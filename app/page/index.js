@@ -1,17 +1,12 @@
 import { createDashboardUI } from "./dashboard.js";
 import { createAboutUI } from "./about.js";
-import { createCssUI } from "./css.js";
 import { createWallpaperUI } from "./wallpaper.js";
-import { createGeometryUI } from './geometry.js';
 import { createClockUI } from './clock.js';
-import { createAppsUI } from './apps.js';
-import { createStyleUI } from "./style.js";
-// import { createSettingUI } from "./setting.js";
-// import { createAppButtonUI } from './appbutton.js';
+import { createLayoutUI } from './layout.js';
+import { createAppearanceUI } from "./appearance.js";
 import { createEffectsUI } from './effects.js';
-// import { createDockUI } from './dock.js';
-// import { createMimicUI } from './mimic.js';
-// import Adw from "gi://Adw";
+import { createGeometryUI } from './geometry.js';
+import { createStylesheetUI } from "./stylesheet.js";
 
 export function getPages() {
   return [
@@ -21,22 +16,15 @@ export function getPages() {
         {
           id: "dashboard",
           title: "Dashboard",
-          icon: "user-home-symbolic", //"preferences-system-symbolic",
+          icon: "user-home-symbolic",
           description: "View system information and basic OS details",
-          keywords: ["dashboard", "home", "indicator", "backup", "restore"],
+          keywords: ["dashboard", "home", "indicator", "backup", "restore", "reset"],
           ui: createDashboardUI,
-        },
-        {
-          id: "about",
-          title: "About",
-          icon: "help-about-symbolic",
-          description: "Learn more about this application",
-          ui: createAboutUI,
         },
       ],
     },
     {
-      title: "Appearance",
+      title: "Desktop",
       items: [
         {
           id: "wallpaper",
@@ -46,139 +34,82 @@ export function getPages() {
           keywords: ["background", "image", "picture", "color", "dark"],
           ui: createWallpaperUI,
         },
-        // {
-        //   id: "settings",
-        //   title: "Display & Monitor",
-        //   icon: "video-display-symbolic",
-        //   description: "Manage screen resolution",
-        //   keywords: ["screen", "monitor", "hardware"],
-        //   ui: createSettingUI,
-        //   pages: [
-        //     {
-        //       id: "nightlight",
-        //       title: "Night Light",
-        //       description: "Blue light reduction filter",
-        //       keywords: ["warm", "color", "temperature", "sleep", "eyes"],
-        //       ui: () => {
-        //         const page = new Adw.PreferencesPage();
-        //         const group = new Adw.PreferencesGroup({
-        //           title: "Color Temperature",
-        //         });
-        //         group.add(
-        //           new Adw.SwitchRow({ title: "Warm Mode", active: true })
-        //         );
-        //         page.add(group);
-        //         return page;
-        //       },
-        //     },
-        //   ],
-        // },
+      ],
+    },
+    {
+      title: "Panel",
+      items: [
         {
-          id: "css",
-          title: "CSS",
+          id: "panel-appearance",
+          title: "Appearance",
           icon: "preferences-desktop-appearance-symbolic",
-          description: "Manage bundled and custom CSS",
-          keywords: ["css", "style", "theme", "color", "custom"],
-          ui: createCssUI,
-        },        
+          description: "Panel colors, gradient, borders, shadow, and presets",
+          keywords: ["panel", "style", "appearance", "theme", "color", "gradient", "background", "border", "shadow", "bar", "preset", "blur", "glass"],
+          ui: createAppearanceUI,
+        },
+        {
+          id: "panel-layout",
+          title: "Layout",
+          icon: "view-grid-symbolic",
+          description: "Arrange panel items and adjust their size, spacing, and colors",
+          keywords: ["layout", "apps", "applets", "arrange", "order", "position", "size", "margin", "padding", "grid", "launcher", "overview"],
+          ui: createLayoutUI,
+        },
+        {
+          id: "clock",
+          title: "Clock",
+          icon: "preferences-system-time-symbolic",
+          description: "Customize the panel clock",
+          keywords: ["clock", "time", "date", "calendar", "format"],
+          ui: createClockUI,
+        },
+      ],
+    },
+    {
+      title: "Window",
+      items: [
         {
           id: "window-effects",
-          title: "Window Effects",
+          title: "Effects",
           icon: "preferences-desktop-appearance-symbolic",
-          description: "Uniform rounded corners for application windows",
-          keywords: ["corners", "round", "radius", "windows", "square"],
+          description: "Window corner rounding, shadows, and transparency",
+          keywords: ["window", "corners", "rounding", "radius", "shadow", "transparency", "opacity", "effects"],
           ui: createEffectsUI,
         },
         {
           id: "window-geometry",
           title: "Geometry",
           icon: "video-single-display-symbolic",
-          description: "geometry saving and restoring",
-          keywords: ['width', 'height', 'position', 'size', 'remember'],
+          description: "Remember and restore window size and position",
+          keywords: ["geometry", "window", "size", "position", "remember", "restore", "workspace", "monitor"],
           ui: createGeometryUI,
         },
       ],
     },
     {
-      title: "Panel",
+      title: "Advanced",
       items: [
-        // {
-        //   id: "appbutton",
-        //   title: "Start",
-        //   icon: "start-here-symbolic",
-        //   description: "Show or hide the Show Apps button on the panel",
-        //   keywords: ["applications", "menu", "grid", "overview", "launcher"],
-        //   ui: createAppButtonUI,
-        // },
         {
-          id: "clock",
-          title: "Clock",
-          icon: "preferences-system-time-symbolic",
-          description: "Clock position on the panel",
-          keywords: ["clock", "time", "date", "panel", "position"],
-          ui: createClockUI,
+          id: "stylesheet",
+          title: "Stylesheet",
+          icon: "text-x-generic-symbolic",
+          description: "Hand-edit custom CSS applied to the shell",
+          keywords: ["css", "stylesheet", "custom", "code", "advanced", "style"],
+          ui: createStylesheetUI,
         },
-        // {
-        //     id: 'dock',
-        //     title: 'Dock',
-        //     icon: 'view-app-grid-symbolic',
-        //     ui: createDockUI
-        // },
+      ],
+    },
+    {
+      title: null,
+      items: [
         {
-            id: 'apps',
-            title: 'Apps',
-            icon: 'view-grid-symbolic',
-            keywords: ['applications', 'bar', 'apps', 'applets', 'menu', 'grid', 'overview', 'launcher'],
-            ui: createAppsUI
+          id: "about",
+          title: "About",
+          icon: "help-about-symbolic",
+          description: "Learn more about this application",
+          keywords: ["about", "version", "info", "links", "documentation"],
+          ui: createAboutUI,
         },
-        {
-            id: 'panel-style',
-            title: 'Style',
-            icon: 'preferences-desktop-keyboard-shortcuts-symbolic',
-            keywords: ['panel', 'style', 'appearance', 'theme', 'color', 'transparency', 'gradient', 'background', 'border', 'shadow', 'bar'],
-            ui: createStyleUI
-        },
-        // {
-        //     id: 'mimic',
-        //     title: 'Mimic',
-        //     icon: 'view-app-grid-symbolic',
-        //     ui: createMimicUI
-        // },
-        // {
-        //   id: "system-tools",
-        //   title: "System Tools",
-        //   icon: "utilities-terminal-symbolic",
-        //   groups: [
-        //     {
-        //       title: "Diagnostics",
-        //       pages: [
-        //         {
-        //           id: "logs",
-        //           title: "System Logs",
-        //           ui: () =>
-        //             new Adw.StatusPage({
-        //               title: "Logs",
-        //               icon_name: "text-x-generic-symbolic",
-        //             }),
-        //         },
-        //       ],
-        //     },
-        //     {
-        //       title: "Storage",
-        //       pages: [
-        //         {
-        //           id: "usage",
-        //           title: "Disk Usage",
-        //           ui: () =>
-        //             new Adw.StatusPage({
-        //               title: "Disk Usage",
-        //               icon_name: "drive-harddisk-symbolic",
-        //             }),
-        //         },
-        //       ],
-        //     },
-        //   ],
-        // },
       ],
     },
   ];

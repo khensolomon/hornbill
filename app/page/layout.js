@@ -14,7 +14,7 @@ import { AppConfig } from '../config.js';
  * - Specific App Groups (Show Apps, Overview, Favorites, Running, Disks, Trash)
  * * @returns {Adw.PreferencesPage} The constructed preferences page.
  */
-export function createAppsUI() {
+export function createLayoutUI() {
     const page = new Adw.PreferencesPage();
     const settings = AppConfig.getSettings();
 

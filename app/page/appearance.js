@@ -8,7 +8,7 @@ import { AppConfig } from '../config.js';
 import { PanelsPresets } from '../data/panels.js';
 import { log, logError } from '../util/logger.js';
 
-export class StylePage extends Adw.PreferencesPage {
+export class AppearancePage extends Adw.PreferencesPage {
     static {
         GObject.registerClass(this);
     }
@@ -363,7 +363,7 @@ export class StylePage extends Adw.PreferencesPage {
         // everything, so what is displayed matches what was applied.
         if (this._goToPage) {
             try {
-                this._goToPage('panel-style');
+                this._goToPage('panel-appearance');
             } catch (e) {
                 console.error('Preset applied but page refresh failed', e);
             }
@@ -537,6 +537,6 @@ export class StylePage extends Adw.PreferencesPage {
 }
 
 // Backward compatibility wrapper
-export function createStyleUI(navigator, goToPage) {
-    return new StylePage(goToPage);
+export function createAppearanceUI(navigator, goToPage) {
+    return new AppearancePage(goToPage);
 }

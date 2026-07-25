@@ -205,17 +205,25 @@ export function createUI() {
         const sections = getPages();
 
         sections.forEach((section, index) => {
-            const headerLabel = new Gtk.Label({
-                label: section.title,
-                xalign: 0,
-                css_classes: ['heading', 'dim-label'],
-                margin_top: index === 0 ? 12 : 24,
-                margin_bottom: 6,
-                margin_start: 12
-            });
-            const headerRow = new Gtk.ListBoxRow({ selectable: false, activatable: false, can_focus: false, css_classes: ['header-row'] });
-            headerRow.set_child(headerLabel);
-            listBox.append(headerRow);
+            // A null section title (e.g. the trailing About group) renders as
+            // spacing only, mirroring the ungrouped Dashboard at the top.
+            if (section.title) {
+                const headerLabel = new Gtk.Label({
+                    label: section.title,
+                    xalign: 0,
+                    css_classes: ['heading', 'dim-label'],
+                    margin_top: index === 0 ? 12 : 24,
+                    margin_bottom: 6,
+                    margin_start: 12
+                });
+                const headerRow = new Gtk.ListBoxRow({ selectable: false, activatable: false, can_focus: false, css_classes: ['header-row'] });
+                headerRow.set_child(headerLabel);
+                listBox.append(headerRow);
+            } else {
+                const spacer = new Gtk.ListBoxRow({ selectable: false, activatable: false, can_focus: false, css_classes: ['header-row'] });
+                spacer.set_child(new Gtk.Box({ height_request: 18 }));
+                listBox.append(spacer);
+            }
 
             if (section.items) {
                 section.items.forEach(page => {

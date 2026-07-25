@@ -11,7 +11,7 @@ let _activeFileChooser = null;
 /**
  * Creates the CSS Configuration Page.
  */
-export function createCssUI(navigator) {
+export function createStylesheetUI(navigator) {
     const page = new Adw.PreferencesPage();
 
     if (!AppConfig.schemaId) {

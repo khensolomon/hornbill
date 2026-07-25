@@ -3,6 +3,29 @@
 Notable changes to the Lesion extension. Version names follow `yy.mm.dd`
 (EGO `version-name` allows letters, numbers, spaces, and periods only).
 
+## 26.07.22 (version 46)
+
+### Preferences navigation reorganized
+- The sidebar is now grouped by the object being configured rather than by
+  abstract categories: Dashboard (ungrouped) / Desktop (Wallpaper) / Panel
+  (Appearance, Layout, Clock) / Window (Effects, Geometry) / Advanced
+  (Stylesheet) / About (ungrouped, trailing). Dashboard and About bookend
+  the object pages.
+- Page renames for clarity, with files and exports renamed to match:
+  - Panel "Style" -> "Appearance" (page/style.js -> appearance.js,
+    StylePage -> AppearancePage, createStyleUI -> createAppearanceUI, id
+    panel-style -> panel-appearance).
+  - Panel "Apps" -> "Layout" (page/apps.js -> layout.js, createAppsUI ->
+    createLayoutUI, id apps -> panel-layout). The panel component
+    (components/apps.js, AppsManager) is unchanged.
+  - "CSS" -> "Stylesheet" (page/css.js -> stylesheet.js, createCssUI ->
+    createStylesheetUI, id css -> stylesheet), moved under Advanced.
+  - Window pages shown as "Effects" and "Geometry" under the Window group.
+- Dashboard quick-access rows updated to the new page ids and titles, with
+  a Panel Appearance row added.
+- No settings-schema changes: every key (panel-*, corners-*,
+  transparency-*, geometry-*, apps-*) is unchanged, so no dconf migration.
+
 ## 26.07.21.8 (version 45)
 
 ### Panel: presets no longer break the panel
