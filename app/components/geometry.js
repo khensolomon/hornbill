@@ -209,6 +209,8 @@ export class GeometryManager extends ExtensionComponent {
         try {
             if (typeof win.get_transient_for === 'function' && win.get_transient_for()) return false;
             if (typeof win.is_skip_taskbar === 'function' && win.is_skip_taskbar()) return false;
+            // Modality is often set before the transient parent is wired up
+            if (typeof win.is_modal === 'function' && win.is_modal()) return false;
         } catch (e) {}
         return true;
     }
@@ -571,6 +573,10 @@ export class GeometryManager extends ExtensionComponent {
         data.verifyTimerId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, VERIFY_DELAY_MS, () => {
             data.verifyTimerId = 0;
             if (!this._isAlive(win)) return GLib.SOURCE_REMOVE;
+            if (!this._shouldManage(win)) {
+                this._untrackWindow(win);
+                return GLib.SOURCE_REMOVE;
+            }
 
             const geo = this._lookupGeometry(win, appId);
             // X11 clients get ONE corrective pass: repeated configure
@@ -955,6 +961,19 @@ export class GeometryManager extends ExtensionComponent {
         data.x11TimerId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, wait, () => {
             data.x11TimerId = 0;
             if (!this._isAlive(win)) return GLib.SOURCE_REMOVE;
+            // FINAL GATE. Dialog markers (window type, transient parent,
+            // modality) often arrive after window-created — later than the
+            // one-time check in _beginRestore. Nautilus's paste-conflict
+            // dialogs passed that early check and were then flown to the
+            // app's saved position from here. Re-validate at the moment of
+            // truth: if the window has revealed itself as a dialog, untrack
+            // it and leave it exactly where the shell placed it.
+            if (!this._shouldManage(win)) {
+                log(`[Geometry] '${appId}' revealed as dialog/transient before apply — untracking`);
+                this._reveal(win, data);
+                this._untrackWindow(win);
+                return GLib.SOURCE_REMOVE;
+            }
             this._applyGeometry(win, appId, geo, null);
             this._reveal(win, data);
             this._verifyRestore(win, data, appId, 0);

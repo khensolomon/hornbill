@@ -3,6 +3,21 @@
 Notable changes to the Lesion extension. Version names follow `yy.mm.dd`
 (EGO `version-name` allows letters, numbers, spaces, and periods only).
 
+## 26.07.22.2 (version 47)
+
+### Window geometry: paste-conflict dialogs no longer moved
+- Nautilus's replace/skip confirmation dialogs (folder conflict, then
+  file conflict) were flown to the app's saved window position. Dialog
+  markers — window type, transient parent, modality — are often set
+  AFTER window-created, so the dialogs passed the one-time filter in
+  _beginRestore while still looking like normal windows, and the actual
+  moves happened later where nothing re-checked.
+- The dialog check now runs at the FINAL gate before any move (the
+  deferred apply and every verify pass): a window that has revealed
+  itself as a dialog by then is untracked and left exactly where the
+  shell placed it. is_modal() added to the filter, since modality often
+  lands before the transient parent is wired up.
+
 ## 26.07.22 (version 46)
 
 ### Preferences navigation reorganized
