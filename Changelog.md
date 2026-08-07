@@ -3,6 +3,14 @@
 Notable changes to the Lesion extension. Version names follow `yy.mm.dd`
 (EGO `version-name` allows letters, numbers, spaces, and periods only).
 
+## 26.08.07.1 (version 50)
+
+### Versioning correction
+- version-name now reflects the actual build date. Earlier builds carried
+  a stale `26.07.22` date forward across several releases instead of
+  advancing `yy.mm.dd` per build; today's build is correctly `26.08.07.1`.
+  The `.N` suffix is the same-day build counter and resets to 1 each day.
+
 ## 26.07.22.4 (version 49)
 
 ### Stylesheet page
