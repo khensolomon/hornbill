@@ -127,6 +127,7 @@
     </key>
 
     <!-- Custom User Styles -->
+    <key name="custom-styles-enabled" type="b"><default>true</default></key>
     <key name="custom-styles" type="a(sb)">
       <default>[]</default>
       <summary>User-added custom CSS files</summary>

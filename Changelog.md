@@ -3,6 +3,49 @@
 Notable changes to the Lesion extension. Version names follow `yy.mm.dd`
 (EGO `version-name` allows letters, numbers, spaces, and periods only).
 
+## 26.07.22.4 (version 49)
+
+### Stylesheet page
+- Custom Styles now appears above Bundled Styles.
+- Bundled Styles carries a description stating it is demo material, and
+  each bundled style has a "View CSS" button opening a read-only,
+  copyable viewer — a cheat sheet for writing custom styles.
+- Custom Styles gained a master enable/disable switch (all custom styles
+  at once) via a new 'custom-styles-enabled' key, shown as a header
+  control alongside a compact Add button once the list has content; the
+  empty state keeps the single large "Add Style File…" button.
+- Fixed the non-working "Open File": it used Gtk.UriLauncher with a null
+  parent, which did nothing. It now uses Gtk.FileLauncher with the window
+  as parent.
+- The Remove button no longer paints a full-height red background inside
+  the row (dropped destructive-action for a flat trash icon); both row
+  buttons are vertically centered.
+
+### Stylesheet hot reload
+- Applied stylesheets (bundled and custom) are watched on disk; edits
+  reapply automatically (debounced), so writing CSS is save-and-see.
+
+### License
+- Relicensed to MIT (permissive, GPL-compatible, accepted by
+  extensions.gnome.org). LICENSE replaced; the GPL-specific numeric
+  license_type key removed from metadata.
+
+## 26.07.22.3 (version 48)
+
+### Publication readiness (extensions.gnome.org)
+- debug is now false in metadata: builds were shipping with debug logging
+  enabled, writing per-move geometry logs into every user's journal.
+- LICENSE added (GPL-2.0-or-later), matching the metadata license link.
+- Experimental pages not wired into the registry (demo, dock, mimic,
+  appbutton, setting) are excluded from the EGO submission package.
+- Audit results, unchanged because already compliant: prefs side imports
+  no shell-only libraries; every component's disable() removes actors,
+  effects, timers, and signals (with pending saves flushed); no
+  session-modes declared; subprocess use is limited to user-triggered
+  actions (opening GNOME Settings, emptying trash); --ego build mode
+  whitelists standard metadata keys and the About page tolerates the
+  stripped ones.
+
 ## 26.07.22.2 (version 47)
 
 ### Window geometry: paste-conflict dialogs no longer moved

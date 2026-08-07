@@ -54,6 +54,10 @@ EGO_EXCLUDE = [
     "app.js",            # standalone gjs runner for UI mockups
     "ui/*", "notes*", "tmp*", "Todo.md",
     "desire-*", "prompt*",
+    # Experimental pages not wired into the registry: reviewers read every
+    # file, and dead code invites questions.
+    "app/page/demo.js", "app/page/dock.js", "app/page/mimic.js",
+    "app/page/appbutton.js", "app/page/setting.js",
 ]
 
 # Global exclude patterns (always ignored)

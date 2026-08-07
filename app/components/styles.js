@@ -8,7 +8,9 @@ export class StyleManager extends ExtensionComponent {
     
     onEnable() {
         this._stylesheetFiles = [];
-        
+        this._monitors = [];
+        this._reloadTimeoutId = 0;
+
         // Apply immediately
         this._applyStyles();
 
@@ -22,15 +24,61 @@ export class StyleManager extends ExtensionComponent {
             log("Setting changed: custom-styles");
             this._applyStyles();
         });
+
+        this.observe('changed::custom-styles-enabled', () => {
+            log("Setting changed: custom-styles-enabled");
+            this._applyStyles();
+        });
     }
 
     onDisable() {
+        if (this._reloadTimeoutId) {
+            GLib.source_remove(this._reloadTimeoutId);
+            this._reloadTimeoutId = 0;
+        }
+        this._clearMonitors();
         this._removeStyles();
         this._stylesheetFiles = [];
     }
 
+    /**
+     * HOT RELOAD. Every applied stylesheet gets a file monitor; edits on
+     * disk reapply all styles (debounced), so iterating on a CSS file is
+     * save -> see, with no toggle dance.
+     */
+    _watchFile(file) {
+        try {
+            const monitor = file.monitor_file(Gio.FileMonitorFlags.NONE, null);
+            monitor.connect('changed', (m, f, of, eventType) => {
+                if (eventType === Gio.FileMonitorEvent.CHANGES_DONE_HINT ||
+                    eventType === Gio.FileMonitorEvent.CHANGED ||
+                    eventType === Gio.FileMonitorEvent.CREATED) {
+                    if (this._reloadTimeoutId)
+                        GLib.source_remove(this._reloadTimeoutId);
+                    this._reloadTimeoutId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 300, () => {
+                        this._reloadTimeoutId = 0;
+                        log('Stylesheet changed on disk — reloading');
+                        this._applyStyles();
+                        return GLib.SOURCE_REMOVE;
+                    });
+                }
+            });
+            this._monitors.push(monitor);
+        } catch (e) {
+            logError('Failed to monitor stylesheet', e);
+        }
+    }
+
+    _clearMonitors() {
+        for (const m of this._monitors ?? []) {
+            try { m.cancel(); } catch (e) {}
+        }
+        this._monitors = [];
+    }
+
     _applyStyles() {
         this._removeStyles();
+        this._clearMonitors();
 
         const themeContext = St.ThemeContext.get_for_stage(global.stage);
         const theme = themeContext.get_theme();
@@ -46,6 +94,7 @@ export class StyleManager extends ExtensionComponent {
                 if (file.query_exists(null)) {
                     theme.load_stylesheet(file);
                     this._stylesheetFiles.push(file);
+                    this._watchFile(file);
                     log(`Applied bundled style: ${cssFile}`);
                 }
             } catch (e) {
@@ -53,8 +102,10 @@ export class StyleManager extends ExtensionComponent {
             }
         }
 
-        // B. Load Custom User Styles
+        // B. Load Custom User Styles (behind the master switch)
         try {
+            if (!settings.get_boolean('custom-styles-enabled'))
+                throw null; // skip customs entirely; bundled remain
             const customStyles = settings.get_value('custom-styles').deep_unpack();
             for (const [uri, enabled] of customStyles) {
                 if (enabled) {
@@ -63,6 +114,7 @@ export class StyleManager extends ExtensionComponent {
                         if (file.query_exists(null)) {
                             theme.load_stylesheet(file);
                             this._stylesheetFiles.push(file);
+                            this._watchFile(file);
                             log(`Applied custom style: ${uri}`);
                         }
                     } catch (e) {
@@ -71,7 +123,7 @@ export class StyleManager extends ExtensionComponent {
                 }
             }
         } catch (e) {
-            logError("Error parsing custom-styles", e);
+            if (e) logError("Error parsing custom-styles", e);
         }
 
         themeContext.set_theme(theme);
