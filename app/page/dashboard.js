@@ -58,7 +58,7 @@ export class DashboardPage extends Adw.PreferencesPage {
         navGroup.add(this._createNavRow('Stylesheet', 'Hand-edit custom CSS', 'text-x-generic-symbolic', 'stylesheet'));
         navGroup.add(this._createNavRow('Panel Layout', 'Arrange panel items and their styling', 'view-grid-symbolic', 'panel-layout'));
         navGroup.add(this._createNavRow('Panel Appearance', 'Panel colors, borders, and presets', 'preferences-desktop-appearance-symbolic', 'panel-appearance'));
-        navGroup.add(this._createNavRow('Window Effects', 'Rounding, shadows, and transparency', 'preferences-desktop-appearance-symbolic', 'window-effects'));
+        navGroup.add(this._createNavRow('Window Effects', 'Rounding, shadows, and transparency', 'focus-windows-symbolic', 'window-effects'));
         navGroup.add(this._createNavRow('Window Geometry', 'Remember and restore window size and position', 'video-single-display-symbolic', 'window-geometry'));
 
         // --- 4. DATA MANAGEMENT ---

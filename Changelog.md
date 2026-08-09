@@ -3,6 +3,21 @@
 Notable changes to the Lesion extension. Version names follow `yy.mm.dd`
 (EGO `version-name` allows letters, numbers, spaces, and periods only).
 
+## 26.08.07.2 (version 51)
+
+### Panel Layout
+- Fixed doubled section toggle title: the per-section switch prepended
+  "Show" onto the group title, rendering "Show Show Applications". The
+  toggle now reads "Show in Panel" for every section.
+- The Show Applications icon-name field now offers a dropdown of common
+  symbolic icon names (GtkEntryCompletion) while still accepting any typed
+  value — a suggestion, not a constraint.
+
+### Preferences navigation
+- Window -> Effects no longer shares Panel -> Appearance's icon; it uses
+  focus-windows-symbolic (window-themed, present in the Adwaita set),
+  updated in both the sidebar and the Dashboard quick-access row.
+
 ## 26.08.07.1 (version 50)
 
 ### Versioning correction

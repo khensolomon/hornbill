@@ -325,7 +325,7 @@ export function createLayoutUI() {
         addGroupIcon(group, iconName);
         page.add(group);
 
-        const enableRow = new Adw.SwitchRow({ title: `Show ${title}` });
+        const enableRow = new Adw.SwitchRow({ title: 'Show in Panel' });
         settings.bind(`apps-${keySuffix}-enabled`, enableRow, 'active', Gio.SettingsBindFlags.DEFAULT);
         group.add(enableRow);
 
@@ -394,13 +394,44 @@ export function createLayoutUI() {
 
             const idxToEnum = (idx) => idx; // 0, 1, 2 map directly
 
-            // 1. Icon Name Entry
-            // FIX: Display fallback default if empty
+            // 1. Icon Name — free text WITH suggestions.
+            // A GtkEntryCompletion offers common symbolic names as the user
+            // types, while any value remains typeable (themes ship hundreds
+            // of icons; a fixed dropdown would be wrong). The dropdown is a
+            // shortcut, not a constraint.
             const currentIcon = settings.get_string('apps-showgrid-icon');
             const iconRow = new Adw.EntryRow({
                 title: 'Icon Name',
                 text: currentIcon || 'start-here-symbolic'
             });
+
+            const iconSuggestions = [
+                'start-here-symbolic', 'view-app-grid-symbolic',
+                'applications-system-symbolic', 'org.gnome.Settings-symbolic',
+                'preferences-system-symbolic', 'go-home-symbolic',
+                'user-home-symbolic', 'emblem-system-symbolic',
+                'application-x-executable-symbolic', 'view-grid-symbolic',
+                'view-more-symbolic', 'open-menu-symbolic',
+                'system-search-symbolic', 'starred-symbolic',
+            ];
+            const iconStore = new Gtk.ListStore();
+            iconStore.set_column_types([GObject.TYPE_STRING]);
+            for (const name of iconSuggestions) {
+                const iter = iconStore.append();
+                iconStore.set(iter, [0], [name]);
+            }
+            const completion = new Gtk.EntryCompletion({
+                model: iconStore,
+                text_column: 0,
+                inline_completion: true,
+                popup_completion: true,
+            });
+            // EntryRow wraps a GtkText/GtkEntry-like delegate; attach there.
+            const delegate = iconRow.get_delegate?.();
+            if (delegate && typeof delegate.set_completion === 'function') {
+                delegate.set_completion(completion);
+            }
+
             iconRow.connect('changed', () => settings.set_string('apps-showgrid-icon', iconRow.text));
             group.add(iconRow);
 

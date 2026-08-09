@@ -71,7 +71,7 @@ export function getPages() {
         {
           id: "window-effects",
           title: "Effects",
-          icon: "preferences-desktop-appearance-symbolic",
+          icon: "focus-windows-symbolic",
           description: "Window corner rounding, shadows, and transparency",
           keywords: ["window", "corners", "rounding", "radius", "shadow", "transparency", "opacity", "effects"],
           ui: createEffectsUI,
