@@ -2,11 +2,35 @@ import St from "gi://St";
 import Gio from "gi://Gio";
 import GLib from "gi://GLib";
 import Clutter from "gi://Clutter";
+import GObject from "gi://GObject";
 import * as PanelMenu from "resource:///org/gnome/shell/ui/panelMenu.js";
 import * as PopupMenu from "resource:///org/gnome/shell/ui/popupMenu.js";
 import * as Main from "resource:///org/gnome/shell/ui/main.js";
 
 import { AppConfig } from "../config.js";
+
+/**
+ * PanelMenu.Button toggles its own menu on EVERY primary press, from its
+ * built-in vfunc_event, before any handler we connect can run. That is why
+ * left-click showed the menu instead of opening preferences. Blocking the
+ * base class's button handling lets our own press handler decide what each
+ * button does. Everything that is not a button event still chains to the
+ * base implementation.
+ */
+const LesionIndicatorButton = GObject.registerClass(
+    { GTypeName: 'LesionIndicatorButton' },
+    class LesionIndicatorButton extends PanelMenu.Button {
+        vfunc_event(event) {
+            const type = event.type();
+            if (type === Clutter.EventType.BUTTON_PRESS ||
+                type === Clutter.EventType.BUTTON_RELEASE ||
+                type === Clutter.EventType.TOUCH_BEGIN ||
+                type === Clutter.EventType.TOUCH_END)
+                return Clutter.EVENT_PROPAGATE;
+            return super.vfunc_event(event);
+        }
+    }
+);
 import { log, logError } from '../util/logger.js';
 
 export class Indicator {
@@ -65,7 +89,32 @@ export class Indicator {
 
   _createButton() {
     const nameId = AppConfig.name || "Lesion Extension";
-    this.button = new PanelMenu.Button(0.5, nameId, false);
+    this.button = new LesionIndicatorButton(0.5, nameId);
+
+    // PanelMenu.Button attaches a Clutter_ClickGesture (confirmed by
+    // inspection on GNOME 50) that toggles its menu on any click. Gestures
+    // claim the pointer sequence and run ahead of the actor's own event
+    // handling, so while one is attached NO handler — connected signal or
+    // overridden vfunc — ever sees a button event. Removing it returns
+    // click handling to us.
+    try { this.button.clear_actions(); } catch (e) {}
+
+    try {
+        const clickAction = new Clutter.ClickAction();
+        clickAction.connect('clicked', (action) => {
+            let btn = Clutter.BUTTON_PRIMARY;
+            try { btn = action.get_button() || Clutter.BUTTON_PRIMARY; } catch (e) {}
+            if (btn === Clutter.BUTTON_SECONDARY) {
+                this.button.menu.toggle();
+            } else {
+                if (this.button.menu.isOpen) this.button.menu.close();
+                this.extension.openPreferences();
+            }
+        });
+        this.button.add_action(clickAction);
+    } catch (e) {
+        logError('Indicator click action unavailable', e);
+    }
     // Note: St widgets have no 'tooltip_text' (that's GTK); setting it here
     // was a silent no-op, so it has been removed.
 
@@ -76,25 +125,34 @@ export class Indicator {
     // Set Initial Icon
     this._updateIcon();
 
-    // 1. Custom Click Handling
-    this.button.connect('event', (actor, event) => {
-        if (event.type() === Clutter.EventType.BUTTON_PRESS) {
-            const button = event.get_button();
-            
-            // Left Click: Open Preferences
-            if (button === Clutter.BUTTON_PRIMARY) {
-                this.extension.openPreferences();
-                return Clutter.EVENT_STOP;
-            }
-            
-            // Right Click: Toggle Menu
-            if (button === Clutter.BUTTON_SECONDARY) {
-                this.button.menu.toggle();
-                return Clutter.EVENT_STOP;
-            }
+    // 1. Custom Click Handling.
+    //
+    // PanelMenu.Button toggles its own menu on every primary press via an
+    // internal handler. Listening on 'event' ran AFTER that, so left-click
+    // opened preferences and also popped the menu. 'button-press-event'
+    // fires early enough to fully own the interaction; we stop propagation
+    // so the built-in toggle never runs.
+    this.button.connect('button-press-event', (actor, event) => {
+        const button = event.get_button();
+
+        if (button === Clutter.BUTTON_PRIMARY) {
+            // Ensure any open menu is closed, then open preferences
+            if (this.button.menu.isOpen) this.button.menu.close();
+            this.extension.openPreferences();
+            return Clutter.EVENT_STOP;
         }
+
+        if (button === Clutter.BUTTON_SECONDARY) {
+            this.button.menu.toggle();
+            return Clutter.EVENT_STOP;
+        }
+
         return Clutter.EVENT_PROPAGATE;
     });
+
+    // Also neutralize the default primary-button menu behavior in case a
+    // touch/keyboard path still reaches it.
+    this.button.connect('key-press-event', () => Clutter.EVENT_PROPAGATE);
 
     // 2. Dynamic Menu Handling
     this._menuSignals.push(
@@ -163,6 +221,16 @@ export class Indicator {
     
     // Clear existing items to rebuild based on state
     menu.removeAll();
+
+    // Running-build stamp: makes a stale/failed install obvious at a glance.
+    try {
+        const vn = AppConfig.metadata?.['version-name'] ?? '?';
+        const vi = AppConfig.metadata?.version ?? '?';
+        const stamp = new PopupMenu.PopupMenuItem(`Lesion ${vn} (${vi})`, { reactive: false });
+        stamp.add_style_class_name('popup-subtitle-menu-item');
+        menu.addMenuItem(stamp);
+        menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
+    } catch (e) {}
 
     // Check if extension has a state flag for prefs window
     const isPrefsOpen = this.extension.isPreferencesOpen === true;

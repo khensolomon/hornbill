@@ -2,7 +2,7 @@
 # bash dev.sh
 set -e
 
-# ln -s "$(pwd)" ~/.local/share/gnome-shell/extensions/lesion@lethil.me
+ln -s "$(pwd)" ~/.local/share/gnome-shell/extensions/lesion@lethil.me
 echo "Compiling schemas..."
 glib-compile-schemas schemas/
 echo "Reloading GNOME Shell..."

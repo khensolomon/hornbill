@@ -52,15 +52,26 @@ export function createGeometryUI() {
     // --- HELPER: GET ICON ---
     const getAppIcon = (wmClass) => {
         const iconImage = new Gtk.Image({ pixel_size: 32 });
-        
-        let appInfo = Gio.DesktopAppInfo.new(`${wmClass}.desktop`);
-        if (!appInfo) {
-            const lower = wmClass.toLowerCase();
-            appInfo = Gio.DesktopAppInfo.new(`${lower}.desktop`);
+
+        // Guard: reserved keys ('__aliases__') and malformed entries have no
+        // valid app id. DesktopAppInfo.new throws on a null/empty string.
+        if (!wmClass || typeof wmClass !== 'string' || wmClass.startsWith('__')) {
+            iconImage.set_from_icon_name('application-x-executable-symbolic');
+            return iconImage;
         }
 
-        if (appInfo) {
-            iconImage.set_from_gicon(appInfo.get_icon());
+        let appInfo = null;
+        try {
+            appInfo = Gio.DesktopAppInfo.new(`${wmClass}.desktop`);
+            if (!appInfo)
+                appInfo = Gio.DesktopAppInfo.new(`${wmClass.toLowerCase()}.desktop`);
+        } catch (e) {
+            appInfo = null;
+        }
+
+        const gicon = appInfo ? appInfo.get_icon() : null;
+        if (gicon) {
+            iconImage.set_from_gicon(gicon);
         } else {
             const theme = Gtk.IconTheme.get_for_display(Gdk.Display.get_default());
             if (theme.has_icon(wmClass)) {
@@ -68,7 +79,7 @@ export function createGeometryUI() {
             } else if (theme.has_icon(wmClass.toLowerCase())) {
                 iconImage.set_from_icon_name(wmClass.toLowerCase());
             } else {
-                iconImage.set_from_icon_name('preferences-system-windows-symbolic');
+                iconImage.set_from_icon_name('application-x-executable-symbolic');
             }
         }
         return iconImage;

@@ -17,24 +17,78 @@ import { log, logError } from '../util/logger.js';
 /**
  * Base Button Class for Application Panel Items
  */
+// A click delivered through more than one path within this window
+// counts once.
+const ACTIVATE_DEBOUNCE_MS = 400;
+
 const AppPanelButton = GObject.registerClass(
     { GTypeName: 'LesionAppPanelButton' },
     class AppPanelButton extends PanelMenu.Button {
+        /**
+         * PanelMenu.Button's built-in vfunc_event toggles this.menu on every
+         * primary press. These menus are usually empty, so nothing is drawn —
+         * but an open menu still takes a modal grab, and that grab swallows
+         * the button release, so no click ever completes. Button events are
+         * handled by _activate() via the paths wired in _init; everything
+         * else still chains to the base implementation.
+         */
+        vfunc_event(event) {
+            const type = event.type();
+            if (type === Clutter.EventType.BUTTON_PRESS ||
+                type === Clutter.EventType.BUTTON_RELEASE ||
+                type === Clutter.EventType.TOUCH_BEGIN ||
+                type === Clutter.EventType.TOUCH_END)
+                return Clutter.EVENT_PROPAGATE;
+            return super.vfunc_event(event);
+        }
+
         _init(iconOrActor, name, clickCallback, menuCallback) {
             super._init(0.0, name);
+
+            // PanelMenu.Button attaches a Clutter_ClickGesture (confirmed by
+            // inspection on GNOME 50) which handles clicks and toggles its
+            // menu. Gestures claim the pointer sequence and run ahead of the
+            // actor's own event handling, so while one is attached NO handler
+            // — connected signal or overridden vfunc — ever sees a button
+            // event. Removing it returns click handling to us.
+            try { this.clear_actions(); } catch (e) {}
+
+            // Fill the panel's height so the button has real clickable area.
+            // Without this the button collapsed to zero height on GNOME 50 —
+            // reactive and visible but with no surface to click.
+            this.y_expand = true;
+            this.y_align = Clutter.ActorAlign.FILL;
+            this.x_align = Clutter.ActorAlign.FILL;
             
             // NOTE: no padding here — panels.js overwrites this button's
             // inline style with the global button style, wiping any padding
             // set on the button itself. Content padding lives on the inner
             // box instead (setContentPadding), which nothing else restyles.
-            this.style = 'min-width: 0px;'; 
+            // A real minimum keeps the button from collapsing to zero size,
+            // which made it unclickable on GNOME 50.
+            this.style = 'min-width: 24px; min-height: 24px;';
 
-            this._box = new St.Widget({ 
+            this._box = new St.Widget({
                 layout_manager: new Clutter.BinLayout(),
-                x_expand: true, 
-                y_expand: true 
+                x_expand: true,
+                y_expand: true,
+                x_align: Clutter.ActorAlign.FILL,
+                y_align: Clutter.ActorAlign.FILL,
             });
-            this.add_child(this._box);
+
+            // The clickable surface. St.Button owns the click protocol; we
+            // only listen to its 'clicked' signal. button_mask enables
+            // middle and right clicks in addition to primary.
+            this._clickButton = new St.Button({
+                x_expand: true,
+                y_expand: true,
+                can_focus: true,
+                reactive: true,
+                track_hover: true,
+                button_mask: St.ButtonMask.ONE | St.ButtonMask.TWO | St.ButtonMask.THREE,
+            });
+            this._clickButton.set_child(this._box);
+            this.add_child(this._clickButton);
 
             this._contentPad = null;
 
@@ -88,12 +142,90 @@ const AppPanelButton = GObject.registerClass(
                 this.iconActor.add_effect(this._desatEffect);
             }
 
+
+            // CLICK HANDLING.
+            // St.Button implements the full click protocol (press/release
+            // pairing, pointer grab, button mask) and emits one 'clicked'
+            // signal with the button number. This is how GNOME Shell's own
+            // app icons work (AppDisplay.AppIcon extends St.Button) and how
+            // other taskbar extensions drive their buttons. PanelMenu.Button
+            // is an St.Widget with no 'clicked' signal, and hand-wiring its
+            // button events proved unreliable across shell versions.
+            this._clickButton.connect('clicked', (actor, button) => this._activate(button));
+            // Hover styling follows the clickable surface.
+            this._clickButton.connect('notify::hover', () => this._onHoverChanged());
+
+            // Second, independent path: a Clutter.ClickAction resolves the
+            // click itself (including the pointer grab) rather than relying
+            // on which button signal the shell delivers. Harmless if the
+            // St.Button path already fired — _activate is debounced.
+            try {
+                const clickAction = new Clutter.ClickAction();
+                clickAction.connect('clicked', (action) => {
+                    let btn = 1;
+                    try { btn = action.get_button() || 1; } catch (e) {}
+                    this._activate(btn);
+                });
+                this.add_action(clickAction);
+                this._clickAction = clickAction;
+            } catch (e) {
+                // ClickAction unavailable on this shell version; the other
+                // paths still apply.
+            }
+
             // Hover & Cleanup
             this.connect('notify::hover', () => this._onHoverChanged());
             this.connect('destroy', () => this._onDestroy());
         }
 
+        /**
+         * Single click entry point. St.Button has already resolved the
+         * press/release pairing and the pointer grab; `button` is the
+         * button number (1 primary, 2 middle, 3 secondary).
+         */
+        /**
+         * Perform the button's action. Any click-delivery path may call
+         * this; a short debounce means only the first one in a burst acts,
+         * so having several paths wired cannot double-launch an app.
+         *
+         * Returns true when the click was handled.
+         */
+        _activate(button) {
+            try {
+                if (this._destroyed) return false;
+                if (this._dragged) return false;
+
+                const now = GLib.get_monotonic_time() / 1000; // ms
+                if (this._lastActivateAt && (now - this._lastActivateAt) < ACTIVATE_DEBOUNCE_MS)
+                    return true; // already handled by another path
+                this._lastActivateAt = now;
+
+                if (button === 3) {
+                    if (this._menuCallback) this._menuCallback(this.menu);
+                    if (this.menu) this.menu.toggle();
+                    return true;
+                }
+
+                if (button === 2) {
+                    if (this._app) { this._app.open_new_window(-1); return true; }
+                    if (this.accessible_name === 'Trash') {
+                        Gio.AppInfo.launch_default_for_uri('trash:///', null);
+                        return true;
+                    }
+                    if (this._clickCallback) { this._clickCallback(true); return true; }
+                    return false;
+                }
+
+                if (this._clickCallback) { this._clickCallback(); return true; }
+                return false;
+            } catch (e) {
+                logError('[Apps] activate failed', e);
+                return false;
+            }
+        }
+
         _onDestroy() {
+            this._destroyed = true;
             if (this._dragMonitor) {
                 DND.removeDragMonitor(this._dragMonitor);
                 this._dragMonitor = null;
@@ -107,9 +239,11 @@ const AppPanelButton = GObject.registerClass(
 
         _onHoverChanged() {
             if (this._dragged) return;
-            
-            // UPDATED: Opacity 100 if hovered, duration 600
-            const targetOpacity = this.hover ? 100 : this._baseOpacity;
+
+            // Hover can be reported by the outer PanelMenu.Button or by the
+            // inner St.Button that owns the pointer; treat either as hover.
+            const hovered = this.hover || this._clickButton?.hover;
+            const targetOpacity = hovered ? 100 : this._baseOpacity;
 
             this.iconActor.ease({
                 opacity: targetOpacity,
@@ -123,10 +257,13 @@ const AppPanelButton = GObject.registerClass(
             this._onDragEnd = onDragEndCallback;
 
             this._draggable = DND.makeDraggable(this, {
-                manualMode: false,
-                restoreOnSuccess: false, 
+                manualMode: true,   // we start drags ourselves; see press/motion
+                restoreOnSuccess: false,
                 dragActorOpacity: 255
             });
+            this._pressX = -1;
+            this._pressY = -1;
+            this._dragThreshold = 8;
 
             this._draggable.connect('drag-begin', () => {
                 if (this._dragged) return;
@@ -390,47 +527,6 @@ const AppPanelButton = GObject.registerClass(
             return Clutter.EVENT_PROPAGATE;
         }
 
-        vfunc_event(event) {
-            try {
-                const type = event.type();
-                if (type === Clutter.EventType.BUTTON_PRESS) {
-                    const button = event.get_button();
-                    if (button === 1) {
-                        if (this._isDraggable) return Clutter.EVENT_PROPAGATE;
-                        return Clutter.EVENT_STOP;
-                    }
-                    if (button === 2) {
-                        if (this._app) {
-                             this._app.open_new_window(-1);
-                             return Clutter.EVENT_STOP;
-                        }
-                        if (this.accessible_name === 'Trash') {
-                             Gio.AppInfo.launch_default_for_uri('trash:///', null);
-                             return Clutter.EVENT_STOP;
-                        }
-                        if (this._clickCallback) {
-                            this._clickCallback(true); 
-                            return Clutter.EVENT_STOP;
-                        }
-                    }
-                    if (button === 3) {
-                        if (this._menuCallback) this._menuCallback(this.menu);
-                        this.menu.toggle();
-                        return Clutter.EVENT_STOP;
-                    }
-                }
-                if (type === Clutter.EventType.BUTTON_RELEASE) {
-                    const button = event.get_button();
-                    if (button === 1 && !this._dragged && this._clickCallback) {
-                        this._clickCallback();
-                        return Clutter.EVENT_STOP;
-                    }
-                }
-                return super.vfunc_event(event);
-            } catch(e) {
-                return Clutter.EVENT_PROPAGATE;
-            }
-        }
     }
 );
 
@@ -440,6 +536,43 @@ const AppPanelButton = GObject.registerClass(
 export class AppsManager extends ExtensionComponent {
     
     onEnable() {
+        
+
+
+        // Third click path: the panel's capture phase. Events reach here
+        // before they are dispatched to individual children, so this works
+        // even when a child never sees the button event itself. It could
+        // not work while buttons had zero size (nothing to hit); they now
+        // fill the panel height. _activate is debounced, so if another path
+        // already handled the click this is a no-op.
+        try {
+            this._clickDispatchId = Main.panel.connect('captured-event', (actor, event) => {
+                try {
+                    if (event.type() !== Clutter.EventType.BUTTON_RELEASE)
+                        return Clutter.EVENT_PROPAGATE;
+
+                    const src = global.stage.get_event_actor
+                        ? global.stage.get_event_actor(event) : null;
+
+                    let btn = src;
+                    let hops = 0;
+                    while (btn && !(btn instanceof AppPanelButton) && hops < 24) {
+                        btn = btn.get_parent ? btn.get_parent() : null;
+                        hops++;
+                    }
+                    if (!btn || btn._destroyed) return Clutter.EVENT_PROPAGATE;
+
+                    if (btn._activate(event.get_button()))
+                        return Clutter.EVENT_STOP;
+                } catch (e) {
+                    logError('[Apps] panel click dispatch failed', e);
+                }
+                return Clutter.EVENT_PROPAGATE;
+            });
+        } catch (e) {
+            logError('[Apps] panel click dispatch connect failed', e);
+        }
+
         this._items = { favorites: [], running: [], disks: [], trash: null, showgrid: null, overview: null };
         this._handledWindows = new Set();
         this._trashName = 'Trash'; 
@@ -593,6 +726,10 @@ export class AppsManager extends ExtensionComponent {
     }
 
     onDisable() {
+        if (this._clickDispatchId) {
+            try { Main.panel.disconnect(this._clickDispatchId); } catch (e) {}
+            this._clickDispatchId = 0;
+        }
         // FIX: a pending debounce could fire after disable and touch
         // destroyed buttons, throwing in the shell's main loop.
         if (this._updateTimeout) {
@@ -602,8 +739,13 @@ export class AppsManager extends ExtensionComponent {
 
         this._clearAll();
         // Restore Default Activities if hidden
-        if (Main.panel.statusArea.activities) {
-            Main.panel.statusArea.activities.container.show();
+        const act = Main.panel.statusArea.activities;
+        if (act) {
+            act.container.show();
+            act.container.reactive = true;
+            act.reactive = true;
+            act.can_focus = true;
+            act.track_hover = true;
         }
 
         if (this._windowSignals) {
@@ -801,12 +943,22 @@ export class AppsManager extends ExtensionComponent {
             return false;
         };
 
+        // Drop any buttons destroyed since the last tick so they are never
+        // touched again (source of the "already disposed" log spam).
+        this._items.favorites = (this._items.favorites || []).filter(b => b && !b._destroyed);
+        this._items.running = (this._items.running || []).filter(b => b && !b._destroyed);
+        this._items.disks = (this._items.disks || []).filter(b => b && !b._destroyed);
+
         if (this._items.trash) checkBtnFocus(this._items.trash);
         this._items.disks.forEach(checkBtnFocus);
 
         const apply = (btn, isRunning, isFocused) => {
             try {
-                if (!btn || !btn.iconActor || !btn.get_parent()) return;
+                // _destroyed is a plain JS flag set in _onDestroy; reading it
+                // never touches the disposed native object, so it can't log
+                // "already disposed". This is the reliable liveness gate.
+                if (!btn || btn._destroyed) return;
+                if (!btn.iconActor || !btn.get_parent()) return;
                 if (btn._dragged || btn.visible === false) return;
 
                 btn.updateDotStyle(ind.width, ind.height, ind.color, ind.radius);
@@ -1567,11 +1719,32 @@ export class AppsManager extends ExtensionComponent {
             this._items.overview = null;
         }
 
-        // Hide Default Activities if requested
+        // Hide Default Activities if requested.
+        //
+        // CRITICAL (GNOME 50): container.hide() alone leaves the
+        // ActivitiesButton reactive and in the panel's input region, so it
+        // floats invisibly over the app buttons and swallows every click
+        // (diagnosed: all releases targeted ActivitiesButton, never our
+        // buttons). Disable reactivity and input on hide; restore on show.
         const hideDefault = this.getSettings().get_boolean('apps-overview-hide-default');
-        if (Main.panel.statusArea.activities) {
-            if (hideDefault) Main.panel.statusArea.activities.container.hide();
-            else Main.panel.statusArea.activities.container.show();
+        const act = Main.panel.statusArea.activities;
+        if (act) {
+            const cont = act.container;
+            if (hideDefault) {
+                cont.hide();
+                cont.reactive = false;
+                cont.can_focus = false;
+                act.reactive = false;
+                act.can_focus = false;
+                act.track_hover = false;
+                if (act.remove_style_pseudo_class) act.remove_style_pseudo_class('active');
+            } else {
+                cont.show();
+                cont.reactive = true;
+                act.reactive = true;
+                act.can_focus = true;
+                act.track_hover = true;
+            }
         }
 
         if (!this.getSettings().get_boolean('apps-overview-enabled')) return;
@@ -1714,13 +1887,18 @@ export class AppsManager extends ExtensionComponent {
 
     _handleAppClick(app) {
         const windows = app.get_windows();
+        const ts = global.get_current_time();
         if (app.get_n_windows() === 0) {
-            app.open_new_window(-1);
+            // activate_full registers the launch with the shell's startup
+            // notification, so the busy cursor is tracked and cleared when
+            // the window maps — like the dock does. open_new_window bypasses
+            // that, leaving the cursor spinning until it times out.
+            app.activate_full(-1, ts);
         } else {
             if (this._winTracker.focus_app === app) {
                 windows.forEach(w => w.minimize());
             } else {
-                app.activate();
+                app.activate_full(-1, ts);
             }
         }
     }

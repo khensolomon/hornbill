@@ -4,6 +4,7 @@ import Shell from 'gi://Shell';
 import GLib from 'gi://GLib';
 import St from 'gi://St';
 import Clutter from 'gi://Clutter';
+import Cogl from 'gi://Cogl';
 import { log, logError } from '../util/logger.js';
 import { ExtensionComponent } from './base.js';
 import { isMaximized } from '../util/compat.js';
@@ -86,7 +87,7 @@ const RoundedCornersEffect = GObject.registerClass({
     GTypeName: 'LesionRoundedCornersEffect',
 }, class RoundedCornersEffect extends Shell.GLSLEffect {
     vfunc_build_pipeline() {
-        this.add_glsl_snippet(Shell.SnippetHook.FRAGMENT, DECLARATIONS, CODE, false);
+        this.add_glsl_snippet(Cogl.SnippetHook.FRAGMENT, DECLARATIONS, CODE, false);
     }
 
     update(frameX, frameY, frameW, frameH, texW, texH, radius, mask = [1, 1, 1, 1]) {
@@ -118,7 +119,7 @@ const ClipShadowEffect = GObject.registerClass({
     GTypeName: 'LesionClipShadowEffect',
 }, class ClipShadowEffect extends Shell.GLSLEffect {
     vfunc_build_pipeline() {
-        this.add_glsl_snippet(Shell.SnippetHook.FRAGMENT, '', CLIP_SHADOW_CODE, false);
+        this.add_glsl_snippet(Cogl.SnippetHook.FRAGMENT, '', CLIP_SHADOW_CODE, false);
     }
 });
 
@@ -187,9 +188,14 @@ export class EffectsManager extends ExtensionComponent {
             this._detachAll();
             return;
         }
-        global.display.list_all_windows().forEach(win => this._maybeAttach(win));
-        for (const win of this._windows.keys())
-            this._updateWindow(win);
+        global.display.list_all_windows().forEach(win => {
+            try { this._maybeAttach(win); }
+            catch (e) { logError(`[Corners] attach failed for '${win?.get_wm_class?.() ?? '?'}'`, e); }
+        });
+        for (const win of this._windows.keys()) {
+            try { this._updateWindow(win); }
+            catch (e) { logError('[Corners] update failed', e); }
+        }
     }
 
     /** Full re-attach: needed when a feature toggle changes which per-window
@@ -322,6 +328,7 @@ export class EffectsManager extends ExtensionComponent {
             reactive: false,
             can_focus: false,
             track_hover: false,
+            visible: false,   // shown after first sizing (see _updateShadow)
             child: new St.Bin({
                 x_expand: true,
                 y_expand: true,
@@ -337,7 +344,7 @@ export class EffectsManager extends ExtensionComponent {
 
         global.window_group.insert_child_below(shadow, actor);
 
-        // Track position and size
+        // Track position and size via constraints...
         for (let i = 0; i < 4; i++) {
             shadow.add_constraint(new Clutter.BindConstraint({
                 source: actor,
@@ -346,11 +353,17 @@ export class EffectsManager extends ExtensionComponent {
             }));
         }
 
+        // The shadow is hidden until its first _updateShadow sets concrete
+        // constraint offsets. Painting it before then produced "Can't update
+        // stage views actor lesion-shadow needs an allocation" on GNOME 50.
+        // It is revealed (via the property bindings from the window) only
+        // after it has a real size.
+
         // Track animations and visibility
         const bindings = [];
         // Exactly RWC's binding set — notably WITHOUT 'opacity'
         for (const prop of ['pivot-point', 'translation-x', 'translation-y',
-                            'scale-x', 'scale-y', 'visible']) {
+                            'scale-x', 'scale-y']) {  // 'visible' managed manually
             try {
                 bindings.push(actor.bind_property(prop, shadow, prop,
                     GObject.BindingFlags.SYNC_CREATE));
@@ -513,6 +526,18 @@ export class EffectsManager extends ExtensionComponent {
             child.style = style;
             child.queue_redraw();
         }
+
+        // First valid sizing: now safe to paint. Bind visibility to the
+        // window from here so future show/hide tracks, without the actor
+        // ever being visible while unallocated.
+        if (!rec._shadowShown) {
+            rec._shadowShown = true;
+            try {
+                rec.shadow.visible = rec.actor.visible;
+                rec.bindings.push(rec.actor.bind_property('visible', rec.shadow, 'visible',
+                    GObject.BindingFlags.SYNC_CREATE));
+            } catch (e) {}
+        }
     }
 
     _detachWindow(win) {
@@ -533,7 +558,13 @@ export class EffectsManager extends ExtensionComponent {
             try { b.unbind(); } catch (e) {}
         });
         try {
-            if (rec.shadow) rec.shadow.destroy();
+            if (rec.shadow) {
+                rec.shadow.get_constraints().forEach(c => {
+                    try { rec.shadow.remove_constraint(c); } catch (e) {}
+                });
+                rec.shadow.clear_effects();
+                rec.shadow.destroy();
+            }
         } catch (e) {}
         try {
             const target = rec.target ?? rec.actor ?? win.get_compositor_private();

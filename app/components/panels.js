@@ -357,7 +357,7 @@ export class PanelsManager extends ExtensionComponent {
         const natPad = this._settings.get_int('panel-btn-pad-nat');
         const btnColor = this._settings.get_string('panel-btn-color');
 
-        const css = `color: ${btnColor}; border-radius: ${radius}px; -natural-hpadding: ${natPad}px; -minimum-hpadding: ${minPad}px;`;
+        const css = `color: ${btnColor}; border-radius: ${radius}px; -natural-hpadding: ${natPad}px; -minimum-hpadding: ${minPad}px; min-width: 24px; min-height: 24px;`;
 
         this._iterateButtons((btn) => {
             try {
@@ -539,6 +539,7 @@ export class PanelsManager extends ExtensionComponent {
 
                     sigs.push({ obj: btn, id: btn.connect('button-press-event', () => {
                         if (!this._isValid(btn)) return false;
+                        printerr(`[LP9] panels.js press FIRED on '${btn.accessible_name}' hasClickCb=${typeof btn._clickCallback}`);
                         try {
                             btn.set_style(`${base} background-color: ${activeBg}; box-shadow: inset 0 0 4px rgba(0,0,0,0.2);`);
                         } catch (e) {}
