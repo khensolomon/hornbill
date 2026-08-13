@@ -1,0 +1,12 @@
+tmp/
+docs/
+ui/
+ext.sh
+dev.sh
+ext.sh
+reload.sh
+restart.sh
+build.py
+install.py
+Todo.md
+Changelog.md
