@@ -182,6 +182,17 @@ const AppPanelButton = GObject.registerClass(
                     return true; // already handled by another path
                 this._lastActivateAt = now;
 
+                // If the Activities overview (including its search) is open,
+                // close it before acting. Otherwise a launched app, an
+                // activated window, or a minimized window all happen behind
+                // the overview, which stays on screen — looking like the
+                // click did nothing. The Applications/Overview buttons are
+                // the overview's own toggle and manage it themselves, so
+                // they are excluded here to avoid fighting their own logic.
+                if (!this._managesOverview && Main.overview.visible) {
+                    Main.overview.hide();
+                }
+
                 if (button === 3) {
                     if (this._menuCallback) this._menuCallback(this.menu);
                     if (this.menu) this.menu.toggle();
@@ -1684,6 +1695,7 @@ export class AppsManager extends ExtensionComponent {
                 this._appendAction(menu, 'Toggle Grid', () => Main.overview.dash.showAppsButton.clicked());
             }
         );
+        btn._managesOverview = true;
 
         btn.add_style_class_name('panel-button');
         btn.add_style_class_name('show-apps');
@@ -1763,6 +1775,7 @@ export class AppsManager extends ExtensionComponent {
                 }
             }
         );
+        btn._managesOverview = true;
 
         btn.add_style_class_name('panel-button');
         btn.add_style_class_name('workspace');
@@ -1868,6 +1881,8 @@ export class AppsManager extends ExtensionComponent {
     }
 
     _handleAppClick(app) {
+        // Overview/search is closed centrally in _activate() before any
+        // click callback runs, so no need to repeat that here.
         const windows = app.get_windows();
         const ts = global.get_current_time();
         if (app.get_n_windows() === 0) {

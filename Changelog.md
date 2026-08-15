@@ -3,6 +3,21 @@
 Notable changes to the Lesion extension. Version names follow `yy.mm.dd`
 (EGO `version-name` allows letters, numbers, spaces, and periods only).
 
+## 26.08.15.60 (version 109) — panel buttons close the overview before acting
+
+### Apps stayed launched behind an open Activities overview / search
+- Clicking a panel app button while the Activities overview, its search, or
+  the app grid was open still launched the app (or activated/minimized its
+  window), but the overview stayed on screen covering it — looking
+  unresponsive or as if the click had failed.
+- _activate(), the single entry point every panel button's click passes
+  through (favorites, running apps, Trash, and other panel buttons), now
+  closes the overview first via Main.overview.hide() when it is visible,
+  before running the button's own click behaviour.
+- The Applications and Overview buttons are exempted (btn._managesOverview),
+  since those buttons ARE the overview's own toggle and already handle
+  showing/hiding it themselves; forcing a hide first would fight that.
+
 ## 26.08.15.59 (version 108) — replaced bundled icons with built-ins
 
 ### icon/
