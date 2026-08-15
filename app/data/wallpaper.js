@@ -32,10 +32,10 @@ export const WallpaperPresets = [
         }
     },
     {
-        name: "Hornbill Forest",
+        name: "Diamond",
         // Simple string: applies to both Light and Dark
         // Flexible path: we now explicitly say "wallpaper/..."
-        wallpaper: "icon/hornbill-symbolic.svg", 
+        wallpaper: "wallpaper/lethil.svg", 
         system: {
             "primary-color": "#656161",
             "secondary-color": "#474545",
@@ -55,8 +55,8 @@ export const WallpaperPresets = [
         name: "Chain Link",
         // Object: distinct images for modes Day & Night
         wallpaper: {
-            light: "wallpaper/chain-light.png",
-            dark: "wallpaper/chain-dark.png"
+            light: "wallpaper/chain.svg",
+            dark: "wallpaper/chain.svg"
         },
         system: {
             "primary-color": "#9B9797",
