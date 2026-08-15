@@ -83,7 +83,7 @@ export class ClockManager extends ExtensionComponent {
         // custom box is non-reactive — no manual pseudo-class juggling.
         this._menuSignal = null;
 
-        // Watch for text changes in the original clock to update our custom label
+        // Watch for text changes in the original clock to update the custom label
         this._clockSignal = this._originalClockDisplay.connect('notify::text', () => {
             GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, () => {
                 try {

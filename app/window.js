@@ -30,8 +30,6 @@ export function createUI() {
         sidebar_width_fraction: 0.25,
     });
 
-    // ... [Rest of your existing createUI code remains exactly the same] ...
-    // ... [Sidebar creation, ListBox, Navigation Stack, Helpers, etc.] ...
 
     const sidebarPage = new Adw.NavigationPage({ title: 'Menu', tag: 'sidebar' });
     const sidebarToolbar = new Adw.ToolbarView();
@@ -61,7 +59,7 @@ export function createUI() {
     contentHolderPage.set_child(contentNav);
     splitView.set_content(contentHolderPage);
 
-    // --- HELPERS (Keep your existing helpers) ---
+    // --- Helpers ---
     const findPageDefinition = (id) => {
         const sections = getPages();
         const scanList = (list) => {
@@ -113,7 +111,7 @@ export function createUI() {
         }
     };
 
-    // --- CUSTOM ROW FACTORY (Keep existing) ---
+    // --- Custom row factory ---
     const createSmartRow = (pageData, { isSearchResult = false, breadcrumb = null } = {}) => {
         const row = new Gtk.ListBoxRow({ activatable: true, selectable: true });
         const box = new Gtk.Box({ orientation: Gtk.Orientation.HORIZONTAL, spacing: 12, margin_start: 12, margin_end: 12, margin_top: 8, margin_bottom: 8 });
@@ -141,7 +139,7 @@ export function createUI() {
         return row;
     };
 
-    // --- RECURSIVE UI GENERATION (Keep existing) ---
+    // --- Recursive UI generation ---
     const createAutoMenuUI = (pageData, navigator, subPageId) => {
         const page = new Adw.PreferencesPage();
         const populateGroup = (groupDef, prefGroup) => {
@@ -327,8 +325,6 @@ export function createUI() {
         loadMainPage(sections[0].items[0]);
     }
 
-    // REMOVED: splitView.connect('realize', ...); 
-    // Reason: We now use installLayout() externally to avoid "realize" issues.
 
     const updateHeader = () => {
         const isCollapsed = splitView.collapsed;

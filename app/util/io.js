@@ -15,7 +15,7 @@ export const SettingsManager = {
             const keys = settings.list_keys();
             const exportData = {
                 metadata: {
-                    version: 1, // Increment this if you make breaking architecture changes
+                    version: 1, // Bump when the export format changes incompatibly
                     uuid: AppConfig.uuid,
                     date: new Date().toISOString()
                 },
@@ -58,13 +58,13 @@ export const SettingsManager = {
 
             // Iterate over the keys provided in the JSON
             for (const [key, value] of Object.entries(data.settings)) {
-                // 1. Check if this key actually exists in our current Schema
+                // 1. Check if this key actually exists in the current schema
                 if (!schemaKeys.includes(key)) {
                     log(`Skipping unknown key: ${key} (deprecated?)`);
                     continue;
                 }
 
-                // 2. We must convert the JS value back to the specific GVariant type
+                // 2. Convert the JS value back to the specific GVariant type
                 // We use the current setting value to determine the expected type signature
                 const currentVariant = settings.get_value(key);
                 const typeString = currentVariant.get_type_string();

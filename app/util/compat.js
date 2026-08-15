@@ -5,7 +5,7 @@ import Meta from 'gi://Meta';
  * Compatibility helpers.
  *
  * Every API that behaves differently across supported GNOME versions
- * (46–49) lives here, so a new GNOME release means updating ONE file
+ * (46–51) lives here, so a new GNOME release means updating ONE file
  * instead of hunting through every component.
  */
 

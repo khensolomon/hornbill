@@ -32,7 +32,7 @@ const AppPanelButton = GObject.registerClass(
             // menu. Gestures claim the pointer sequence and run ahead of the
             // actor's own event handling, so while one is attached NO handler
             // — connected signal or overridden vfunc — ever sees a button
-            // event. Removing it returns click handling to us.
+            // event. Removing it returns click handling to this button.
             try { this.clear_actions(); } catch (e) {}
 
             // Fill the panel's height so the button has real clickable area.
@@ -58,8 +58,8 @@ const AppPanelButton = GObject.registerClass(
                 y_align: Clutter.ActorAlign.FILL,
             });
 
-            // The clickable surface. St.Button owns the click protocol; we
-            // only listen to its 'clicked' signal. button_mask enables
+            // The clickable surface. St.Button owns the click protocol; only
+            // its 'clicked' signal is used. button_mask enables
             // middle and right clicks in addition to primary.
             this._clickButton = new St.Button({
                 x_expand: true,
@@ -250,7 +250,7 @@ const AppPanelButton = GObject.registerClass(
             this._onDragEnd = onDragEndCallback;
 
             this._draggable = DND.makeDraggable(this, {
-                manualMode: true,   // we start drags ourselves; see press/motion
+                manualMode: true,   // drags are started manually; see press/motion
                 restoreOnSuccess: false,
                 dragActorOpacity: 255
             });
@@ -696,7 +696,7 @@ export class AppsManager extends ExtensionComponent {
             id: Main.overview.connect('hiding', () => this._updateVisuals())
         });
         // Connect to dash item (App Grid Button) state changes if possible, or just poll in visual update
-        // We can hook into 'hidden'/'shown' for cleaner transitions
+        // Hooking into 'hidden'/'shown' gives cleaner transitions
         this._signals.push({
             obj: Main.overview,
             id: Main.overview.connect('shown', () => this._updateVisuals())
@@ -915,7 +915,7 @@ export class AppsManager extends ExtensionComponent {
         const opacityStopped = this.getSettings().get_int('apps-opacity-stopped');
         const contentPad = this.getSettings().get_int('apps-btn-padding');
 
-        // Content padding for all of our custom buttons (no-op if unchanged)
+        // Content padding for all custom buttons (no-op if unchanged)
         const padAll = (btn) => { if (btn && btn.setContentPadding) btn.setContentPadding(contentPad); };
         padAll(this._items.trash);
         padAll(this._items.showgrid);
@@ -1718,7 +1718,7 @@ export class AppsManager extends ExtensionComponent {
         // CRITICAL (GNOME 50): container.hide() alone leaves the
         // ActivitiesButton reactive and in the panel's input region, so it
         // floats invisibly over the app buttons and swallows every click
-        // (diagnosed: all releases targeted ActivitiesButton, never our
+        // (diagnosed: all releases targeted ActivitiesButton, never the
         // buttons). Disable reactivity and input on hide; restore on show.
         const hideDefault = this.getSettings().get_boolean('apps-overview-hide-default');
         const act = Main.panel.statusArea.activities;
@@ -1755,7 +1755,7 @@ export class AppsManager extends ExtensionComponent {
         const btn = new AppPanelButton(
             icon, 'Overview',
             () => {
-                 // Toggle overview, but ensure we aren't in grid mode if showing
+                 // Toggle overview, but ensure it isn't in grid mode when showing
                  if (Main.overview.visible && !Main.overview.dash.showAppsButton.checked) {
                      Main.overview.hide();
                  } else {

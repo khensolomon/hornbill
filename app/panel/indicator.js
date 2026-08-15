@@ -70,7 +70,7 @@ export class Indicator {
     const nameId = AppConfig.name || "Lesion Extension";
 
     // A standard PanelMenu.Button. Its built-in menu is used for the
-    // right-click menu; we override the primary button to open preferences.
+    // right-click menu; the primary button is overridden to open preferences.
     this.button = new PanelMenu.Button(0.5, nameId, false);
 
     // Create Icon Bin, wrapped in an St.Button.
@@ -319,7 +319,7 @@ export class Indicator {
     if (isPrefsOpen) {
         const closeItem = new PopupMenu.PopupMenuItem("Close");
         closeItem.connect("activate", () => {
-             // Assuming you implement closePreferences in your extension class
+             // Use closePreferences when the extension class provides it
              if (typeof this.extension.closePreferences === 'function') {
                  this.extension.closePreferences();
              } else {

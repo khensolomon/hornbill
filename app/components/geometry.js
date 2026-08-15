@@ -164,7 +164,7 @@ export class GeometryManager extends ExtensionComponent {
      */
     /**
      * OPERATION TRACE. The session terminations leave no [Lesion] error
-     * because the failure is Xwayland exiting, not our JS throwing. Naming
+     * because the failure is Xwayland exiting, not a JS exception here. Naming
      * each risky window operation immediately BEFORE it runs makes the
      * final journal line before a crash identify the exact call.
      */
@@ -635,7 +635,7 @@ export class GeometryManager extends ExtensionComponent {
             return near(r.x, target.x) && near(r.y, target.y) &&
                    near(r.width, target.w) && near(r.height, target.h);
         } catch (e) {
-            return true; // Don't fight windows we can't measure
+            return true; // Don't fight windows that can't be measured
         }
     }
 
@@ -986,7 +986,7 @@ export class GeometryManager extends ExtensionComponent {
 
         try {
             this._applyWorkspace(win, geo);
-            // Apply the floating rect first (when we have one) so a later
+            // Apply the floating rect first (when present) so a later
             // unmaximize returns to the remembered size, then apply the
             // maximized state on top if that's how the app was closed.
             if (geo.w > 50 && geo.h > 50) {
@@ -1033,7 +1033,7 @@ export class GeometryManager extends ExtensionComponent {
 
         const data = this._windowData.get(win);
         // Unsettled = the app is still doing its initial self-placement, or
-        // our own restore is in flight. Never persist those values.
+        // a restore is in flight. Never persist those values.
         if (!data || !data.settled) return;
 
         if (win.is_fullscreen()) return;
@@ -1112,7 +1112,7 @@ export class GeometryManager extends ExtensionComponent {
         try {
             const json = JSON.stringify(this._geometryCache);
             this._lastWrittenJson = json; // so the changed:: observer can
-                                          // tell our writes from external ones
+                                          // distinguish in-process writes from external ones
             this.getSettings().set_string('geometry-data', json);
             log("[Geometry] Saved state to disk.");
         } catch (e) {

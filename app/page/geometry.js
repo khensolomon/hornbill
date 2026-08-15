@@ -102,7 +102,7 @@ export function createGeometryUI() {
         const currentKeySet = new Set(currentKeys);
 
         // 1. REMOVE STALE ROWS
-        // Check our Memory Map. If a key exists in Map but not in Data, delete it.
+        // Check the memory map. If a key exists in Map but not in Data, delete it.
         for (const [key, rowWidget] of activeRows.entries()) {
             if (!currentKeySet.has(key)) {
                 dataGroup.remove(rowWidget);
@@ -127,7 +127,7 @@ export function createGeometryUI() {
             }
             return; // Done
         } else {
-            // We have data, remove empty state if it exists
+            // Data present: remove the empty state if it exists
             if (emptyStateRow) {
                 dataGroup.remove(emptyStateRow);
                 emptyStateRow = null;
@@ -176,9 +176,9 @@ export function createGeometryUI() {
                     }
                     
                     // 3. Trigger check (handles showing empty state if last item gone)
-                    // We call updateList logic again via the signal or manually if needed
+                    // updateList runs again via the signal, or manually if needed
                     if (activeRows.size === 0) {
-                        // Manually show empty state if we deleted the last one
+                        // Manually show the empty state when the last row is deleted
                         // to ensure instant feedback without waiting for settings signal
                         // (Though the signal will fire shortly after)
                     }
@@ -197,16 +197,21 @@ export function createGeometryUI() {
     updateList();
 
     // --- LIVE UPDATES ---
-    let updateTimeout = null;
+    let updateTimeoutId = 0;
     const changeSignalId = settings.connect('changed::geometry-data', () => {
-        if (updateTimeout) return;
-        updateTimeout = setTimeout(() => {
+        if (updateTimeoutId) return;
+        updateTimeoutId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 100, () => {
+            updateTimeoutId = 0;
             updateList();
-            updateTimeout = null;
-        }, 100); 
+            return GLib.SOURCE_REMOVE;
+        });
     });
 
     page.connect('destroy', () => {
+        if (updateTimeoutId) {
+            GLib.source_remove(updateTimeoutId);
+            updateTimeoutId = 0;
+        }
         if (changeSignalId) settings.disconnect(changeSignalId);
         activeRows.clear();
     });

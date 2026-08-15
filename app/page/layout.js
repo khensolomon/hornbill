@@ -550,7 +550,7 @@ export function createLayoutUI() {
     page.add(favGroup);
 
     // Using a ListBox with "boxed-list" style matches Adwaita preferences styling
-    // while giving us control over row logic for DND.
+    // while keeping control over row logic for DND.
     const favList = new Gtk.ListBox({
         selection_mode: Gtk.SelectionMode.NONE,
         css_classes: ['boxed-list']
@@ -604,7 +604,7 @@ export function createLayoutUI() {
             // 3. DND Controller: Source (Draggable)
             const dragSource = new Gtk.DragSource({ actions: Gdk.DragAction.MOVE });
             dragSource.connect('prepare', (source, x, y) => {
-                // We drag the index of the item as a string (simplest payload for GJS)
+                // The item index is dragged as a string (simplest payload for GJS)
                 return Gdk.ContentProvider.new_for_value(index.toString());
             });
             // Visual feedback while dragging
@@ -648,7 +648,7 @@ export function createLayoutUI() {
 
     // Listen for external changes (e.g. if user unpins via Shell)
     const id = shellSettings.connect('changed::favorite-apps', refreshFavs);
-    // Note: We don't have a clean way to disconnect this signal when the page is destroyed 
+    // Note: this signal is not disconnected when the page is destroyed 
     // in this specific functional structure, but in Prefs windows, the process usually ends 
     // when the window closes, so it's acceptable.
     

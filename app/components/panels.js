@@ -72,7 +72,7 @@ export class PanelsManager extends ExtensionComponent {
 
         // Cleanup settings signals.
         // NOTE: never run_dispose() a Gio.Settings — it is shared and disposing
-        // it invalidates every other consumer. Disconnect our own signals only.
+        // it invalidates every other consumer. Disconnect only the signals added here.
         if (this._settings) {
             this._settingsSignals.forEach(id => {
                 try { this._settings.disconnect(id); } catch (e) {}
@@ -141,7 +141,7 @@ export class PanelsManager extends ExtensionComponent {
     }
 
     _refreshAll() {
-        // Use our consistent settings object
+        // Use the shared settings object
         if (!this._settings.get_boolean('panel-enabled')) {
             if (Main.panel) Main.panel.set_style(this._savedPanelStyle || null);
             const monitor = Main.layoutManager.primaryMonitor;
@@ -395,7 +395,7 @@ export class PanelsManager extends ExtensionComponent {
 
         // Since the theme's own pill (which lived on the inner '.clock') is
         // neutralized below, the clock would have NO hover/active feedback
-        // unless we provide it here. Use the configured colors when the
+        // unless it is provided here. Use the configured colors when the
         // hover effect is on; otherwise fall back to a shell-like overlay so
         // the clock still behaves like the other buttons' theme defaults.
         const hoverBg = hoverEnabled
@@ -539,7 +539,6 @@ export class PanelsManager extends ExtensionComponent {
 
                     sigs.push({ obj: btn, id: btn.connect('button-press-event', () => {
                         if (!this._isValid(btn)) return false;
-                        printerr(`[LP9] panels.js press FIRED on '${btn.accessible_name}' hasClickCb=${typeof btn._clickCallback}`);
                         try {
                             btn.set_style(`${base} background-color: ${activeBg}; box-shadow: inset 0 0 4px rgba(0,0,0,0.2);`);
                         } catch (e) {}

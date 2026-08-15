@@ -143,7 +143,7 @@ export function createWallpaperUI() {
             bgArea.set_hexpand(true);
             bgArea.set_vexpand(true);
 
-            // Note: Presets still define 'primary-color' in 'system' block, which we now map to Light Mode key
+            // Note: Presets still define 'primary-color' in the 'system' block, now mapped to the Light Mode key
             const pColor = preset.system?.['primary-color'] || '#000000';
             const sColor = preset.system?.['secondary-color'] || pColor;
             const type = preset.system?.['color-shading-type'] || 'solid';

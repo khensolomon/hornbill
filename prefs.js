@@ -15,8 +15,8 @@ export default class GnomeSplitViewPrefs extends ExtensionPreferences {
 
     fillPreferencesWindow(window) {
         // Bundled icons: recent adwaita-icon-theme trims removed several
-        // symbolics our UI relied on (edit-undo, view-refresh, link, ...),
-        // so we ship our own and register the search path once.
+        // symbolics the UI relies on (edit-undo, view-refresh, link, ...),
+        // so the extension ships its own and registers the search path once.
         try {
             const display = window.get_display();
             const theme = Gtk.IconTheme.get_for_display(display);

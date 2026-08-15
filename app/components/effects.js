@@ -45,7 +45,7 @@ uniform vec4 corner_mask; // 1.0 = round, 0.0 = square: TL, TR, BL, BR
 `;
 
 // Masking (RWC math): everything outside the frame is removed (that's the
-// app's own shadow — replaced by our shadow actor); inside the frame, the
+// app's own shadow — replaced by the shadow actor); inside the frame, the
 // corner circle test runs with an antialiasing band centered on the curve
 // (radius +/- 0.5, linear falloff), touching only the corner squares.
 const CODE = `
@@ -137,7 +137,7 @@ export class EffectsManager extends ExtensionComponent {
         });
         this._signals.push({ obj: global.display, id });
 
-        // RESTACKING: Mutter reorders window actors on focus/raise, but our
+        // RESTACKING: Mutter reorders window actors on focus/raise, but the
         // shadow actors keep their old depth — a stale shadow can end up
         // ABOVE a newly raised window, painting a dark rim over its edges
         // that reads as the window being translucent. Re-sync every shadow
@@ -414,8 +414,8 @@ export class EffectsManager extends ExtensionComponent {
 
     /**
      * Unfocused-only transparency. The FOCUSED window is always fully
-     * opaque — dimming the window you're actively inspecting (a graphics
-     * editor, say) lets the background bleed into your visual judgement,
+     * opaque — dimming the focused window (a graphics editor, say) would
+     * let the background bleed into visual judgement,
      * which is exactly the annoyance that motivated this design.
      * Skips actors with an opacity transition in flight (the geometry
      * fade-move owns those moments).
@@ -518,7 +518,7 @@ export class EffectsManager extends ExtensionComponent {
                 : 'box-shadow: 0 2px 10px 2px rgba(0,0,0,0.18);';
             // Match the shadow body to the per-corner rounding so a squared
             // window corner doesn't sit on a rounded shadow.
-            // CSS order: TL TR BR BL; our mask order: TL TR BL BR.
+            // CSS order: TL TR BR BL; the mask order: TL TR BL BR.
             const r = (i) => `${mask[i] ? radius : 0}px`;
             style = `background: white; border-radius: ${r(0)} ${r(1)} ${r(3)} ${r(2)}; ${shadowCss}`;
         }

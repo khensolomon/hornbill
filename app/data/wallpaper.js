@@ -4,7 +4,7 @@
  * - name: Display name
  * - wallpaper: String (path relative to extension root) OR Object { light, dark }
  * - system: Settings for 'org.gnome.desktop.background'
- * - extension: Settings for our extension schema
+ * - extension: Settings for the extension schema
  * * * Path Examples:
  * - "wallpaper/forest.jpg"  -> looks inside [extension_root]/wallpaper/
  * - "assets/bg.png"         -> looks inside [extension_root]/assets/
@@ -34,7 +34,7 @@ export const WallpaperPresets = [
     {
         name: "Diamond",
         // Simple string: applies to both Light and Dark
-        // Flexible path: we now explicitly say "wallpaper/..."
+        // Flexible path: explicitly prefixed with "wallpaper/..."
         wallpaper: "wallpaper/lethil.svg", 
         system: {
             "primary-color": "#656161",
@@ -75,7 +75,7 @@ export const WallpaperPresets = [
     },
     {
         name: "Mono Minimal",
-        // Example: could be in a different folder if you wanted
+        // Example: an absolute path in another folder also works
         wallpaper: "icon/hornbill.svg", 
         system: {
             "primary-color": "#615F5F",

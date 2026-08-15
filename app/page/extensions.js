@@ -18,7 +18,7 @@ const IFACE = 'org.gnome.Shell.Extensions';
 const TYPE_SYSTEM = 1;
 const TYPE_USER = 2;
 
-// Extension "state" (subset we care about).
+// Extension "state" (relevant subset).
 const STATE_ENABLED = 1;
 const STATE_DISABLED = 2;
 const STATE_ERROR = 3;
@@ -128,7 +128,7 @@ export function createExtensionsUI() {
     statusGroup.add(statusRow);
     page.add(statusGroup);
 
-    // Own extension's uuid, so we never offer to disable/remove ourselves.
+    // The extension's own uuid, so it never offers to disable/remove itself.
     const selfUuid = AppConfig.metadata?.uuid ?? 'lesion@lethil.me';
 
     const userGroup = new Adw.PreferencesGroup({
@@ -300,7 +300,7 @@ export function createExtensionsUI() {
         // Live updates: the service emits ExtensionStateChanged whenever any
         // extension is enabled, disabled, installed, or removed — including
         // from the CLI or the official app. Rebuild the list when it fires so
-        // our switches always reflect the real state. Debounced, because a
+        // the switches always reflect the real state. Debounced, because a
         // single action can emit several signals in a burst.
         try {
             proxy.connect('g-signal', (_proxy, _sender, signalName) => {

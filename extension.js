@@ -36,7 +36,13 @@ export default class LesionExtension extends Extension {
       try { global.display.disconnect(this._winCreatedId); } catch (e) {}
       this._winCreatedId = 0;
     }
-    this._prefsWindow = null;    [...this._instances].reverse().forEach((instance) => {
+    if (this._adoptTimers) {
+      for (const id of this._adoptTimers) GLib.source_remove(id);
+      this._adoptTimers.clear();
+    }
+    this._prefsWindow = null;
+
+    [...this._instances].reverse().forEach((instance) => {
       try {
         if (typeof instance.disable === "function") {
           instance.disable();
@@ -48,7 +54,7 @@ export default class LesionExtension extends Extension {
     this._instances = [];
   }
 
-  // 1. Find OUR specific preferences window
+  // Find this extension's own preferences window
   /**
    * Hold a live reference to the preferences window.
    *
@@ -60,6 +66,7 @@ export default class LesionExtension extends Extension {
    */
   _trackPrefsWindow() {
     this._prefsWindow = null;
+    this._adoptTimers = new Set();
 
     const isPrefsWindow = (win) => {
       try {
@@ -93,11 +100,16 @@ export default class LesionExtension extends Extension {
       // wm_class frequently arrives after creation; try now, then again.
       if (adopt(win)) return;
       let tries = 0;
-      GLib.timeout_add(GLib.PRIORITY_DEFAULT, 150, () => {
+      let sourceId = 0;
+      sourceId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 150, () => {
         tries++;
-        if (adopt(win) || tries > 12) return GLib.SOURCE_REMOVE;
+        if (adopt(win) || tries > 12) {
+          this._adoptTimers.delete(sourceId);
+          return GLib.SOURCE_REMOVE;
+        }
         return GLib.SOURCE_CONTINUE;
       });
+      this._adoptTimers.add(sourceId);
     });
   }
 

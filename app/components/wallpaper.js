@@ -16,13 +16,13 @@ export class WallpaperManager extends ExtensionComponent {
         this._backupWallpaper();
 
         // FIX: background actors are recreated on monitor changes and
-        // wallpaper switches, silently dropping our effects. Reapply then.
+        // wallpaper switches, silently dropping the effects. Reapply then.
         this._monitorsChangedId = Main.layoutManager.connect('monitors-changed', () => {
             if (this.getSettings().get_boolean('wallpaper-enabled'))
                 this._updateEffects();
         });
 
-        // Check if we need to initialize Light colors from system
+        // Initialize Light colors from the system when unset
         this._initLightColors();
 
         this.observe('changed::wallpaper-enabled', () => this._updateMasterState());

@@ -3,6 +3,34 @@
 Notable changes to the Lesion extension. Version names follow `yy.mm.dd`
 (EGO `version-name` allows letters, numbers, spaces, and periods only).
 
+## 26.08.15.62 (version 111) — dead-code removal, impersonal docs, EGO cleanup
+
+### Dead code
+- Removed 8 unreachable files (~1,875 lines): app/components/dock.js,
+  app/components/mimic.js, app/panel/appbutton.js, and the orphaned
+  preferences pages app/page/{dock,appbutton,mimic,setting,demo}.js. None
+  were reachable from extension.js, prefs.js, or app.js.
+- Dropped the commented-out DockManager/MimicManager/AppButton imports and
+  list entries from app/components/index.js.
+
+### EGO review compliance
+- Removed an ungated printerr in panels.js that fired on every panel button
+  press (violated the no-excessive-logging rule).
+- Replaced setTimeout in the Geometry preferences page with a tracked
+  GLib.timeout_add that is removed on page destroy (remove-main-loop-sources).
+- extension.js now tracks the per-window preferences-adoption timers and
+  removes any pending ones in disable().
+- Removed scaffolding/narration comments left in window.js
+  ("[Rest of your existing createUI code...]", "Keep existing", etc.) that
+  read as generated boilerplate.
+
+### Documentation style
+- Rewrote comments to impersonal voice: removed all first- and second-person
+  pronouns (we/our/us, you/your) across the live source.
+- Reconciled the supported-version note in util/compat.js (46-49 -> 46-51) to
+  match metadata.json.
+
+
 ## 26.08.15.61 (version 110) — metadata cleanup, README, dead CSS removed
 
 ### metadata.json
