@@ -1,79 +1,36 @@
-# Lesion - A GNOME Shell CSS Manager
+# Lesion
 
-Lesion is a simple yet powerful GNOME Shell extension that allows you to apply custom CSS stylesheets to your desktop, giving you the freedom to tweak and personalize your GNOME experience.
+A GNOME Shell extension that personalizes the desktop from one place — panel, clock, apps, and window behavior — aiming to replace the need for several separate extensions.
 
-Whether you want to apply a few small fixes or completely overhaul your UI, Lesion provides a straightforward interface to manage both bundled and user-provided stylesheets.
+Supports GNOME Shell 46–51.
 
 ## Features
 
-* **Bundled Styles:** Easily enable or disable stylesheets that come packaged with the extension.
-* **Custom User Styles:** Add your own .css files from anywhere on your computer.
-* **Flexible Management:** For each custom style, you can:
-  * Toggle it on or off.
-  * Open the file directly in your default text editor.
-  * Remove it from the list without deleting the original file.
-* **Modern UI:** A clean and simple preferences window built with Adwaita for a native look and feel.
+**Panel** — colors, gradients, blur, borders, shadows, and per-button styling, with one-click presets that recreate the macOS menu bar or the Windows 11 taskbar.
 
-## Installation
+**Clock** — reposition and reformat the panel clock.
 
-There are three ways to install Lesion:
+**Apps** — Show Apps, favorites, running apps, removable drives, and trash as panel buttons.
 
-1. GNOME Extensions Website (Recommended)
+**Windows** — remember and restore each application's size and position, round window corners uniformly (with square corners at screen edges, replacement drop shadows, and automatic squaring when maximized), and optionally dim unfocused windows.
 
-   * Visit the Lesion page on [extensions.gnome.org](https://extensions.gnome.org/) (once published).
-   * Click the on/off switch to install and enable the extension automatically.
+**Extras** — custom CSS injection, a dual-mode wallpaper engine, and a built-in manager for other installed GNOME Shell extensions.
 
-2. Manual Installation (from Release)
+## Install
 
-   This method is for installing a pre-packaged .zip file from a release.
+**From extensions.gnome.org**
+Search for "Lesion" and install from there.
 
-   * Download the latest `lesion@lethil.zip` from the [GitHub Releases page](https://www.google.com/search?q=https://github.com/khensolomon/lesion/releases).
-   * Unzip the downloaded file.
-   * Copy the resulting lesion@lethil directory to \~/.local/share/gnome-shell/extensions/.
-   * Restart GNOME Shell (Alt + F2, type r, press Enter) or log out and back in.
-   * Enable the extension using the Extensions app.
-
-3. Installation from Source (for Development)
-
-   This method is for developers who want to contribute or test the latest changes.
-
-   1. Clone the repository:
-
-      ```bash
-      git clone https://github.com/khensolomon/lesion.git
-
-      cd lesion
-      ```
-
-   2. Compile the GSettings schemas:
-
-      ```bash
-      glib-compile-schemas schemas/
-      ```
-
-   3. Link the extension directory to your local extensions folder:
-
-      ```bash
-      ln -s "$(pwd)" \~/.local/share/gnome-shell/extensions/lesion@lethil.me
-      ```
-
-   4. Restart GNOME Shell (`Alt` + `F2`, type `r`, press `Enter`).
-   5. Enable the extension using the Extensions app.
+**Manual install**
+1. Download the latest release zip.
+2. `gnome-extensions install --force lesion@lethil.me.shell-extension.zip`
+3. Log out and back in.
+4. Enable it in the Extensions app, or run `gnome-extensions enable lesion@lethil.me`.
 
 ## Usage
 
-After installation, open the Extensions app, find "Lesion", and click the settings icon.
+Click the Lesion icon in the panel to open preferences, or right-click it for a quick menu. Everything is organized under Dashboard, Desktop, Panel, Window, Advanced, and About.
 
-From the preferences window, you can toggle the bundled styles in the "Bundled CSS Style" section or add your own files using the "Custom CSS Style" section. Any changes you make are applied in real-time.
+## Contributing
 
-## Development
-
-```bash
-gjs ./app.js -m
-gjs ./ui/window-half-seperated.js
-gjs ~/.local/share/gnome-shell/extensions/lesion@lethil/prefs.js
-```
-
-## Contributing & Feedback
-
-Found a bug or have a feature request? Please [open an issue](https://www.google.com/search?q=https://github.com/khensolomon/lesion/issues) on GitHub\!
+Issues and pull requests are welcome — see [Changelog.md](Changelog.md) for recent work and [LICENSE](LICENSE) for terms.

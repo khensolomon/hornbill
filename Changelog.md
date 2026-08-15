@@ -3,6 +3,24 @@
 Notable changes to the Lesion extension. Version names follow `yy.mm.dd`
 (EGO `version-name` allows letters, numbers, spaces, and periods only).
 
+## 26.08.15.61 (version 110) — metadata cleanup, README, dead CSS removed
+
+### metadata.json
+- Removed the MyOrdbok link from the About page's links list — unrelated to
+  this extension.
+- Fixed the readme link to point at README.md (the actual filename) instead
+  of the old Readme.md casing.
+
+### README.md
+- Added a short README: what the extension does, supported GNOME versions,
+  install steps, and where to file issues.
+
+### style/
+- Removed dynamic-corners.css and panel-clock.css. Neither was referenced
+  anywhere in the codebase or the build/packaging script — leftover
+  experiments from before the proper geometry engine and the Appearance
+  page's preset system existed.
+
 ## 26.08.15.60 (version 109) — panel buttons close the overview before acting
 
 ### Apps stayed launched behind an open Activities overview / search
