@@ -2,18 +2,18 @@
 .extensionignore
 
 .git/
+.vscode/
 tmp/
 ui/
 docs/
-.vscode/
 
 ext.sh
-dev.sh
-ext.sh
-reload.sh
-restart.sh
+
 build.py
 install.py
 
+Makefile
 Todo.md
 Changelog.md
+
+icon/bible.svg
