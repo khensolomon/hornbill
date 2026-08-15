@@ -3,6 +3,124 @@
 Notable changes to the Lesion extension. Version names follow `yy.mm.dd`
 (EGO `version-name` allows letters, numbers, spaces, and periods only).
 
+## 26.08.15.58 (version 107) — Extensions page: Lesion listed, link buttons, focus highlight
+
+### Advanced -> Extensions
+- Lesion is listed here again like any other extension (its own
+  remove/toggle stay disabled, since removing or disabling the
+  extension you are currently configuring from inside itself is not a
+  safe action).
+- The settings-gear button ("Open preference") is replaced with a link
+  button that opens the extension's homepage URL, taken from its own
+  metadata.json via the shell's ListExtensions. OpenExtensionPrefs
+  proved unreliable across shell versions and needs a parent-window
+  handle a prefs process cannot supply; a homepage link always works
+  and needs nothing from the target extension.
+
+## 26.08.14.57 (version 106) — down to 52, consolidated
+
+Versions 52 through 106 were built and shipped individually during one
+long debugging arc but were not each recorded here as separate entries.
+This single block covers the whole arc, grouped by what was actually
+fixed rather than by build number, since many builds in the middle were
+diagnostic-only or superseded by the next attempt.
+
+### Panel app buttons: the GNOME 50 click investigation (v52-v86)
+On a fresh Ubuntu 26.04 / GNOME 50.1 install, panel app buttons stopped
+responding to clicks entirely (window corners and shadows also briefly
+regressed). This took a long forensic chain to resolve:
+- **Shader/effects broke first**: `Shell.SnippetHook` moved to
+  `Cogl.SnippetHook` in GNOME 47; on 50 the old enum was undefined, so
+  window corner/shadow effects silently failed to attach. Fixed by
+  importing Cogl directly.
+- **Buttons had collapsed to zero size** (confirmed via live actor
+  inspection: `w=0 h=0`, later `h=0` alone): `min-width: 0px` plus an
+  inner box that requested no intrinsic size let the button's computed
+  size resolve to nothing under GNOME 50's stricter layout. Fixed with a
+  real minimum size and an inner box set to fill its parent.
+- **The root cause of "clicks do nothing"**: `PanelMenu.Button` attaches a
+  `Clutter_ClickGesture` that claims the pointer sequence and runs ahead
+  of all of the actor's own event handling -- before any connected signal
+  handler and before any overridden vfunc. No amount of rewriting the
+  click handler could work while that gesture was attached. The fix,
+  proven by directly inspecting the actor's attached actions, is
+  `clear_actions()` right after construction, followed by the extension's
+  own click handling.
+- The reliable, final click implementation wraps the button's content in
+  an `St.Button` and listens to its `clicked` signal -- the same pattern
+  GNOME Shell's own `AppDisplay.AppIcon` uses -- rather than
+  hand-assembling press/release pairing from raw button events, which
+  proved fragile across shell versions.
+- App launch now uses `app.activate_full(-1, timestamp)` so the shell's
+  startup notification tracks the launch and clears the busy cursor when
+  the window maps, instead of spinning until timeout.
+
+### Preferences UI: reorganisation and an Extensions manager (v46, v87-v104)
+- Preferences navigation reorganised into object-based groups: Dashboard
+  (ungrouped) / Desktop / Panel / Window / Advanced / About. Several page
+  files renamed to match (`style.js` to `appearance.js`, `apps.js` to
+  `layout.js`, `css.js` to `stylesheet.js`).
+- New page: **Advanced -> Extensions**, a management UI for all installed
+  GNOME Shell extensions (user and system), built on the
+  `org.gnome.Shell.Extensions` D-Bus service -- the same one the official
+  Extensions app uses. Supports enable/disable (live), remove (user
+  extensions only -- system extensions are root-owned), and opens each
+  extension's homepage URL (read from its own metadata) rather than trying
+  to launch its preferences, since `OpenExtensionPrefs` needs a
+  parent-window handle a prefs process cannot reliably supply and proved
+  unreliable across shell versions.
+- The page's D-Bus calls were made fully asynchronous after an early
+  version, which used `call_sync` on the UI thread, froze the whole
+  preferences window ("Extensions is not responding").
+- The page subscribes to the service's `ExtensionStateChanged` signal so
+  external changes (CLI, the official app) are reflected live.
+- Fixed a crash on every preferences open: `AdwNavigationView` threw
+  "Duplicate page tag" when a page (e.g. About) could be pushed onto the
+  navigation stack while already present, which aborted UI construction
+  and left GNOME reporting "Extension did not provide any UI". Navigation
+  now checks for an existing page before pushing, and the preferences
+  window is given placeholder content immediately so a later failure can
+  no longer produce an empty/error window.
+- Fixed an invalid GTK CSS rule (`height` is not a GTK CSS property; the
+  intended rule used `min-height`) that had been logging a theme-parser
+  error on every preferences load.
+
+### Indicator menu
+- Removed the "Options" submenu: both of its entries were guarded on
+  extension methods that were never implemented, so it always rendered
+  empty.
+- Added "Extensions", opening the Advanced -> Extensions page via the
+  existing deep-link mechanism.
+- The build-version stamp moved from the top of the menu to a dimmed,
+  non-interactive line at the bottom.
+- "Disable Extension" now asks for confirmation (Cancel default, Disable
+  styled as destructive) via the shell's `ModalDialog`, since this code
+  runs inside gnome-shell rather than the preferences process.
+- The indicator's own click handling hit the same `Clutter_ClickGesture`
+  issue as the app buttons and was fixed the same way.
+
+### Preferences window: raising it from behind another window
+Bringing an already-open preferences window to the front (from the
+indicator's left-click or its "Preferences" menu item) required its own
+investigation, separate from the click issue above:
+- Matching the window by title or by scanning `list_all_windows()` on
+  demand proved unreliable: Adw retitles the window to whatever page is
+  visible ("About", "Panel", ...) rather than the extension's name, and a
+  scan run at the wrong moment could see nothing, or only a stale
+  "Extension Error" dialog left over from an earlier failed launch.
+- The reliable fix holds a live reference instead of searching for one:
+  the extension connects to `display::window-created` and adopts the
+  first new window whose `wm_class` / `gtk-application-id` is
+  `org.gnome.Shell.Extensions` (re-checked briefly after creation, since
+  `wm_class` is often not set at the moment the window first appears),
+  and drops the reference when the window is unmanaged.
+- Raising that window unminimizes it, moves it to the active workspace,
+  and calls `Main.activateWindow()` -- `activate()` alone does not lift a
+  window from behind another on Wayland.
+- The indicator now highlights (an `active` style state) while the
+  preferences window is open, using the same tracked reference -- a cheap
+  boolean check, not a poll of the window list.
+
 ## 26.08.07.2 (version 51)
 
 ### Panel Layout

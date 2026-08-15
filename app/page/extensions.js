@@ -3,6 +3,7 @@ import Gtk from 'gi://Gtk';
 import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
 import GObject from 'gi://GObject';
+import Gdk from 'gi://Gdk';
 import { AppConfig } from '../config.js';
 import { log, logError } from '../util/logger.js';
 
@@ -83,6 +84,7 @@ function _listExtensionsAsync(proxy, callback) {
                 const typeV = get('type');
                 const prefsV = get('hasPrefs');
                 const descV = get('description');
+                const urlV = get('url');
 
                 result.push({
                     uuid,
@@ -91,6 +93,7 @@ function _listExtensionsAsync(proxy, callback) {
                     state: stateV ? stateV.get_double() : 0,
                     type: typeV ? typeV.get_double() : 0,
                     hasPrefs: prefsV ? prefsV.get_boolean() : false,
+                    url: urlV ? urlV.get_string()[0] : '',
                 });
             }
         } catch (e) {
@@ -168,42 +171,11 @@ export function createExtensionsUI() {
             });
     };
 
-    const openPrefs = (uuid) => {
-        // Prefer the D-Bus method with a real parent-window handle exported
-        // from our own window; without a handle it silently no-ops, which is
-        // why it did nothing before. Fall back to the CLI if anything fails.
-        const spawnCli = () => {
-            try {
-                const proc = Gio.Subprocess.new(
-                    ['gnome-extensions', 'prefs', uuid],
-                    Gio.SubprocessFlags.NONE
-                );
-                proc.wait_async(null, (p, res) => {
-                    try { p.wait_finish(res); }
-                    catch (e) { logError('gnome-extensions prefs failed', e); }
-                });
-            } catch (e) {
-                logError('Could not launch extension preferences', e);
-            }
-        };
-
-        if (!proxy) { spawnCli(); return; }
-
-        proxy.call('OpenExtensionPrefs',
-            new GLib.Variant('(ssa{sv})', [uuid, '', {}]),
-            Gio.DBusCallFlags.NONE, -1, null, (src, res) => {
-                try {
-                    proxy.call_finish(res);
-                } catch (e) {
-                    // Method missing/failed on this shell — use the CLI.
-                    spawnCli();
-                }
-            });
-    };
-
     const buildRow = (ext) => {
-        // Lesion itself is filtered out before this point, so no self-handling.
+        // Lesion is included here like any other extension (see request);
+        // its own toggle/remove are still guarded further below.
         const isUser = ext.type === TYPE_USER;
+        const isSelf = ext.uuid === selfUuid;
         const enabled = ext.state === STATE_ENABLED;
 
         const row = new Adw.ActionRow({
@@ -211,25 +183,40 @@ export function createExtensionsUI() {
             subtitle: ext.uuid,
         });
 
-        if (ext.hasPrefs) {
-            const prefsBtn = new Gtk.Button({
-                icon_name: 'emblem-system-symbolic',
-                tooltip_text: 'Open preference',
+        // OpenExtensionPrefs is unreliable across shell versions (it needs a
+        // parent-window handle a prefs process cannot supply, and even the
+        // gnome-extensions CLI fallback depends on PATH and the target
+        // extension's own prefs.js being well-behaved). A link to the
+        // extension's homepage — taken straight from its metadata.json,
+        // exposed by the shell's ListExtensions as 'url' — always works and
+        // needs nothing from the target extension.
+        if (ext.url) {
+            const linkBtn = new Gtk.Button({
+                icon_name: 'web-browser-symbolic',
+                tooltip_text: 'Open extension homepage',
                 valign: Gtk.Align.CENTER,
                 css_classes: ['flat'],
             });
-            prefsBtn.connect('clicked', () => openPrefs(ext.uuid));
-            row.add_suffix(prefsBtn);
+            linkBtn.connect('clicked', () => {
+                try {
+                    Gtk.show_uri(row.get_root(), ext.url, Gdk.CURRENT_TIME);
+                } catch (e) {
+                    logError('Could not open extension url', e);
+                }
+            });
+            row.add_suffix(linkBtn);
         }
 
         const removeBtn = new Gtk.Button({
             icon_name: 'user-trash-symbolic',
-            tooltip_text: isUser
-                ? 'Remove this extension'
-                : 'System extensions cannot be removed here',
+            tooltip_text: isSelf
+                ? 'Cannot remove the extension you are configuring'
+                : isUser
+                    ? 'Remove this extension'
+                    : 'System extensions cannot be removed here',
             valign: Gtk.Align.CENTER,
             css_classes: ['flat'],
-            sensitive: isUser,
+            sensitive: isUser && !isSelf,
         });
         removeBtn.connect('clicked', () => {
             _confirmRemove(row.get_root(), ext.name, () => {
@@ -244,6 +231,8 @@ export function createExtensionsUI() {
         const toggle = new Gtk.Switch({
             active: enabled,
             valign: Gtk.Align.CENTER,
+            sensitive: !isSelf,
+            tooltip_text: isSelf ? 'This extension is enabled while you configure it' : '',
         });
         toggle.connect('state-set', (_sw, state) => {
             doAction(state ? 'EnableExtension' : 'DisableExtension', ext.uuid, null);
@@ -260,7 +249,6 @@ export function createExtensionsUI() {
 
         const list = all
             .filter(e => e.state !== STATE_UNINSTALLED)
-            .filter(e => e.uuid !== selfUuid) // don't manage ourselves
             .sort((a, b) => (a.name || a.uuid).localeCompare(b.name || b.uuid));
 
         let userCount = 0, systemCount = 0;
