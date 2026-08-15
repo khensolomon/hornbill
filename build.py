@@ -10,7 +10,7 @@ it to a target directory.
 USAGE EXAMPLES:
 -----------------------
 1. Standard Build (Recommended)
-   Includes 'build.py' in the zip so you have the tool available in backups.
+   Includes 'build.py' in the zip to ensure the tool remains available in backups.
    $ python3 build.py
 
 2. Production Build (Clean)
@@ -18,8 +18,9 @@ USAGE EXAMPLES:
    $ python3 build.py --no-self
 
 3. EGO Submission Build
-   Clean package for extensions.gnome.org: no dev tooling, sanitized
-   metadata.json, gnome-extensions pack naming.
+   Clean package for extensions.gnome.org: strips nonstandard keys from 
+   metadata.json, names the package correctly. Relies on .extensionignore 
+   for file exclusion.
    $ python3 build.py --ego
 
 4. Help
@@ -36,39 +37,14 @@ import argparse
 import sys
 
 # --- CONFIGURATION ---
-TARGET_DIR = os.path.expanduser("~/dev/backup")
+# Output directory relative to the current working directory
+TARGET_DIR = os.path.abspath("tmp")
 
-# Keys extensions.gnome.org recognizes in metadata.json; everything else is
-# stripped from the packaged metadata in --ego mode (review hygiene). The
-# runtime tolerates the missing keys: AppConfig falls back to debug=false
-# and the About page guards missing links.
+# Keys extensions.gnome.org recognizes in metadata.json
 EGO_METADATA_KEYS = [
     "uuid", "name", "description", "shell-version", "url",
     "version", "version-name", "settings-schema", "gettext-domain",
     "session-modes", "donations",
-]
-
-# Development-only content that must not reach an EGO submission package
-EGO_EXCLUDE = [
-    "build.py", "install.py", "dev.sh", "reload.sh", "restart.sh",
-    "app.js",            # standalone gjs runner for UI mockups
-    "ui/*", "notes*", "tmp*", "Todo.md",
-    "desire-*", "prompt*",
-    # Experimental pages not wired into the registry: reviewers read every
-    # file, and dead code invites questions.
-    "app/page/demo.js", "app/page/dock.js", "app/page/mimic.js",
-    "app/page/appbutton.js", "app/page/setting.js",
-]
-
-# Global exclude patterns (always ignored)
-ALWAYS_EXCLUDE = [
-    "*.git*", 
-    "*.vscode*", 
-    ".idea/*", 
-    "__pycache__*",
-    "tmp",
-    "*.zip", 
-    "schemas/gschemas.compiled"
 ]
 # ---------------------
 
@@ -91,9 +67,8 @@ def parse_arguments():
         "--ego",
         action="store_true",
         help=(
-            "Build a submission package for extensions.gnome.org: excludes "
-            "all development tooling, strips nonstandard keys from "
-            "metadata.json inside the zip, and names the file "
+            "Build a submission package for extensions.gnome.org: strips nonstandard "
+            "keys from metadata.json inside the zip, and names the file "
             "<uuid>.shell-extension.zip (the `gnome-extensions pack` "
             "convention). Implies --no-self."
         ),
@@ -104,8 +79,55 @@ def parse_arguments():
 
     return parser.parse_args()
 
+def load_ignore_patterns():
+    """Parses patterns from .gitignore and .extensionignore files."""
+    patterns = []
+    for ignore_file in [".gitignore", ".extensionignore"]:
+        if os.path.exists(ignore_file):
+            with open(ignore_file, 'r', encoding='utf-8') as f:
+                for line in f:
+                    line = line.strip()
+                    if line and not line.startswith('#'):
+                        patterns.append(line)
+    return patterns
+
+def should_exclude(filename, patterns):
+    """Checks if a filename matches any loaded ignore pattern."""
+    # Normalize path to use forward slashes for cross-OS compatibility
+    normalized = filename.replace(os.sep, '/')
+    parts = normalized.split('/')
+    
+    for pattern in patterns:
+        pattern = pattern.strip()
+        if not pattern: 
+            continue
+        
+        clean_pattern = pattern.rstrip('/')
+        
+        # 1. Full path match (handles patterns like "tests/*" or exact paths)
+        if fnmatch.fnmatch(normalized, pattern) or fnmatch.fnmatch(normalized, clean_pattern):
+            return True
+            
+        # 2. File basename match (handles extensions like "*.zip")
+        if fnmatch.fnmatch(parts[-1], clean_pattern):
+            return True
+            
+        # 3. Parent directory match (handles nested files inside ignored folders)
+        for i in range(len(parts) - 1): 
+            # Check individual directory name (e.g., 'ui' in 'src/ui/file.js')
+            if fnmatch.fnmatch(parts[i], clean_pattern):
+                return True
+            
+            # Check cumulative path (e.g., 'src/ui' in 'src/ui/file.js')
+            dir_to_check = '/'.join(parts[:i+1])
+            if fnmatch.fnmatch(dir_to_check, clean_pattern):
+                return True
+                
+    return False
+
 def main():
     args = parse_arguments()
+    ignore_patterns = load_ignore_patterns()
 
     # 1. Read metadata.json
     meta_file = "metadata.json"
@@ -114,7 +136,7 @@ def main():
         sys.exit(1)
 
     try:
-        with open(meta_file, 'r') as f:
+        with open(meta_file, 'r', encoding='utf-8') as f:
             data = json.load(f)
             uuid = data.get("uuid")
             # Prioritize version-name, fallback to integer version
@@ -124,7 +146,7 @@ def main():
                 print("Error: 'uuid' missing in metadata.json")
                 sys.exit(1)
     except json.JSONDecodeError:
-        print(f"Error: Failed to parse {meta_file}. Check your JSON syntax.")
+        print(f"Error: Failed to parse {meta_file}. Check the JSON syntax.")
         sys.exit(1)
 
     # 2. Define Filename
@@ -141,19 +163,22 @@ def main():
             for root, dirs, files in os.walk("."):
                 for file in files:
                     file_path = os.path.join(root, file)
+                    abs_file_path = os.path.abspath(file_path)
                     archive_name = os.path.relpath(file_path, ".")
 
                     # --- EXCLUSION LOGIC ---
                     
-                    # 1. Check global patterns
-                    if should_exclude(archive_name, ALWAYS_EXCLUDE):
+                    # Prevent recursive zipping of the output directory or the zip file itself
+                    if abs_file_path.startswith(TARGET_DIR):
+                        continue
+                    if file == zip_filename:
                         continue
 
-                    # 2. EGO mode: exclude dev tooling, sanitize metadata
+                    if should_exclude(archive_name, ignore_patterns):
+                        continue
+
+                    # EGO mode: sanitize metadata
                     if args.ego:
-                        if should_exclude(archive_name, EGO_EXCLUDE):
-                            print(f"   [EGO excluded] {archive_name}")
-                            continue
                         if archive_name == "metadata.json":
                             clean = {k: data[k] for k in EGO_METADATA_KEYS if k in data}
                             dropped = sorted(set(data) - set(clean))
@@ -162,7 +187,7 @@ def main():
                             zipf.writestr(archive_name, json.dumps(clean, indent=2) + "\n")
                             continue
 
-                    # 3. Check build.py specifically
+                    # Check build.py specifically
                     if file == os.path.basename(__file__) and not (args.include_self and not args.ego):
                         print(f"   [Excluded] Builder script ({file})")
                         continue
@@ -184,6 +209,10 @@ def main():
             print(f"   Created directory: {TARGET_DIR}")
 
         destination = os.path.join(TARGET_DIR, zip_filename)
+        # Handle case where file might already exist in tmp/
+        if os.path.exists(destination):
+            os.remove(destination)
+            
         shutil.move(zip_filename, destination)
         
         print("-" * 40)
@@ -193,15 +222,6 @@ def main():
 
     except Exception as e:
         print(f"Error moving file: {e}")
-
-def should_exclude(filename, patterns):
-    """Checks if a filename matches any exclude pattern."""
-    for pattern in patterns:
-        if fnmatch.fnmatch(filename, pattern):
-            return True
-        if fnmatch.fnmatch(os.path.dirname(filename), pattern):
-            return True
-    return False
 
 if __name__ == "__main__":
     main()
