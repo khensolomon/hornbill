@@ -3,6 +3,17 @@
 Notable changes to the Lesion extension. Version names follow `yy.mm.dd`
 (EGO `version-name` allows letters, numbers, spaces, and periods only).
 
+## 26.08.15.65 (version 114) — candidate: silence "Extension did not provide any UI"
+
+### Changed (NEEDS VERIFICATION on live GNOME)
+- prefs.js: added a single empty Adw.PreferencesPage after set_content(). The
+  custom UI is set via window.set_content(splitView), which adds zero
+  Adw.PreferencesPages, so GNOME's ExtensionPreferences logs "Extension did
+  not provide any UI" on every open (non-fatal — the window still shows).
+  Adding one page satisfies that check. Guarded with try/catch so it can never
+  block the real UI. Pending confirmation that (a) the JS ERROR stops and
+  (b) the split-view prefs still render correctly.
+
 ## 26.08.15.64 (version 113) — journal-driven bug fixes
 
 ### Fixed

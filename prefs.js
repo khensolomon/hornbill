@@ -72,6 +72,14 @@ export default class GnomeSplitViewPrefs extends ExtensionPreferences {
             // 4. Create UI
             const splitView = createUI();
             window.set_content(splitView);
+
+            // GNOME's ExtensionPreferences checks that at least one
+            // Adw.PreferencesPage was added to the window; a pure set_content()
+            // UI adds none, so it logs "Extension did not provide any UI" on
+            // every open (confirmed harmless — the split view above still
+            // shows). Add one empty page to satisfy that check. Guarded so a
+            // failure here can never block the real UI that is already set.
+            try { window.add(new Adw.PreferencesPage()); } catch (e) {}
             
             installLayout(window, splitView);
             this._setupDeepLinking(splitView);
