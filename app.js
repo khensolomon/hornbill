@@ -19,16 +19,12 @@ const app = new Adw.Application({
 function loadLocalMetadata() {
     const currentDir = GLib.get_current_dir();
     const metadataPath = GLib.build_filenamev([currentDir, 'metadata.json']);
-    try {
-        if (GLib.file_test(metadataPath, GLib.FileTest.EXISTS)) {
-            const [success, contents] = GLib.file_get_contents(metadataPath);
-            if (success) {
-                const decoder = new TextDecoder('utf-8');
-                return JSON.parse(decoder.decode(contents));
-            }
+    if (GLib.file_test(metadataPath, GLib.FileTest.EXISTS)) {
+        const [success, contents] = GLib.file_get_contents(metadataPath);
+        if (success) {
+            const decoder = new TextDecoder('utf-8');
+            return JSON.parse(decoder.decode(contents));
         }
-    } catch (e) {
-        console.warn('Failed to load metadata.json:', e);
     }
     return {};
 }

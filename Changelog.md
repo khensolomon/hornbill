@@ -3,6 +3,38 @@
 Notable changes to the Lesion extension. Version names follow `yy.mm.dd`
 (EGO `version-name` allows letters, numbers, spaces, and periods only).
 
+## 26.08.15.64 (version 113) — journal-driven bug fixes
+
+### Fixed
+- compat.js: maximize()/unmaximize() were passing MetaMaximizeFlags.BOTH on
+  GNOME 49+ where the argument was removed, logging "Too many arguments to
+  method Meta.Window.maximize: expected 0, got 1" on every restore-to-maximized.
+  The MetaMaximizeFlags enum can persist in the typelib after the argument is
+  gone, so the check now gates on the shell major version (>= 49 = flagless),
+  keeping the enum-absent case as a secondary signal.
+- wallpaper.js: removed two `overflow: hidden;` declarations from the inline
+  preset-card CSS. GTK4 has no `overflow` CSS property (it is set via
+  Gtk.Widget.set_overflow, already done on the overlay), so these produced
+  "Theme parser error: No property named overflow" in the prefs process.
+
+## 26.08.15.63 (version 112) — regression fix + real-bug fixes from journal logs
+
+### Fixed
+- REGRESSION (introduced in 26.08.15.62): app/page/geometry.js referenced
+  GLib.timeout_add/source_remove after the setTimeout->GLib change but never
+  imported GLib, throwing "ReferenceError: GLib is not defined" on every
+  geometry-data change while the Geometry page was open. Added the missing
+  `import GLib from 'gi://GLib'`.
+- Escaped raw ampersands in two preferences titles ('Geometry & Floating',
+  'Text & Icon Color') that broke Pango markup parsing in the prefs process
+  ("Entity did not end with a semicolon").
+
+### Tooling
+- Added an import-verification scan (used in review): every gi:: namespace
+  referenced as `Ns.` must be imported. node --check validates syntax only and
+  does not catch an undefined global, which is how the GLib regression slipped
+  through.
+
 ## 26.08.15.62 (version 111) — dead-code removal, impersonal docs, EGO cleanup
 
 ### Dead code
@@ -23,6 +55,15 @@ Notable changes to the Lesion extension. Version names follow `yy.mm.dd`
 - Removed scaffolding/narration comments left in window.js
   ("[Rest of your existing createUI code...]", "Keep existing", etc.) that
   read as generated boilerplate.
+
+### Unnecessary try/catch (batch 1 — provably cannot throw)
+- app.js: removed the try/catch around loading the extension's own
+  metadata.json; existence is already checked with file_test and a malformed
+  own-metadata should fail loudly in the dev launcher, not be swallowed.
+- Removed three `typeof x === 'function'` guards on methods that always exist:
+  indicator.js closePreferences (own class method; dead else-branch removed),
+  wallpaper.js row.set_sensitive and panels.js btn.menu.connect (both kept
+  their real null checks; only the redundant typeof was dropped).
 
 ### Documentation style
 - Rewrote comments to impersonal voice: removed all first- and second-person

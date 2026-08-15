@@ -55,7 +55,6 @@ export function createWallpaperUI() {
                 padding: 0; 
                 border: 1px solid rgba(0,0,0,0.08);
                 border-radius: 12px;
-                overflow: hidden;
                 box-shadow: 0 2px 4px rgba(0,0,0,0.05);
                 transition: all 200ms cubic-bezier(0.25, 0.46, 0.45, 0.94);
                 transform: scale(1);
@@ -73,7 +72,6 @@ export function createWallpaperUI() {
             /* Ensure the button's internal content node is also clipped if needed by the theme */
             .preset-card > * {
                 border-radius: 12px;
-                overflow: hidden;
             }
         `;
 
@@ -579,7 +577,7 @@ function _createShadingRow(settings, dependencies) {
                 const sensitive = current !== 'solid';
                 if (Array.isArray(dependencies)) {
                     dependencies.forEach(row => {
-                         if (row && typeof row.set_sensitive === 'function') {
+                         if (row) {
                              row.set_sensitive(sensitive);
                          }
                     });

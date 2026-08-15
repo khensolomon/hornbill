@@ -117,7 +117,7 @@ export class AppearancePage extends Adw.PreferencesPage {
 
         // --- 3.6 Geometry (Floating) ---
         const geomGroup = new Adw.PreferencesGroup({ 
-            title: 'Geometry & Floating',
+            title: 'Geometry &amp; Floating',
             description: 'Detach the panel from the screen edges.'
         });
         this.add(geomGroup);
@@ -178,7 +178,7 @@ export class AppearancePage extends Adw.PreferencesPage {
         });
         this.add(btnGroup);
         
-        btnGroup.add(this._createColorRow('Text & Icon Color', 'panel-btn-color'));
+        btnGroup.add(this._createColorRow('Text &amp; Icon Color', 'panel-btn-color'));
         btnGroup.add(this._createSpinRow('Corner Radius', 'panel-btn-radius', 0, 50));
         btnGroup.add(this._createSpinRow('Min Padding', 'panel-btn-pad-min', 0, 50));
         btnGroup.add(this._createSpinRow('Natural Padding', 'panel-btn-pad-nat', 0, 50));

@@ -553,7 +553,7 @@ export class PanelsManager extends ExtensionComponent {
                     // Highlight while the button's menu is open. This is what
                     // makes the indicator (and any button opened via
                     // keyboard/code rather than a tracked press) light up.
-                    if (btn.menu && typeof btn.menu.connect === 'function') {
+                    if (btn.menu) {
                         sigs.push({ obj: btn.menu, id: btn.menu.connect('open-state-changed', applyState) });
                     }
                 }

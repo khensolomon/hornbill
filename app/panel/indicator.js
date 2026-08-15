@@ -319,13 +319,7 @@ export class Indicator {
     if (isPrefsOpen) {
         const closeItem = new PopupMenu.PopupMenuItem("Close");
         closeItem.connect("activate", () => {
-             // Use closePreferences when the extension class provides it
-             if (typeof this.extension.closePreferences === 'function') {
-                 this.extension.closePreferences();
-             } else {
-                 // Fallback if no close method exists: just toggle prefs
-                 this.extension.openPreferences();
-             }
+             this.extension.closePreferences();
         });
         menu.addMenuItem(closeItem);
     }

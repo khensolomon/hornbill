@@ -1,5 +1,13 @@
 import Clutter from 'gi://Clutter';
 import Meta from 'gi://Meta';
+import * as Config from 'resource:///org/gnome/shell/misc/config.js';
+
+// GNOME 49 dropped the MetaMaximizeFlags argument from maximize()/unmaximize().
+// The enum can linger in the typelib on 49+, so an `!== undefined` check is
+// unreliable (it still passes and then warns "too many arguments"). Gate on the
+// shell major version, with the enum-absent case kept as an extra signal.
+const SHELL_MAJOR = parseInt((Config.PACKAGE_VERSION || '0').split('.')[0], 10) || 0;
+const MAXIMIZE_IS_FLAGLESS = Meta.MaximizeFlags === undefined || SHELL_MAJOR >= 49;
 
 /**
  * Compatibility helpers.
@@ -36,15 +44,14 @@ export function isMaximized(win) {
 }
 
 /**
- * Meta.MaximizeFlags was removed in GNOME 49; maximize()/unmaximize()
- * became flagless there.
+ * GNOME 49 made maximize()/unmaximize() flagless (see MAXIMIZE_IS_FLAGLESS).
  */
 export function maximize(win) {
-    if (Meta.MaximizeFlags !== undefined) win.maximize(Meta.MaximizeFlags.BOTH);
-    else win.maximize();
+    if (MAXIMIZE_IS_FLAGLESS) win.maximize();
+    else win.maximize(Meta.MaximizeFlags.BOTH);
 }
 
 export function unmaximize(win) {
-    if (Meta.MaximizeFlags !== undefined) win.unmaximize(Meta.MaximizeFlags.BOTH);
-    else win.unmaximize();
+    if (MAXIMIZE_IS_FLAGLESS) win.unmaximize();
+    else win.unmaximize(Meta.MaximizeFlags.BOTH);
 }
