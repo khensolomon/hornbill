@@ -2,7 +2,19 @@
 EXT ?= lesion@lethil.me
 
 # Mark targets as PHONY so Make doesn't look for files with these names
-.PHONY: disable enable refresh reload logs
+.PHONY: uninstall disable enable refresh reload logs
+
+prefs:
+	@echo "-- Opening preferences for extension $(EXT) ..."
+	gnome-extensions prefs $(EXT)
+
+reset:
+	@echo "-- Resetting extension $(EXT) ..."
+	dconf reset -f /org/gnome/shell/extensions/$(EXT)/
+
+uninstall:
+	@echo "-- Uninstalling extension $(EXT) ..."
+	gnome-extensions uninstall $(EXT)
 
 disable:
 	@echo "-- Disabling extension $(EXT) ..."
