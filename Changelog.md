@@ -3,6 +3,20 @@
 Notable changes to the Lesion extension. Version names follow `yy.mm.dd`
 (EGO `version-name` allows letters, numbers, spaces, and periods only).
 
+## 26.08.15.59 (version 108) — replaced bundled icons with built-ins
+
+### icon/
+- Removed lesion-clear-symbolic.svg, lesion-erase-symbolic.svg,
+  lesion-link-symbolic.svg, and lesion-reset-symbolic.svg. Each had a
+  suitable built-in Adwaita equivalent, so bundling and shipping them was
+  unnecessary:
+  - Clear Saved Geometry (geometry.js) -> edit-clear-all-symbolic
+  - Reset Style (appearance.js) -> edit-clear-symbolic
+  - Reset All Settings (dashboard.js) -> view-refresh-symbolic
+  - Documentation link rows (about.js) -> insert-link-symbolic
+- hornbill.svg and hornbill-symbolic.svg (the extension's own icon) are
+  unaffected and remain bundled, since no built-in theme provides those.
+
 ## 26.08.15.58 (version 107) — Extensions page: Lesion listed, link buttons, focus highlight
 
 ### Advanced -> Extensions

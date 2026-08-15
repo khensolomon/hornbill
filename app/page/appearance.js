@@ -40,7 +40,7 @@ export class AppearancePage extends Adw.PreferencesPage {
             subtitle: 'Restore panel, popup, and button styling to defaults. Other settings are untouched'
         });
         const resetBtn = new Gtk.Button({
-            icon_name: 'lesion-erase-symbolic', // bundled — theme-proof
+            icon_name: 'edit-clear-symbolic', // built-in Adwaita icon
             valign: Gtk.Align.CENTER,
             tooltip_text: 'Reset styling to defaults'
         });

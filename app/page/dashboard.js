@@ -103,7 +103,7 @@ export class DashboardPage extends Adw.PreferencesPage {
             subtitle: 'Restore every Lesion setting to its default value'
         });
         const resetBtn = new Gtk.Button({
-            icon_name: 'lesion-reset-symbolic', // bundled — theme-proof
+            icon_name: 'view-refresh-symbolic', // built-in Adwaita icon
             valign: Gtk.Align.CENTER,
             tooltip_text: 'Reset All Settings',
             css_classes: ['flat', 'destructive-action']

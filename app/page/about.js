@@ -88,7 +88,7 @@ export function createAboutUI(navigator, goToPage) {
 
         const createLinkRow = (title, uri) => {
             const row = new Adw.ActionRow({ title: title, activatable: true });
-            row.add_suffix(new Gtk.Image({ icon_name: 'lesion-link-symbolic', css_classes: ['dim-label'] }));
+            row.add_suffix(new Gtk.Image({ icon_name: 'insert-link-symbolic', css_classes: ['dim-label'] }));
             row.connect('activated', () => {
                 try {
                     const launcher = new Gtk.UriLauncher({ uri: uri });

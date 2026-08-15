@@ -221,7 +221,7 @@ export function createGeometryUI() {
     });
 
     const clearBtn = new Gtk.Button({
-        icon_name: 'lesion-clear-symbolic', // bundled — theme-proof
+        icon_name: 'edit-clear-all-symbolic', // built-in Adwaita icon
         valign: Gtk.Align.CENTER,
         tooltip_text: 'Clear all saved window geometry',
     });
