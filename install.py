@@ -11,10 +11,10 @@ MODES OF OPERATION
 
 1. Auto-Detection (Default behavior):
    - The script checks for 'metadata.json' in the current directory.
-   - If FOUND: It assumes you are a DEVELOPER working in the source repo.
-     It switches to 'Dev Mode' (symlinking).
-   - If MISSING: It assumes you are a USER running a standalone script.
-     It switches to 'Remote Mode' (downloading from GitHub).
+   - If FOUND: Assumes a DEVELOPER working in the source repo.
+     Switches to 'Dev Mode' (symlinking).
+   - If MISSING: Assumes an END-USER running a standalone script.
+     Switches to 'Remote Mode' (downloading from GitHub).
 
 2. Dev Mode (--mode dev):
    - Creates a symbolic link from the current directory (or --src) to
@@ -25,8 +25,9 @@ MODES OF OPERATION
 
 3. Remote Mode (--mode remote):
    - Downloads a specific tag/branch (default: master) from GitHub.
-   - Installs files (copy) to the extensions directory.
-   - NOW ALSO compiles schemas globally (just like Dev Mode) to fix 
+   - Extracts and copies files to the extensions directory, respecting 
+     .extensionignore and .gitignore.
+   - Compiles schemas globally (just like Dev Mode) to prevent 
      "Preferences Error" issues.
 
 --------------------------------------------------------------------------------
@@ -35,10 +36,10 @@ USAGE EXAMPLES
 
   [Developer]
   1. Setup environment (run from repo root):
-     ./install.py
+     $ python3 install.py
 
   [End-User]
-  1. Install latest master branch (one-liner):
+  1. Install latest master branch:
      curl https://raw.githubusercontent.com/khensolomon/lesion/master/install.py | python3 -
 """
 
@@ -52,17 +53,89 @@ import tarfile
 import tempfile
 import urllib.request
 import textwrap
+import fnmatch
 import xml.etree.ElementTree as ET
 
 # --- Configuration ---
-DEFAULT_REPO = "khensolomon/lesion"
-DEFAULT_REF = "master"
+# Set to the target repository to allow seamless curl piping
+DEFAULT_REPO = os.environ.get("GNOME_EXT_REPO", "khensolomon/lesion")
+DEFAULT_REF = os.environ.get("GNOME_EXT_REF", "master")
+
+# Standard GNOME paths
+GLOBAL_SCHEMAS_DIR = os.path.expanduser("~/.local/share/glib-2.0/schemas")
+EXTENSIONS_PATH = os.path.expanduser("~/.local/share/gnome-shell/extensions")
 
 # Colors for diagnostics
 RED = "\033[91m"
 YELLOW = "\033[93m"
 GREEN = "\033[92m"
 RESET = "\033[0m"
+
+def check_dependencies():
+    """Validates required system binaries are present."""
+    missing = []
+    if not shutil.which("glib-compile-schemas"):
+        missing.append("glib-compile-schemas (install glib2-devel or libglib2.0-dev)")
+    if not shutil.which("gsettings"):
+        missing.append("gsettings (install glib2 or libglib2.0-bin)")
+        
+    if missing:
+        sys.exit(f"{RED}Error: Missing required system dependencies:\n- " + "\n- ".join(missing) + f"{RESET}")
+
+def load_ignore_patterns(src_dir):
+    """Parses patterns from .gitignore and .extensionignore files."""
+    patterns = []
+    for ignore_file in [".gitignore", ".extensionignore"]:
+        target_file = os.path.join(src_dir, ignore_file)
+        if os.path.exists(target_file):
+            with open(target_file, 'r', encoding='utf-8') as f:
+                for line in f:
+                    line = line.strip()
+                    if line and not line.startswith('#'):
+                        patterns.append(line)
+    return patterns
+
+def should_exclude(filename, patterns):
+    """Checks if a filename matches any loaded ignore pattern."""
+    normalized = filename.replace(os.sep, '/')
+    parts = normalized.split('/')
+    
+    for pattern in patterns:
+        pattern = pattern.strip()
+        if not pattern: 
+            continue
+        
+        clean_pattern = pattern.rstrip('/')
+        
+        if fnmatch.fnmatch(normalized, pattern) or fnmatch.fnmatch(normalized, clean_pattern):
+            return True
+            
+        if fnmatch.fnmatch(parts[-1], clean_pattern):
+            return True
+            
+        for i in range(len(parts) - 1): 
+            if fnmatch.fnmatch(parts[i], clean_pattern):
+                return True
+            
+            dir_to_check = '/'.join(parts[:i+1])
+            if fnmatch.fnmatch(dir_to_check, clean_pattern):
+                return True
+                
+    return False
+
+def copy_with_ignore(src, dest, ignore_patterns):
+    """Recursively copies files while adhering to ignore patterns."""
+    os.makedirs(dest, exist_ok=True)
+    for root, dirs, files in os.walk(src):
+        # Filter directories in-place to prevent walking into ignored ones
+        dirs[:] = [d for d in dirs if not should_exclude(os.path.relpath(os.path.join(root, d), src).replace(os.sep, '/'), ignore_patterns)]
+        
+        for file in files:
+            rel_path = os.path.relpath(os.path.join(root, file), src).replace(os.sep, '/')
+            if not should_exclude(rel_path, ignore_patterns):
+                dest_dir = os.path.join(dest, os.path.relpath(root, src))
+                os.makedirs(dest_dir, exist_ok=True)
+                shutil.copy2(os.path.join(root, file), os.path.join(dest_dir, file))
 
 def get_metadata_path(src_dir):
     return os.path.join(src_dir, "metadata.json")
@@ -103,28 +176,27 @@ def get_schema_ids_from_file(xml_path):
 
 def install_schemas(src_schemas_dir):
     """
-    Compiles schemas locally AND installs them globally to user's local share.
+    Compiles schemas locally AND installs them globally to the user local share.
     Returns a list of Schema IDs found in the files.
     """
     found_ids = []
-    global_schemas_dir = os.path.expanduser("~/.local/share/glib-2.0/schemas")
     
     if os.path.isdir(src_schemas_dir):
         # 1. Global Install (for immediate effect and stability)
-        os.makedirs(global_schemas_dir, exist_ok=True)
+        os.makedirs(GLOBAL_SCHEMAS_DIR, exist_ok=True)
         files_found = 0
         
         for f in os.listdir(src_schemas_dir):
             if f.endswith(".gschema.xml"):
                 src_file = os.path.join(src_schemas_dir, f)
                 found_ids.extend(get_schema_ids_from_file(src_file))
-                shutil.copy(src_file, global_schemas_dir)
+                shutil.copy(src_file, GLOBAL_SCHEMAS_DIR)
                 files_found += 1
         
         if files_found > 0:
             try:
-                subprocess.run(["glib-compile-schemas", global_schemas_dir], check=True)
-                print(f"Compiled {files_found} global schema(s) in {global_schemas_dir}")
+                subprocess.run(["glib-compile-schemas", GLOBAL_SCHEMAS_DIR], check=True)
+                print(f"Compiled {files_found} global schema(s) in {GLOBAL_SCHEMAS_DIR}")
             except subprocess.CalledProcessError:
                 print(f"{RED}Warning: Failed to compile global schemas.{RESET}")
         
@@ -135,15 +207,15 @@ def install_schemas(src_schemas_dir):
     return found_ids
 
 def run_diagnostics(target_schema_id, found_ids):
-    """Checks if the system can actually see the schema."""
+    """Checks if the system can accurately detect the schema."""
     if not target_schema_id:
         return
 
     # A. Check Consistency
     if target_schema_id not in found_ids:
         print(f"\n{RED}!!! CONFIGURATION ERROR DETECTED !!!{RESET}")
-        print(f"{YELLOW}metadata.json asks for schema: '{target_schema_id}'{RESET}")
-        print(f"{YELLOW}But your XML files only defined: {found_ids}{RESET}")
+        print(f"{YELLOW}metadata.json requests schema: '{target_schema_id}'{RESET}")
+        print(f"{YELLOW}However, local XML files only defined: {found_ids}{RESET}")
         print(f"-> Please open schemas/*.gschema.xml and ensure <schema id=\"{target_schema_id}\" ...>")
         return
 
@@ -163,9 +235,9 @@ def run_diagnostics(target_schema_id, found_ids):
     else:
             print(f"\n{RED}X System cannot find schema '{target_schema_id}' yet.{RESET}")
             print(f"{YELLOW}Diagnosed Cause:{RESET}")
-            print(f"The XML file is installed, but the desktop session hasn't loaded it.")
+            print(f"The XML file is installed, but the desktop session has not loaded it.")
             print(f"{YELLOW}Solution:{RESET}")
-            print(f"You MUST log out and log back in to fix the Preferences window.")
+            print(f"A logout and login sequence is required to fix the Preferences window.")
 
 def reset_settings_logic(schema_id):
     """Attempts to reset settings for the given schema ID."""
@@ -178,7 +250,7 @@ def reset_settings_logic(schema_id):
     # Check if schema is visible first
     if not run_cmd(["gsettings", "list-keys", schema_id], quiet=True):
         print(f"{RED}Error: Schema '{schema_id}' is not visible to gsettings.{RESET}")
-        print(f"We tried compiling it globally, but it's not showing up. Try logging out/in.")
+        print(f"Compilation was attempted globally, but the schema remains invisible. A logout and login sequence is recommended.")
         return
 
     if run_cmd(["gsettings", "reset-recursively", schema_id]):
@@ -193,8 +265,9 @@ def get_archive_url(repo, ref):
 
 def install_remote(args, target_base):
     """Downloads and installs the extension from GitHub (User Mode)."""
-    repo = args.repo or DEFAULT_REPO
-    ref = args.ref or DEFAULT_REF
+    repo = args.repo
+    ref = args.ref
+    
     url = get_archive_url(repo, ref)
 
     print(f"--- Remote Install Mode ---")
@@ -235,9 +308,12 @@ def install_remote(args, target_base):
             else:
                 shutil.rmtree(dest_dir)
 
-        os.makedirs(target_base, exist_ok=True)
-        shutil.copytree(src_dir, dest_dir)
-        print(f"Installed to: {dest_dir}")
+        # Parse ignore files from the downloaded source
+        ignore_patterns = load_ignore_patterns(src_dir)
+        
+        # Install files using the custom copy function
+        copy_with_ignore(src_dir, dest_dir, ignore_patterns)
+        print(f"Installed to: {dest_dir} (Ignored {len(ignore_patterns)} patterns)")
 
         # --- UNIFIED SCHEMA LOGIC ---
         schemas_dir = os.path.join(dest_dir, "schemas")
@@ -252,11 +328,11 @@ def install_remote(args, target_base):
         target_schema_id = metadata.get("settings-schema")
         run_diagnostics(target_schema_id, found_ids)
         
-        # Support Reset in Remote Mode too
+        # Support Reset in Remote Mode
         if args.reset_settings:
             reset_settings_logic(target_schema_id)
         
-        print("\nDone! If the extension doesn't appear, log out and back in.")
+        print("\nDone! If the extension fails to appear, execute a logout and login sequence.")
 
 def install_local(args, target_base):
     """Symlinks the current directory for development (Dev Mode)."""
@@ -276,16 +352,15 @@ def install_local(args, target_base):
     print(f"Source: {src_dir}")
     print(f"Destination: {dest_dir}")
 
-    # 1. Schemas (Do this FIRST so reset works)
+    # 1. Schemas (Execute this FIRST to ensure reset functionality)
     local_schemas_dir = os.path.join(src_dir, "schemas")
     found_ids = install_schemas(local_schemas_dir)
 
-    # 2. Reset Settings (Do this BEFORE symlink check)
+    # 2. Reset Settings (Execute this BEFORE symlink check)
     if args.reset_settings:
         reset_settings_logic(target_schema_id)
 
     # 3. Symlink Logic
-    # We relax the symlink check if we just reset settings or if the user wants to keep a folder
     os.makedirs(target_base, exist_ok=True)
     
     if os.path.islink(dest_dir):
@@ -296,11 +371,9 @@ def install_local(args, target_base):
         else:
             print("Symlink already correct.")
     elif os.path.exists(dest_dir):
-        # IMPROVEMENT: Don't crash if it's a directory, just warn.
-        # This allows --reset-settings to work even on directory installs.
-        print(f"{YELLOW}Warning: Target {dest_dir} exists and is NOT a symlink (it's a directory).{RESET}")
-        print(f"{YELLOW}Skipping symlink creation to avoid data loss.{RESET}")
-        print(f"If you want to switch to symlink mode, manually delete the folder and run this again.")
+        print(f"{YELLOW}Warning: Target {dest_dir} exists and is NOT a symlink (it is a directory).{RESET}")
+        print(f"{YELLOW}Skipping symlink creation to prevent data loss.{RESET}")
+        print(f"To switch to symlink mode, manually delete the folder and execute the script again.")
     else:
         os.symlink(src_dir, dest_dir)
         print("Created symlink.")
@@ -309,9 +382,12 @@ def install_local(args, target_base):
     run_diagnostics(target_schema_id, found_ids)
 
     print("\nDev setup complete.")
-    print("If this is your first install, restart GNOME Shell (Alt+F2 -> r).")
+    print("For initial installations, restart GNOME Shell (Alt+F2 -> r).")
 
 def main():
+    # Pre-flight checks
+    check_dependencies()
+    
     parser = argparse.ArgumentParser(
         description="Install GNOME Shell Extension (Dev & User modes)",
         formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -324,7 +400,7 @@ def main():
               ./install.py --reset-settings
               
               # User: Download and install master branch
-              ./install.py --mode remote
+              curl https://raw.githubusercontent.com/khensolomon/lesion/master/install.py | python3 -
         """)
     )
     
@@ -339,12 +415,10 @@ def main():
     parser.add_argument("--reset-settings", action="store_true", help="Reset GSettings to defaults")
     
     # Remote options
-    parser.add_argument("--ref", help=f"Git reference/tag to install (default: {DEFAULT_REF})")
-    parser.add_argument("--repo", help=f"GitHub repository (default: {DEFAULT_REPO})")
+    parser.add_argument("--ref", default=DEFAULT_REF, help=f"Git reference/tag to install (default: {DEFAULT_REF})")
+    parser.add_argument("--repo", default=DEFAULT_REPO, help=f"GitHub repository (default: {DEFAULT_REPO})")
 
     args = parser.parse_args()
-    
-    extensions_path = os.path.expanduser("~/.local/share/gnome-shell/extensions")
 
     mode = args.mode
     if mode == "auto":
@@ -352,9 +426,9 @@ def main():
         mode = "dev" if has_local_meta else "remote"
 
     if mode == "remote":
-        install_remote(args, extensions_path)
+        install_remote(args, EXTENSIONS_PATH)
     else:
-        install_local(args, extensions_path)
+        install_local(args, EXTENSIONS_PATH)
 
 if __name__ == "__main__":
     main()
