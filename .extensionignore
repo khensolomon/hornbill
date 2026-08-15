@@ -1,6 +1,12 @@
+.gitignore
+.extensionignore
+
+.git/
 tmp/
-docs/
 ui/
+docs/
+.vscode/
+
 ext.sh
 dev.sh
 ext.sh
@@ -8,5 +14,6 @@ reload.sh
 restart.sh
 build.py
 install.py
+
 Todo.md
 Changelog.md

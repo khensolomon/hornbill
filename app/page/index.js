@@ -7,6 +7,7 @@ import { createAppearanceUI } from "./appearance.js";
 import { createEffectsUI } from './effects.js';
 import { createGeometryUI } from './geometry.js';
 import { createStylesheetUI } from "./stylesheet.js";
+import { createExtensionsUI } from "./extensions.js";
 
 export function getPages() {
   return [
@@ -89,6 +90,14 @@ export function getPages() {
     {
       title: "Advanced",
       items: [
+        {
+          id: "extensions",
+          title: "Extensions",
+          icon: "application-x-addon-symbolic",
+          description: "Manage installed GNOME Shell extensions",
+          keywords: ["extensions", "manage", "enable", "disable", "remove", "uninstall", "addons", "plugins"],
+          ui: createExtensionsUI,
+        },
         {
           id: "stylesheet",
           title: "Stylesheet",

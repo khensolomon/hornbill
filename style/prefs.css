@@ -13,6 +13,6 @@ headerbar {
     margin: 8px 0;
 }
 .dash-separator {
-    /* Extra safety if needed */
-    height: 0px !important;
+    /* GTK CSS has no 'height'; use min-height. */
+    min-height: 0px;
 }

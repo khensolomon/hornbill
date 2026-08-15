@@ -24,24 +24,6 @@ const ACTIVATE_DEBOUNCE_MS = 400;
 const AppPanelButton = GObject.registerClass(
     { GTypeName: 'LesionAppPanelButton' },
     class AppPanelButton extends PanelMenu.Button {
-        /**
-         * PanelMenu.Button's built-in vfunc_event toggles this.menu on every
-         * primary press. These menus are usually empty, so nothing is drawn —
-         * but an open menu still takes a modal grab, and that grab swallows
-         * the button release, so no click ever completes. Button events are
-         * handled by _activate() via the paths wired in _init; everything
-         * else still chains to the base implementation.
-         */
-        vfunc_event(event) {
-            const type = event.type();
-            if (type === Clutter.EventType.BUTTON_PRESS ||
-                type === Clutter.EventType.BUTTON_RELEASE ||
-                type === Clutter.EventType.TOUCH_BEGIN ||
-                type === Clutter.EventType.TOUCH_END)
-                return Clutter.EVENT_PROPAGATE;
-            return super.vfunc_event(event);
-        }
-
         _init(iconOrActor, name, clickCallback, menuCallback) {
             super._init(0.0, name);
 

@@ -81,12 +81,28 @@ export function createUI() {
     };
 
     const pushSubPage = (pageData, widget) => {
+        // AdwNavigationView requires unique tags; pushing a tag already in
+        // the stack throws "Duplicate page tag" and aborts the whole UI. If
+        // the page is already present, navigate to it instead of re-adding.
+        const existing = contentNav.find_page ? contentNav.find_page(pageData.id) : null;
+        if (existing) {
+            try { contentNav.pop_to_page(existing); return; } catch (e) {}
+        }
         const navPage = new Adw.NavigationPage({ title: pageData.title, tag: pageData.id });
         const toolbar = new Adw.ToolbarView();
         toolbar.add_top_bar(new Adw.HeaderBar());
         toolbar.set_content(widget);
         navPage.set_child(toolbar);
-        contentNav.push(navPage);
+        try {
+            contentNav.push(navPage);
+        } catch (e) {
+            // Duplicate tag or similar — navigate to the existing page
+            // instead of letting the exception abort the UI.
+            try {
+                const existing2 = contentNav.find_page ? contentNav.find_page(pageData.id) : null;
+                if (existing2) contentNav.pop_to_page(existing2);
+            } catch (e2) {}
+        }
     };
 
     contentNav.pushName = (subPageId) => {
@@ -170,13 +186,23 @@ export function createUI() {
 
         let navPage = (widget instanceof Adw.NavigationPage) ? widget : null;
         if (!navPage) {
-            navPage = new Adw.NavigationPage({ title: pageData.title, tag: pageData.id });
+            // replace() below clears the stack, but if a page with this tag
+            // somehow remains, reusing the tag would throw. Guard it.
+            const dup = contentNav.find_page ? contentNav.find_page(pageData.id) : null;
+            const tag = dup ? null : pageData.id;
+            navPage = new Adw.NavigationPage({ title: pageData.title });
+            if (tag) navPage.set_tag(tag);
             const toolbar = new Adw.ToolbarView();
             toolbar.add_top_bar(new Adw.HeaderBar());
             toolbar.set_content(widget);
             navPage.set_child(toolbar);
         }
-        contentNav.replace([navPage]);
+        try {
+            contentNav.replace([navPage]);
+        } catch (e) {
+            // Never let a navigation error abort the whole prefs UI.
+            try { contentNav.replace([]); contentNav.push(navPage); } catch (e2) {}
+        }
         splitView.set_show_content(true);
     };
 

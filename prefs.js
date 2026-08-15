@@ -37,6 +37,13 @@ export default class GnomeSplitViewPrefs extends ExtensionPreferences {
 
             // 1. Init Config
             AppConfig.init(finalMetadata, this.path, true);
+
+            // Attach placeholder content IMMEDIATELY so the window always has
+            // a UI child. If the real UI build below throws, GNOME still sees
+            // a valid window (avoids "Extension did not provide any UI", which
+            // produces an unusable 'Extension Error' window).
+            const bootstrap = new Adw.Bin();
+            window.set_content(bootstrap);
             
             // Debug: Check if links are actually loaded
             const linkCount = finalMetadata.links ? Object.keys(finalMetadata.links).length : 0;
@@ -51,6 +58,13 @@ export default class GnomeSplitViewPrefs extends ExtensionPreferences {
                 AppConfig.defaults.window.minWidth,
                 AppConfig.defaults.window.minHeight
             );
+
+            // Tag the window so the shell side can reliably find it to raise
+            // it when it is already open (Adw retitles per visible page, so
+            // the title alone is not a stable identifier). A hidden marker in
+            // the window name survives page changes.
+            try { window.set_title(`${finalMetadata.name || 'Lesion'}`); } catch (e) {}
+            try { window.add_css_class('lesion-prefs-window'); } catch (e) {}
 
             // 3. Load CSS
             this._loadCustomStyles();
