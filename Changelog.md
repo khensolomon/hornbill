@@ -3,6 +3,19 @@
 Notable changes to the Lesion extension. Version names follow `yy.mm.dd`
 (EGO `version-name` allows letters, numbers, spaces, and periods only).
 
+## 26.08.15.66 (version 115) — try/catch reduction in entry points
+
+### Changed
+- extension.js: removed unnecessary try/catch around signal disconnects,
+  window lookups, and the settings write in openPreferences(). Kept isolation
+  where it matters: enable() now tracks each component before enabling it (so a
+  throw can't orphan an enabled component), and disable() wraps each
+  component's disable() so one failure can't stop the others from cleaning up.
+- prefs.js: removed unnecessary try/catch around icon-path registration,
+  metadata/CSS loading, title/class tagging, and deep-linking setup. The one
+  guarded call kept is window.add(Adw.PreferencesPage) so a failure there can
+  never replace the real UI with the error page.
+
 ## 26.08.15.65 (version 114) — candidate: silence "Extension did not provide any UI"
 
 ### Changed (NEEDS VERIFICATION on live GNOME)

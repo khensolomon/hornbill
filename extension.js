@@ -14,27 +14,25 @@ export default class LesionExtension extends Extension {
 
     this._trackPrefsWindow();
 
-    this._instances = getComponents()
-      .map((ComponentClass) => {
-        try {
-          const instance = new ComponentClass(this);
-          if (typeof instance.enable === "function") {
-            instance.enable();
-          }
-          return instance;
-        } catch (e) {
-          logError(`Failed to load component ${ComponentClass.name}`, e);
-          return null;
-        }
-      })
-      .filter((i) => i !== null);
+    this._instances = [];
+    for (const ComponentClass of getComponents()) {
+      try {
+        const instance = new ComponentClass(this);
+        this._instances.push(instance); // track first, so disable() can always clean up
+        instance.enable?.();
+      } catch (e) {
+        logError(`Failed to enable ${ComponentClass.name}`, e);
+      }
+    }
   }
 
   disable() {
     log("System stopping.");
     if (this._winCreatedId) {
-      try { global.display.disconnect(this._winCreatedId); } catch (e) {}
-      this._winCreatedId = 0;
+      // NEW (Safe to remove try/catch)
+      // Clear it immediately
+      global.display.disconnect(this._winCreatedId);
+      this._winCreatedId = null;
     }
     if (this._adoptTimers) {
       for (const id of this._adoptTimers) GLib.source_remove(id);
@@ -44,9 +42,7 @@ export default class LesionExtension extends Extension {
 
     [...this._instances].reverse().forEach((instance) => {
       try {
-        if (typeof instance.disable === "function") {
-          instance.disable();
-        }
+        instance?.disable?.();
       } catch (e) {
         logError("Error disabling component", e);
       }
@@ -71,32 +67,40 @@ export default class LesionExtension extends Extension {
     const isPrefsWindow = (win) => {
       try {
         const cls = win.get_wm_class ? win.get_wm_class() : null;
-        const gtkId = win.get_gtk_application_id ? win.get_gtk_application_id() : null;
-        return cls === 'org.gnome.Shell.Extensions' ||
-               gtkId === 'org.gnome.Shell.Extensions';
-      } catch (e) { return false; }
+        const gtkId = win.get_gtk_application_id
+          ? win.get_gtk_application_id()
+          : null;
+        return (
+          cls === "org.gnome.Shell.Extensions" ||
+          gtkId === "org.gnome.Shell.Extensions"
+        );
+      } catch (e) {
+        return false;
+      }
     };
 
     const adopt = (win) => {
       if (!win || this._prefsWindow === win) return false;
       if (!isPrefsWindow(win)) return false;
       this._prefsWindow = win;
-      log(`Preferences window tracked: '${win.get_title ? win.get_title() : '?'}'`);
-      const id = win.connect('unmanaged', () => {
+      log(
+        `Preferences window tracked: '${win.get_title ? win.get_title() : "?"}'`,
+      );
+      const id = win.connect("unmanaged", () => {
         if (this._prefsWindow === win) this._prefsWindow = null;
-        try { win.disconnect(id); } catch (e) {}
+        // NEW (Safe to remove try/catch)
+        win.disconnect(id);
       });
       return true;
     };
 
     // Adopt anything already open (e.g. after the extension is re-enabled).
-    try {
-      for (const w of global.display.list_all_windows()) {
-        if (adopt(w)) break;
-      }
-    } catch (e) {}
+    // NEW (Safe to remove try/catch)
+    for (const w of global?.display?.list_all_windows()) {
+      if (adopt(w)) break;
+    }
 
-    this._winCreatedId = global.display.connect('window-created', (_d, win) => {
+    this._winCreatedId = global.display.connect("window-created", (_d, win) => {
       // wm_class frequently arrives after creation; try now, then again.
       if (adopt(win)) return;
       let tries = 0;
@@ -116,9 +120,8 @@ export default class LesionExtension extends Extension {
   _getPreferencesWindow() {
     const w = this._prefsWindow;
     if (!w) return null;
-    try {
-      return global.display.list_all_windows().includes(w) ? w : null;
-    } catch (e) { return null; }
+    // NEW (Safe to remove try/catch)
+    return global?.display?.list_all_windows()?.includes(w) ? w : null;
   }
 
   get isPreferencesOpen() {
@@ -135,11 +138,12 @@ export default class LesionExtension extends Extension {
   openPreferences(page) {
     // Save the requested page so the prefs window reads it on load.
     if (page) {
-      try {
-        const schema = AppConfig.schemaId || this.metadata["settings-schema"];
+      // NEW (Safe to remove try/catch)
+      const schema = AppConfig.schemaId || this.metadata["settings-schema"];
+      if (schema) {
         const s = this.getSettings(schema);
-        s.set_string("open-page", page);
-      } catch (e) {}
+        if (s) s.set_string("open-page", page);
+      }
     }
 
     // If a preferences window is already open, raise it. activate() alone
@@ -154,22 +158,19 @@ export default class LesionExtension extends Extension {
         const ws = global.workspace_manager.get_active_workspace();
         if (ws && win.change_workspace) win.change_workspace(ws);
         Main.activateWindow(win, now);
-        log('Raised existing preferences window.');
+        log("Raised existing preferences window.");
         return;
       } catch (e) {
-        logError('Failed to raise preferences window', e);
+        logError("Failed to raise preferences window", e);
       }
     }
 
     // Otherwise open it. GNOME's built-in also focuses an existing window if
     // one is open, so this is a safe fallback.
-    try {
-      const result = super.openPreferences();
-      if (result && typeof result.then === "function") {
-        result.catch((err) => logError("openPreferences() rejected", err));
-      }
-    } catch (e) {
-      logError("openPreferences() threw", e);
+    // NEW (Safe to remove try/catch)
+    const result = super.openPreferences();
+    if (result && typeof result.then === "function") {
+      result.catch((err) => logError("openPreferences() rejected", err));
     }
   }
 }
