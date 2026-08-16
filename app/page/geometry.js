@@ -4,6 +4,7 @@ import Gio from 'gi://Gio';
 import Gdk from 'gi://Gdk';
 import GLib from 'gi://GLib';
 import { AppConfig } from '../config.js';
+import { gettext as _ } from '../util/gettext.js';
 
 export function createGeometryUI() {
     const page = new Adw.PreferencesPage();
@@ -16,27 +17,27 @@ export function createGeometryUI() {
 
     // --- SECTION 1: SETTINGS ---
     const mainGroup = new Adw.PreferencesGroup({
-        title: 'Settings',
+        title: _('Settings'),
     });
     page.add(mainGroup);
 
     const enableRow = new Adw.SwitchRow({
-        title: 'Enable Geometry Saving',
-        subtitle: 'Remember window size and position'
+        title: _('Enable Geometry Saving'),
+        subtitle: _('Remember window size and position')
     });
     settings.bind('geometry-enabled', enableRow, 'active', Gio.SettingsBindFlags.DEFAULT);
     mainGroup.add(enableRow);
 
     const wsRow = new Adw.SwitchRow({
-        title: 'Restore Workspace',
-        subtitle: 'Reopen windows on the workspace they were closed on (recreated if needed)'
+        title: _('Restore Workspace'),
+        subtitle: _('Reopen windows on the workspace they were closed on (recreated if needed)')
     });
     settings.bind('geometry-restore-workspace', wsRow, 'active', Gio.SettingsBindFlags.DEFAULT);
     settings.bind('geometry-enabled', wsRow, 'sensitive', Gio.SettingsBindFlags.GET);
 
     const x11Row = new Adw.SwitchRow({
-        title: 'Manage X11 Windows',
-        subtitle: 'Applies to apps running through Xwayland. Disable if X11 apps destabilize the session'
+        title: _('Manage X11 Windows'),
+        subtitle: _('Applies to apps running through Xwayland. Disable if X11 apps destabilize the session')
     });
     settings.bind('geometry-manage-x11', x11Row, 'active', Gio.SettingsBindFlags.DEFAULT);
     settings.bind('geometry-enabled', x11Row, 'sensitive', Gio.SettingsBindFlags.GET);
@@ -45,8 +46,8 @@ export function createGeometryUI() {
 
     // --- SECTION 2: DATA LIST ---
     const dataGroup = new Adw.PreferencesGroup({
-        title: 'Saved Applications',
-        description: 'Manage currently stored window positions'
+        title: _('Saved Applications'),
+        description: _('Manage currently stored window positions')
     });
     page.add(dataGroup);
 
@@ -115,8 +116,8 @@ export function createGeometryUI() {
         if (currentKeys.length === 0) {
             if (!emptyStateRow) {
                 emptyStateRow = new Adw.ActionRow({
-                    title: 'No Saved Windows',
-                    subtitle: 'Move windows around to populate this list',
+                    title: _('No Saved Windows'),
+                    subtitle: _('Move windows around to populate this list'),
                     activatable: false
                 });
                 emptyStateRow.add_prefix(new Gtk.Image({ 
@@ -160,7 +161,7 @@ export function createGeometryUI() {
                     icon_name: 'user-trash-symbolic',
                     valign: Gtk.Align.CENTER,
                     has_frame: false,
-                    tooltip_text: 'Forget this window'
+                    tooltip_text: _('Forget this window')
                 });
                 delBtn.add_css_class('error');
 
@@ -222,14 +223,14 @@ export function createGeometryUI() {
     page.add(clearGroup);
 
     const clearRow = new Adw.ActionRow({
-        title: 'Clear Saved Geometry',
-        subtitle: 'Remove all remembered window positions and sizes. Entries rebuild as you move windows'
+        title: _('Clear Saved Geometry'),
+        subtitle: _('Remove all remembered window positions and sizes. Entries rebuild as you move windows')
     });
 
     const clearBtn = new Gtk.Button({
         icon_name: 'edit-clear-all-symbolic', // built-in Adwaita icon
         valign: Gtk.Align.CENTER,
-        tooltip_text: 'Clear all saved window geometry',
+        tooltip_text: _('Clear all saved window geometry'),
     });
     clearBtn.add_css_class('flat'); // low-stakes: data rebuilds through normal use
 

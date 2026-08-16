@@ -1,3 +1,4 @@
+import { N_ } from '../util/gettext.js';
 /**
  * Wallpaper Presets Configuration
  * * * New Structure:
@@ -12,7 +13,7 @@
  */
 export const WallpaperPresets = [
     {
-        name: "Midnight Gradient",
+        name: N_("Midnight Gradient"),
         // No wallpaper property = use system colors defined below
         system: {
             "primary-color": "#858583",
@@ -32,7 +33,7 @@ export const WallpaperPresets = [
         }
     },
     {
-        name: "Diamond",
+        name: N_("Diamond"),
         // Simple string: applies to both Light and Dark
         // Flexible path: explicitly prefixed with "wallpaper/..."
         wallpaper: "wallpaper/lethil.svg", 
@@ -52,7 +53,7 @@ export const WallpaperPresets = [
         }
     },
     {
-        name: "Chain Link",
+        name: N_("Chain Link"),
         // Object: distinct images for modes Day & Night
         wallpaper: {
             light: "wallpaper/chain.svg",
@@ -74,7 +75,7 @@ export const WallpaperPresets = [
         }
     },
     {
-        name: "Mono Minimal",
+        name: N_("Mono Minimal"),
         // Example: an absolute path in another folder also works
         wallpaper: "icon/hornbill.svg", 
         system: {

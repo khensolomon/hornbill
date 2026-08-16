@@ -5,6 +5,7 @@ import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
 import GObject from 'gi://GObject';
 import { AppConfig } from '../config.js';
+import { gettext as _, N_ } from '../util/gettext.js';
 
 /**
  * Creates the Applications Preferences Page UI.
@@ -38,15 +39,15 @@ export function createLayoutUI() {
      * Configures the general look and feel of panel buttons.
      */
     const globalGroup = new Adw.PreferencesGroup({
-        title: 'Global Appearance',
-        description: 'Configure the look and feel of your panel buttons.'
+        title: _('Global Appearance'),
+        description: _('Configure the look and feel of your panel buttons.')
     });
     addGroupIcon(globalGroup, 'preferences-desktop-appearance-symbolic');
     page.add(globalGroup);
 
     /** Setting: Icon Size */
     const sizeRow = new Adw.SpinRow({
-        title: 'Icon Size',
+        title: _('Icon Size'),
         adjustment: new Gtk.Adjustment({ lower: 12, upper: 64, step_increment: 2 }),
         value: settings.get_int('apps-icon-size')
     });
@@ -56,8 +57,8 @@ export function createLayoutUI() {
     /** Setting: Item Padding (inner padding of custom buttons, independent
      *  of Style -> Panel Buttons padding) */
     const padRow = new Adw.SpinRow({
-        title: 'Item Padding',
-        subtitle: 'Horizontal space inside each item, independent of panel button padding',
+        title: _('Item Padding'),
+        subtitle: _('Horizontal space inside each item, independent of panel button padding'),
         adjustment: new Gtk.Adjustment({ lower: 0, upper: 24, step_increment: 1 }),
         value: settings.get_int('apps-btn-padding')
     });
@@ -66,15 +67,15 @@ export function createLayoutUI() {
 
     /** Setting: Desaturation (Monochrome) */
     const desatRow = new Adw.SwitchRow({
-        title: 'Monochrome Icons',
+        title: _('Monochrome Icons'),
     });
     settings.bind('apps-icon-desaturate', desatRow, 'active', Gio.SettingsBindFlags.DEFAULT);
     globalGroup.add(desatRow);
 
     /** Setting: Running Opacity */
     const opRunRow = new Adw.SpinRow({
-        title: 'Running Opacity',
-        subtitle: 'Opacity for running apps (0-255)',
+        title: _('Running Opacity'),
+        subtitle: _('Opacity for running apps (0-255)'),
         adjustment: new Gtk.Adjustment({ lower: 0, upper: 255, step_increment: 5 }),
         value: settings.get_int('apps-opacity-running')
     });
@@ -83,8 +84,8 @@ export function createLayoutUI() {
 
     /** Setting: Stopped/Inactive Opacity */
     const opStopRow = new Adw.SpinRow({
-        title: 'Stopped Opacity',
-        subtitle: 'Opacity for inactive favorites (0-255)',
+        title: _('Stopped Opacity'),
+        subtitle: _('Opacity for inactive favorites (0-255)'),
         adjustment: new Gtk.Adjustment({ lower: 0, upper: 255, step_increment: 5 }),
         value: settings.get_int('apps-opacity-stopped')
     });
@@ -97,8 +98,8 @@ export function createLayoutUI() {
      * Customize the visual indicator for running applications.
      */
     const indGroup = new Adw.PreferencesGroup({ 
-        title: 'Running Indicator',
-        description: 'Customize the visual indicator for running applications.'
+        title: _('Running Indicator'),
+        description: _('Customize the visual indicator for running applications.')
     });
     addGroupIcon(indGroup, 'software-update-available-symbolic');
     page.add(indGroup);
@@ -108,21 +109,21 @@ export function createLayoutUI() {
      * Maps user-friendly names to specific indicator properties.
      */
     const presetConfig = [
-        { name: 'Custom', id: 0 },
-        { name: 'Dot Below',  pos: 'top',    off: 12, w: 4,  h: 4,  r: 99, c: '#ffffff' },
-        { name: 'Dot Above',  pos: 'bottom', off: 12, w: 4,  h: 4,  r: 99, c: '#ffffff' },
-        { name: 'Line Below', pos: 'top',    off: 14, w: 14, h: 1,  r: 0,  c: '#ffffff' },
-        { name: 'Line Above', pos: 'bottom', off: 14, w: 14, h: 1,  r: 0,  c: '#ffffff' },
-        { name: 'Bar Left',   pos: 'right',  off: 13, w: 2,  h: 16, r: 0,  c: '#ffffff' },
-        { name: 'Bar Right',  pos: 'left',   off: 13, w: 2,  h: 16, r: 0,  c: '#ffffff' }
+        { name: N_('Custom'), id: 0 },
+        { name: N_('Dot Below'),  pos: 'top',    off: 12, w: 4,  h: 4,  r: 99, c: '#ffffff' },
+        { name: N_('Dot Above'),  pos: 'bottom', off: 12, w: 4,  h: 4,  r: 99, c: '#ffffff' },
+        { name: N_('Line Below'), pos: 'top',    off: 14, w: 14, h: 1,  r: 0,  c: '#ffffff' },
+        { name: N_('Line Above'), pos: 'bottom', off: 14, w: 14, h: 1,  r: 0,  c: '#ffffff' },
+        { name: N_('Bar Left'),   pos: 'right',  off: 13, w: 2,  h: 16, r: 0,  c: '#ffffff' },
+        { name: N_('Bar Right'),  pos: 'left',   off: 13, w: 2,  h: 16, r: 0,  c: '#ffffff' }
     ];
 
     const presetModel = new Gtk.StringList();
-    presetConfig.forEach(p => presetModel.append(p.name));
+    presetConfig.forEach(p => presetModel.append(_(p.name)));
 
     const presetRow = new Adw.ComboRow({
-        title: 'Style Preset',
-        subtitle: 'Quickly apply common indicator styles',
+        title: _('Style Preset'),
+        subtitle: _('Quickly apply common indicator styles'),
         model: presetModel,
     });
 
@@ -218,7 +219,7 @@ export function createLayoutUI() {
     indPosModel.append('Left');   // 3
     
     const indPosRow = new Adw.ComboRow({
-        title: 'Position',
+        title: _('Position'),
         model: indPosModel
     });
 
@@ -245,8 +246,8 @@ export function createLayoutUI() {
 
     /** Setting: Offset */
     const offsetRow = new Adw.SpinRow({
-        title: 'Offset',
-        subtitle: 'Distance from edge',
+        title: _('Offset'),
+        subtitle: _('Distance from edge'),
         adjustment: new Gtk.Adjustment({ lower: 0, upper: 20, step_increment: 1 })
     });
     settings.bind('apps-indicator-offset', offsetRow, 'value', Gio.SettingsBindFlags.DEFAULT);
@@ -254,7 +255,7 @@ export function createLayoutUI() {
 
     /** Setting: Width */
     const wRow = new Adw.SpinRow({
-        title: 'Width',
+        title: _('Width'),
         adjustment: new Gtk.Adjustment({ lower: 1, upper: 20, step_increment: 1 })
     });
     settings.bind('apps-indicator-width', wRow, 'value', Gio.SettingsBindFlags.DEFAULT);
@@ -262,7 +263,7 @@ export function createLayoutUI() {
 
     /** Setting: Height */
     const hRow = new Adw.SpinRow({
-        title: 'Height',
+        title: _('Height'),
         adjustment: new Gtk.Adjustment({ lower: 1, upper: 20, step_increment: 1 })
     });
     settings.bind('apps-indicator-height', hRow, 'value', Gio.SettingsBindFlags.DEFAULT);
@@ -270,15 +271,15 @@ export function createLayoutUI() {
 
     /** Setting: Radius */
     const radRow = new Adw.SpinRow({
-        title: 'Radius',
-        subtitle: 'Corner rounding (0=Square, 99=Round)',
+        title: _('Radius'),
+        subtitle: _('Corner rounding (0=Square, 99=Round)'),
         adjustment: new Gtk.Adjustment({ lower: 0, upper: 99, step_increment: 1 })
     });
     settings.bind('apps-indicator-radius', radRow, 'value', Gio.SettingsBindFlags.DEFAULT);
     indGroup.add(radRow);
 
     /** Setting: Color */
-    const colorRow = new Adw.ActionRow({ title: 'Color' });
+    const colorRow = new Adw.ActionRow({ title: _('Color') });
     const colorDialog = new Gtk.ColorDialog();
     const colorBtn = new Gtk.ColorDialogButton({
         dialog: colorDialog,
@@ -325,7 +326,7 @@ export function createLayoutUI() {
         addGroupIcon(group, iconName);
         page.add(group);
 
-        const enableRow = new Adw.SwitchRow({ title: 'Show in Panel' });
+        const enableRow = new Adw.SwitchRow({ title: _('Show in Panel') });
         settings.bind(`apps-${keySuffix}-enabled`, enableRow, 'active', Gio.SettingsBindFlags.DEFAULT);
         group.add(enableRow);
 
@@ -333,7 +334,7 @@ export function createLayoutUI() {
         posModel.append('Left Panel');
         posModel.append('Right Panel');
         const posRow = new Adw.ComboRow({
-            title: 'Position',
+            title: _('Position'),
             model: posModel,
             selected: settings.get_enum(`apps-${keySuffix}-pos`)
         });
@@ -350,7 +351,7 @@ export function createLayoutUI() {
         group.add(posRow);
 
         const idxRow = new Adw.SpinRow({
-            title: 'Sort Order',
+            title: _('Sort Order'),
             adjustment: new Gtk.Adjustment({ lower: 0, upper: 20, step_increment: 1 }),
             value: settings.get_int(`apps-${keySuffix}-index`)
         });
@@ -379,8 +380,8 @@ export function createLayoutUI() {
             modeModel.append('Text Label'); // 2
 
             const modeRow = new Adw.ComboRow({
-                title: 'Display Mode',
-                subtitle: 'Choose how the button appears in the panel.',
+                title: _('Display Mode'),
+                subtitle: _('Choose how the button appears in the panel.'),
                 model: modeModel,
                 selected: settings.get_enum('apps-showgrid-mode')
             });
@@ -401,7 +402,7 @@ export function createLayoutUI() {
             // shortcut, not a constraint.
             const currentIcon = settings.get_string('apps-showgrid-icon');
             const iconRow = new Adw.EntryRow({
-                title: 'Icon Name',
+                title: _('Icon Name'),
                 text: currentIcon || 'start-here-symbolic'
             });
 
@@ -437,7 +438,7 @@ export function createLayoutUI() {
 
             // 2. File Path Entry + Button
             const fileRow = new Adw.ActionRow({
-                title: 'Icon File',
+                title: _('Icon File'),
                 subtitle: settings.get_string('apps-showgrid-path') || 'No file selected'
             });
             
@@ -450,7 +451,7 @@ export function createLayoutUI() {
                 // Use FileDialog for modern GTK4
                 try {
                     const dialog = new Gtk.FileDialog({
-                        title: 'Select Icon',
+                        title: _('Select Icon'),
                         modal: true
                     });
                     
@@ -485,7 +486,7 @@ export function createLayoutUI() {
 
             // 3. Text Entry
             const textRow = new Adw.EntryRow({
-                title: 'Label Text',
+                title: _('Label Text'),
                 text: settings.get_string('apps-showgrid-text')
             });
             textRow.connect('changed', () => settings.set_string('apps-showgrid-text', textRow.text));
@@ -493,8 +494,8 @@ export function createLayoutUI() {
 
             // Helper text
             const helpRow = new Adw.ActionRow({
-                title: 'Note',
-                subtitle: 'Enter a themed icon name (e.g., start-here-symbolic) or a full file path.'
+                title: _('Note'),
+                subtitle: _('Enter a themed icon name (e.g., start-here-symbolic) or a full file path.')
             });
             group.add(helpRow);
 
@@ -519,8 +520,8 @@ export function createLayoutUI() {
         'view-paged-symbolic',
         (group) => {
             const hideDefaultRow = new Adw.SwitchRow({
-                title: 'Hide "Activities" Button',
-                subtitle: 'Hide the default GNOME Shell Activities button'
+                title: _('Hide "Activities" Button'),
+                subtitle: _('Hide the default GNOME Shell Activities button')
             });
             settings.bind('apps-overview-hide-default', hideDefaultRow, 'active', Gio.SettingsBindFlags.DEFAULT);
             group.add(hideDefaultRow);
@@ -543,8 +544,8 @@ export function createLayoutUI() {
      * Interface for reordering pinned applications.
      */
     const favGroup = new Adw.PreferencesGroup({
-        title: 'Manage Favorites',
-        description: 'Drag and drop items to reorder.'
+        title: _('Manage Favorites'),
+        description: _('Drag and drop items to reorder.')
     });
     addGroupIcon(favGroup, 'view-sort-ascending-symbolic');
     page.add(favGroup);

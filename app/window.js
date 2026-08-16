@@ -4,6 +4,7 @@ import GObject from 'gi://GObject';
 import GLib from 'gi://GLib';
 
 import { getPages } from './page/index.js';
+import { gettext as _, format } from './util/gettext.js';
 
 // NEW: Export a helper to attach responsive behaviors to the parent window explicitly
 export function installLayout(window, splitView) {
@@ -31,16 +32,16 @@ export function createUI() {
     });
 
 
-    const sidebarPage = new Adw.NavigationPage({ title: 'Menu', tag: 'sidebar' });
+    const sidebarPage = new Adw.NavigationPage({ title: _('Menu'), tag: 'sidebar' });
     const sidebarToolbar = new Adw.ToolbarView();
     const sidebarHeader = new Adw.HeaderBar({ show_end_title_buttons: false, show_start_title_buttons: false });
 
     // --- Search UI Setup ---
-    const searchButton = new Gtk.ToggleButton({ icon_name: 'system-search-symbolic', tooltip_text: 'Search' });
+    const searchButton = new Gtk.ToggleButton({ icon_name: 'system-search-symbolic', tooltip_text: _('Search') });
     sidebarHeader.pack_start(searchButton);
     
     const searchBar = new Gtk.SearchBar();
-    const searchEntry = new Gtk.SearchEntry({ placeholder_text: 'Search settings...', hexpand: true, halign: Gtk.Align.FILL });
+    const searchEntry = new Gtk.SearchEntry({ placeholder_text: _('Search settings...'), hexpand: true, halign: Gtk.Align.FILL });
     searchBar.set_child(searchEntry);
     searchBar.connect_entry(searchEntry);
     searchBar.bind_property('search_mode_enabled', searchButton, 'active', GObject.BindingFlags.BIDIRECTIONAL);
@@ -156,7 +157,7 @@ export function createUI() {
             }
         };
         if (pageData.pages) {
-            const group = new Adw.PreferencesGroup({ title: 'General', description: `Options for ${pageData.title}` });
+            const group = new Adw.PreferencesGroup({ title: _('General'), description: format(_('Options for %s'), pageData.title) });
             populateGroup(pageData, group);
             page.add(group);
         }
@@ -291,7 +292,7 @@ export function createUI() {
         listBox.remove_all(); 
         const results = performSearch(query);
         if (results.length === 0) {
-            const noRes = new Adw.ActionRow({ title: 'No Results Found', activatable: false });
+            const noRes = new Adw.ActionRow({ title: _('No Results Found'), activatable: false });
             listBox.append(noRes);
             return;
         }

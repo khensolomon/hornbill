@@ -3,6 +3,7 @@ import Gtk from 'gi://Gtk';
 import GLib from 'gi://GLib';
 import Gdk from 'gi://Gdk';
 import { AppConfig } from '../config.js'; 
+import { gettext as _ } from '../util/gettext.js';
 
 export function createAboutUI(navigator, goToPage) {
     const page = new Adw.PreferencesPage();
@@ -49,25 +50,25 @@ export function createAboutUI(navigator, goToPage) {
 
     // --- SYSTEM / DIAGNOSTICS (moved here from the old dashboard hero) ---
     const sysGroup = new Adw.PreferencesGroup({
-        title: 'System',
+        title: _('System'),
     });
 
     const sessionType = GLib.getenv('XDG_SESSION_TYPE') || 'Unknown';
     sysGroup.add(new Adw.ActionRow({
-        title: 'Session',
+        title: _('Session'),
         subtitle: sessionType.toUpperCase(),
         activatable: false,
     }));
 
     const uuidRow = new Adw.ActionRow({
-        title: 'Extension UUID',
+        title: _('Extension UUID'),
         subtitle: AppConfig.uuid,
     });
     const copyBtn = new Gtk.Button({
         icon_name: 'edit-copy-symbolic',
         valign: Gtk.Align.CENTER,
         css_classes: ['flat', 'circular'],
-        tooltip_text: 'Copy UUID',
+        tooltip_text: _('Copy UUID'),
     });
     copyBtn.connect('clicked', () => {
         try {
@@ -82,8 +83,8 @@ export function createAboutUI(navigator, goToPage) {
     // Check if links exist in the metadata loaded by AppConfig
     if (metadata.links && Object.keys(metadata.links).length > 0) {
         const docGroup = new Adw.PreferencesGroup({
-            title: 'Documentation',
-            description: 'Resources and help'
+            title: _('Documentation'),
+            description: _('Resources and help')
         });
 
         const createLinkRow = (title, uri) => {

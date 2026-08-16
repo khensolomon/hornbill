@@ -3,6 +3,7 @@ import Gtk from "gi://Gtk";
 import Gio from "gi://Gio";
 import Pango from "gi://Pango";
 import { AppConfig } from "../config.js";
+import { gettext as _, N_ } from '../util/gettext.js';
 
 /**
  * Creates the Clock Settings UI page.
@@ -97,12 +98,12 @@ export function createClockUI() {
 
   // --- GROUP 1: POSITIONING ---
   const posGroup = new Adw.PreferencesGroup({
-    title: "Positioning",
-    description: "Control where the clock appears on the panel and its position relative to other elements.",
+    title: _("Positioning"),
+    description: _("Control where the clock appears on the panel and its position relative to other elements."),
   });
   page.add(posGroup);
 
-  const enableRow = new Adw.SwitchRow({ title: "Move Clock" });
+  const enableRow = new Adw.SwitchRow({ title: _("Move Clock") });
   settings.bind(
     "clock-move-enabled",
     enableRow,
@@ -112,7 +113,7 @@ export function createClockUI() {
   posGroup.add(enableRow);
 
   const targetRow = new Adw.ComboRow({
-    title: "Target Side",
+    title: _("Target Side"),
     model: new Gtk.StringList({ strings: ["Left Panel", "Right Panel"] }),
   });
   settings.bind(
@@ -128,7 +129,7 @@ export function createClockUI() {
   posGroup.add(targetRow);
 
   const placeRow = new Adw.ComboRow({
-    title: "Placement",
+    title: _("Placement"),
     model: new Gtk.StringList({ strings: ["Before Anchor", "After Anchor"] }),
   });
   settings.bind(
@@ -145,14 +146,14 @@ export function createClockUI() {
 
   // --- GROUP 2: FORMATTING ---
   const formatGroup = new Adw.PreferencesGroup({
-    title: "Appearance",
-    description: "Adjust the visual style, format the date and time strings, or choose a preset layout.",
+    title: _("Appearance"),
+    description: _("Adjust the visual style, format the date and time strings, or choose a preset layout."),
   });
   page.add(formatGroup);
 
   const multiRow = new Adw.SwitchRow({
-    title: "Two-Line Clock",
-    subtitle: "Time top, Date bottom",
+    title: _("Two-Line Clock"),
+    subtitle: _("Time top, Date bottom"),
   });
   settings.bind(
     "clock-multiline",
@@ -162,7 +163,7 @@ export function createClockUI() {
   );
   formatGroup.add(multiRow);
 
-  const dimRow = new Adw.SwitchRow({ title: "Dim Separators" });
+  const dimRow = new Adw.SwitchRow({ title: _("Dim Separators") });
   settings.bind(
     "clock-dim-separator",
     dimRow,
@@ -172,7 +173,7 @@ export function createClockUI() {
   formatGroup.add(dimRow);
 
   const modeRow = new Adw.ComboRow({
-    title: "Format Mode",
+    title: _("Format Mode"),
     model: new Gtk.StringList({ strings: ["System Default", "Custom Format"] }),
   });
   modeRow.set_selected(settings.get_enum("clock-format-mode"));
@@ -183,7 +184,7 @@ export function createClockUI() {
 
   // Custom Entry
   const formatEntryRow = new Adw.EntryRow({
-    title: "Format String",
+    title: _("Format String"),
     show_apply_button: true,
   });
   settings.bind(
@@ -197,44 +198,44 @@ export function createClockUI() {
   // Presets
   const presets = [
     // Originals
-    { name: "Single: Standard", value: "%H:%M %a %d %b" },
-    { name: "Single: Full", value: "%H:%M %A, %B %d" },
-    { name: "Double: Standard", value: "%H:%M%n%A, %B %d" },
-    { name: "Double: Compact", value: "%H:%M%n%a %d %b" },
-    { name: "Double: Big Day", value: "%A%n%H:%M" },
-    { name: "Double: EU Compact", value: "%H:%M %d.%m.%y" },
-    { name: "Double: EU Full", value: "%H:%M:%S %a %d.%m.%Y" },
+    { name: N_("Single: Standard"), value: "%H:%M %a %d %b" },
+    { name: N_("Single: Full"), value: "%H:%M %A, %B %d" },
+    { name: N_("Double: Standard"), value: "%H:%M%n%A, %B %d" },
+    { name: N_("Double: Compact"), value: "%H:%M%n%a %d %b" },
+    { name: N_("Double: Big Day"), value: "%A%n%H:%M" },
+    { name: N_("Double: EU Compact"), value: "%H:%M %d.%m.%y" },
+    { name: N_("Double: EU Full"), value: "%H:%M:%S %a %d.%m.%Y" },
 
     // Single-line
-    { name: "Single: Compact", value: "%H:%M %a %d" },
-    { name: "Single: With Seconds", value: "%H:%M:%S %a %d %b" },
-    { name: "Single: With Year", value: "%H:%M %a %d %b %Y" },
-    { name: "Single: 12-Hour", value: "%I:%M %p %a %d %b" },
-    { name: "Single: 12-Hour Full", value: "%I:%M %p %A, %B %d" },
-    { name: "Single: Date First", value: "%a %d %b %H:%M" },
+    { name: N_("Single: Compact"), value: "%H:%M %a %d" },
+    { name: N_("Single: With Seconds"), value: "%H:%M:%S %a %d %b" },
+    { name: N_("Single: With Year"), value: "%H:%M %a %d %b %Y" },
+    { name: N_("Single: 12-Hour"), value: "%I:%M %p %a %d %b" },
+    { name: N_("Single: 12-Hour Full"), value: "%I:%M %p %A, %B %d" },
+    { name: N_("Single: Date First"), value: "%a %d %b %H:%M" },
 
     // Double-line
-    { name: "Double: With Seconds", value: "%H:%M:%S%n%A, %B %d" },
-    { name: "Double: With Year", value: "%H:%M%n%A, %B %d, %Y" },
-    { name: "Double: Big Month", value: "%B %d%n%H:%M" },
-    { name: "Double: 12-Hour", value: "%I:%M %p%n%A, %B %d" },
-    { name: "Double: 12-Hour Compact", value: "%I:%M %p%n%a %d %b" },
-    { name: "Double: Time Top Big", value: "%H:%M%n%a %d %b %Y" },
+    { name: N_("Double: With Seconds"), value: "%H:%M:%S%n%A, %B %d" },
+    { name: N_("Double: With Year"), value: "%H:%M%n%A, %B %d, %Y" },
+    { name: N_("Double: Big Month"), value: "%B %d%n%H:%M" },
+    { name: N_("Double: 12-Hour"), value: "%I:%M %p%n%A, %B %d" },
+    { name: N_("Double: 12-Hour Compact"), value: "%I:%M %p%n%a %d %b" },
+    { name: N_("Double: Time Top Big"), value: "%H:%M%n%a %d %b %Y" },
 
     // Triple-line
-    { name: "Triple: Time + Day + Date", value: "%H:%M%n%A%n%B %d, %Y" },
-    { name: "Triple: With Seconds", value: "%H:%M:%S%n%A%n%B %d" },
-    { name: "Triple: 12-Hour Full", value: "%I:%M %p%n%A%n%B %d, %Y" },
+    { name: N_("Triple: Time + Day + Date"), value: "%H:%M%n%A%n%B %d, %Y" },
+    { name: N_("Triple: With Seconds"), value: "%H:%M:%S%n%A%n%B %d" },
+    { name: N_("Triple: 12-Hour Full"), value: "%I:%M %p%n%A%n%B %d, %Y" },
 
     // Creative
-    { name: "Single: Minimal", value: "%H:%M" },
-    { name: "Double: Day Focus", value: "%A %d%n%H:%M" },
-    { name: "Single: ISO-ish", value: "%Y-%m-%d %H:%M" },
+    { name: N_("Single: Minimal"), value: "%H:%M" },
+    { name: N_("Double: Day Focus"), value: "%A %d%n%H:%M" },
+    { name: N_("Single: ISO-ish"), value: "%Y-%m-%d %H:%M" },
   ];
 
   const presetRow = new Adw.ComboRow({
-    title: "Select a Preset",
-    model: new Gtk.StringList({ strings: presets.map((p) => p.name) }),
+    title: _("Select a Preset"),
+    model: new Gtk.StringList({ strings: presets.map((p) => _(p.name)) }),
   });
   formatGroup.add(presetRow);
 
@@ -263,8 +264,8 @@ export function createClockUI() {
 
   // --- GROUP 3: FORMATTING GUIDE ---
   const formattingGuideGroup = new Adw.PreferencesGroup({
-    title: "Formatting Guide",
-    description: "Reference for standard 'strftime' codes used to build custom date and time formats.",
+    title: _("Formatting Guide"),
+    description: _("Reference for standard 'strftime' codes used to build custom date and time formats."),
   });
 
   const formattingGuideClamp = new Adw.Clamp({

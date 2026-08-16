@@ -5,15 +5,12 @@
 .vscode/
 tmp/
 ui/
-docs/
+po/
 
 ext.sh
-
 build.py
 install.py
 
 Makefile
 Todo.md
 Changelog.md
-
-icon/bible.svg

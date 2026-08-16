@@ -1,0 +1,33 @@
+# Source files scanned for translatable strings.
+# Regenerate the template with: ./po/update-pot.sh
+app.js
+app/components/apps.js
+app/components/base.js
+app/components/clock.js
+app/components/effects.js
+app/components/geometry.js
+app/components/index.js
+app/components/panels.js
+app/components/styles.js
+app/components/wallpaper.js
+app/config.js
+app/data/panels.js
+app/data/wallpaper.js
+app/page/about.js
+app/page/appearance.js
+app/page/clock.js
+app/page/dashboard.js
+app/page/effects.js
+app/page/extensions.js
+app/page/geometry.js
+app/page/index.js
+app/page/layout.js
+app/page/stylesheet.js
+app/page/wallpaper.js
+app/panel/indicator.js
+app/util/compat.js
+app/util/io.js
+app/util/logger.js
+app/window.js
+extension.js
+prefs.js

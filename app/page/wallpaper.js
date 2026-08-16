@@ -7,6 +7,7 @@ import Cairo from 'cairo';
 import { logError } from '../util/logger.js';
 import { AppConfig } from '../config.js';
 import { WallpaperPresets } from '../data/wallpaper.js';
+import { gettext as _, N_, format } from '../util/gettext.js';
 
 // Global reference to prevent GC closing the dialog
 let _activeWallpaperChooser = null;
@@ -96,16 +97,16 @@ export function createWallpaperUI() {
         page.add(mainGroup);
 
         const enableRow = new Adw.SwitchRow({
-            title: 'Enable Wallpaper Management',
-            subtitle: 'Master switch for all wallpaper features'
+            title: _('Enable Wallpaper Management'),
+            subtitle: _('Master switch for all wallpaper features')
         });
         extSettings.bind('wallpaper-enabled', enableRow, 'active', Gio.SettingsBindFlags.DEFAULT);
         mainGroup.add(enableRow);
 
         // --- PRESETS SECTION (THUMBNAIL GRID) ---
         const presetGroup = new Adw.PreferencesGroup({
-            title: 'Presets',
-            description: 'Instantly apply a pre-configured theme with matching colors and effects.'
+            title: _('Presets'),
+            description: _('Instantly apply a pre-configured theme with matching colors and effects.')
         });
         page.add(presetGroup);
 
@@ -202,7 +203,7 @@ export function createWallpaperUI() {
                 css_classes: ['preset-overlay-box']
             });
             const label = new Gtk.Label({
-                label: preset.name,
+                label: _(preset.name),
                 css_classes: ['preset-label'],
                 halign: Gtk.Align.START,
                 ellipsize: 3 
@@ -220,14 +221,14 @@ export function createWallpaperUI() {
 
         // --- BACKGROUND IMAGE SECTION ---
         const imgGroup = new Adw.PreferencesGroup({ 
-            title: 'Background Image',
-            description: 'Choose specific images for Light and Dark system themes.'
+            title: _('Background Image'),
+            description: _('Choose specific images for Light and Dark system themes.')
         });
         page.add(imgGroup);
 
         const showImageRow = new Adw.SwitchRow({
-            title: 'Show Image',
-            subtitle: 'Toggle the desktop background wallpaper'
+            title: _('Show Image'),
+            subtitle: _('Toggle the desktop background wallpaper')
         });
         extSettings.bind('wallpaper-show-image', showImageRow, 'active', Gio.SettingsBindFlags.DEFAULT);
         imgGroup.add(showImageRow);
@@ -242,8 +243,8 @@ export function createWallpaperUI() {
 
         // --- SCALING OPTIONS ---
         const optGroup = new Adw.PreferencesGroup({ 
-            title: 'Scaling Options',
-            description: 'Control how the wallpaper image fits your screen.'
+            title: _('Scaling Options'),
+            description: _('Control how the wallpaper image fits your screen.')
         });
         page.add(optGroup);
         
@@ -254,19 +255,19 @@ export function createWallpaperUI() {
 
         // --- EFFECTS ---
         const fxGroup = new Adw.PreferencesGroup({ 
-            title: "Effects",
-            description: 'Apply visual filters like blur or desaturation to the background.'
+            title: _("Effects"),
+            description: _('Apply visual filters like blur or desaturation to the background.')
         });
         page.add(fxGroup);
 
         const monoRow = new Adw.SwitchRow({
-            title: 'Monochrome',
-            subtitle: 'Desaturate the background'
+            title: _('Monochrome'),
+            subtitle: _('Desaturate the background')
         });
         _bindSwitch(extSettings, 'wallpaper-monochrome', monoRow);
         fxGroup.add(monoRow);
 
-        const blurRow = new Adw.ActionRow({ title: "Blur Amount" });
+        const blurRow = new Adw.ActionRow({ title: _("Blur Amount") });
         const blurScale = Gtk.Scale.new_with_range(Gtk.Orientation.HORIZONTAL, 0, 30, 1);
         blurScale.set_hexpand(true);
         blurScale.set_size_request(150, -1);
@@ -276,7 +277,7 @@ export function createWallpaperUI() {
         blurRow.add_suffix(blurScale);
         fxGroup.add(blurRow);
 
-        const brightRow = new Adw.ActionRow({ title: "Brightness" });
+        const brightRow = new Adw.ActionRow({ title: _("Brightness") });
         const brightScale = Gtk.Scale.new_with_range(Gtk.Orientation.HORIZONTAL, 0.0, 1.0, 0.1);
         brightScale.set_hexpand(true);
         brightScale.set_size_request(150, -1);
@@ -289,8 +290,8 @@ export function createWallpaperUI() {
 
         // --- COLORS ---
         const colorGroup = new Adw.PreferencesGroup({ 
-            title: 'Colors',
-            description: 'Define solid colors or gradients. These appear when no image is set or behind transparent wallpapers.'
+            title: _('Colors'),
+            description: _('Define solid colors or gradients. These appear when no image is set or behind transparent wallpapers.')
         });
         page.add(colorGroup);
 
@@ -440,7 +441,7 @@ function _createImageRow(settings, key, title) {
         if (_activeWallpaperChooser) return;
         try {
             const dialog = new Gtk.FileChooserNative({
-                title: `Select ${title}`,
+                title: format(_('Select %s'), title),
                 action: Gtk.FileChooserAction.OPEN,
                 transient_for: btn.get_root(),
                 modal: true
@@ -515,7 +516,7 @@ function _createOptionsRow(settings) {
         strings: ['none', 'wallpaper', 'centered', 'scaled', 'stretched', 'zoom', 'spanned']
     });
     const row = new Adw.ComboRow({
-        title: 'Picture Style',
+        title: _('Picture Style'),
         model: model
     });
 
@@ -556,7 +557,7 @@ function _createShadingRow(settings, dependencies) {
         strings: ['solid', 'vertical', 'horizontal']
     });
     const row = new Adw.ComboRow({
-        title: 'Color Mode',
+        title: _('Color Mode'),
         model: model
     });
 

@@ -6,6 +6,7 @@ import GObject from 'gi://GObject';
 
 import { AppConfig } from '../config.js';
 import { SettingsManager } from '../util/io.js';
+import { gettext as _ } from '../util/gettext.js';
 
 export class DashboardPage extends Adw.PreferencesPage {
     static {
@@ -31,14 +32,14 @@ export class DashboardPage extends Adw.PreferencesPage {
 
         // --- 1. GLOBAL INDICATOR SETTINGS ---
         const indicatorGroup = new Adw.PreferencesGroup({
-            title: 'Panel Indicator',
-            description: 'Control the main menu icon in the top bar'
+            title: _('Panel Indicator'),
+            description: _('Control the main menu icon in the top bar')
         });
         this.add(indicatorGroup);
 
         const indEnableRow = new Adw.SwitchRow({
-            title: 'Show Indicator',
-            subtitle: 'Toggle visibility'
+            title: _('Show Indicator'),
+            subtitle: _('Toggle visibility')
         });
         this._settings.bind('indicator-enabled', indEnableRow, 'active', Gio.SettingsBindFlags.DEFAULT);
         indicatorGroup.add(indEnableRow);
@@ -49,8 +50,8 @@ export class DashboardPage extends Adw.PreferencesPage {
 
         // --- 3. FEATURE SHORTCUTS ---
         const navGroup = new Adw.PreferencesGroup({
-            title: 'Features',
-            description: 'Quick access to core modules'
+            title: _('Features'),
+            description: _('Quick access to core modules')
         });
         this.add(navGroup);
 
@@ -63,15 +64,15 @@ export class DashboardPage extends Adw.PreferencesPage {
 
         // --- 4. DATA MANAGEMENT ---
         const dataGroup = new Adw.PreferencesGroup({
-            title: 'Data Management',
-            description: 'Backup or restore your configuration'
+            title: _('Data Management'),
+            description: _('Backup or restore your configuration')
         });
         this.add(dataGroup);
 
         // Export Row
         const exportRow = new Adw.ActionRow({
-            title: 'Export Configuration',
-            subtitle: 'Save settings to a JSON file'
+            title: _('Export Configuration'),
+            subtitle: _('Save settings to a JSON file')
         });
         const exportBtn = new Gtk.Button({
             icon_name: 'document-save-symbolic',
@@ -84,8 +85,8 @@ export class DashboardPage extends Adw.PreferencesPage {
 
         // Import Row
         const importRow = new Adw.ActionRow({
-            title: 'Import Configuration',
-            subtitle: 'Restore settings from a JSON file'
+            title: _('Import Configuration'),
+            subtitle: _('Restore settings from a JSON file')
         });
         const importBtn = new Gtk.Button({
             icon_name: 'document-open-symbolic',
@@ -99,13 +100,13 @@ export class DashboardPage extends Adw.PreferencesPage {
         // Full Reset Row — resets EVERY key in the schema (the Style page's
         // "Reset Style" only covers styling)
         const resetRow = new Adw.ActionRow({
-            title: 'Reset All Settings',
-            subtitle: 'Restore every Lesion setting to its default value'
+            title: _('Reset All Settings'),
+            subtitle: _('Restore every Lesion setting to its default value')
         });
         const resetBtn = new Gtk.Button({
             icon_name: 'view-refresh-symbolic', // built-in Adwaita icon
             valign: Gtk.Align.CENTER,
-            tooltip_text: 'Reset All Settings',
+            tooltip_text: _('Reset All Settings'),
             css_classes: ['flat', 'destructive-action']
         });
         resetBtn.connect('clicked', () => this._confirmFullReset());
@@ -133,8 +134,8 @@ export class DashboardPage extends Adw.PreferencesPage {
 
     _createIconSelector() {
         const row = new Adw.ActionRow({
-            title: 'Custom Icon',
-            subtitle: 'Default'
+            title: _('Custom Icon'),
+            subtitle: _('Default')
         });
 
         const previewIcon = new Gtk.Image({
@@ -177,7 +178,7 @@ export class DashboardPage extends Adw.PreferencesPage {
 
         const resetBtn = new Gtk.Button({
             icon_name: 'view-refresh-symbolic', 
-            tooltip_text: 'Reset to Default',
+            tooltip_text: _('Reset to Default'),
             css_classes: ['flat']
         });
         resetBtn.connect('clicked', () => {
@@ -188,7 +189,7 @@ export class DashboardPage extends Adw.PreferencesPage {
         const folderBtn = new Gtk.Button({
             icon_name: 'folder-open-symbolic',
             css_classes: ['flat'],
-            tooltip_text: 'Select File'
+            tooltip_text: _('Select File')
         });
         
         folderBtn.connect('clicked', () => this._handleIconSelection(folderBtn));
@@ -204,7 +205,7 @@ export class DashboardPage extends Adw.PreferencesPage {
         }
 
         const dialog = new Gtk.FileChooserNative({
-            title: 'Select Panel Icon',
+            title: _('Select Panel Icon'),
             action: Gtk.FileChooserAction.OPEN,
             transient_for: parentBtn.get_root(),
             modal: true
@@ -245,7 +246,7 @@ export class DashboardPage extends Adw.PreferencesPage {
         }
 
         const dialog = new Gtk.FileChooserNative({
-            title: 'Export Settings',
+            title: _('Export Settings'),
             action: Gtk.FileChooserAction.SAVE,
             transient_for: button.get_root(),
             modal: true
@@ -280,7 +281,7 @@ export class DashboardPage extends Adw.PreferencesPage {
             } catch (error) {
                 console.error("Export failed:", error);
                 const errDialog = new Adw.MessageDialog({
-                    heading: "Export Failed",
+                    heading: _("Export Failed"),
                     body: error.message,
                     transient_for: button.get_root()
                 });
@@ -302,7 +303,7 @@ export class DashboardPage extends Adw.PreferencesPage {
         }
 
         const dialog = new Gtk.FileChooserNative({
-            title: 'Import Settings',
+            title: _('Import Settings'),
             action: Gtk.FileChooserAction.OPEN,
             transient_for: button.get_root(),
             modal: true
@@ -337,7 +338,7 @@ export class DashboardPage extends Adw.PreferencesPage {
             } catch (error) {
                 console.error("Import failed:", error);
                 const errDialog = new Adw.MessageDialog({
-                    heading: "Import Failed",
+                    heading: _("Import Failed"),
                     body: error.message,
                     transient_for: button.get_root()
                 });
@@ -354,7 +355,7 @@ export class DashboardPage extends Adw.PreferencesPage {
 
     _confirmFullReset() {
         const dialog = new Adw.AlertDialog({
-            heading: 'Reset All Settings?',
+            heading: _('Reset All Settings?'),
             body: 'Every Lesion setting — style, clock, apps, geometry data, corners, transparency, wallpaper — will return to its default value. Exported backups are not affected.',
         });
         dialog.add_response('cancel', 'Cancel');

@@ -13,6 +13,7 @@ import * as DND from 'resource:///org/gnome/shell/ui/dnd.js';
 import { ExtensionComponent } from './base.js';
 import { setVertical } from '../util/compat.js';
 import { log, logError } from '../util/logger.js'; 
+import { gettext as _ } from '../util/gettext.js';
 
 /**
  * Base Button Class for Application Panel Items
@@ -1173,7 +1174,7 @@ export class AppsManager extends ExtensionComponent {
         const icon = app.create_icon_texture(32);
         const title = new St.Label({ 
             // UPDATED TITLE
-            text: 'Properties', 
+            text: _('Properties'), 
             style: 'font-weight: bold; font-size: 1.2em; padding-left: 12px;',
             y_align: Clutter.ActorAlign.CENTER,
             x_expand: true // Title takes up remaining space
@@ -1226,7 +1227,7 @@ export class AppsManager extends ExtensionComponent {
         const actionBox = new St.BoxLayout({ style: 'padding-top: 16px; spacing: 12px;', x_align: Clutter.ActorAlign.END });
         
         const copyBtn = new St.Button({
-            label: 'Copy Info',
+            label: _('Copy Info'),
             style_class: 'button',
             style: 'padding: 4px 12px;'
         });
@@ -1392,9 +1393,9 @@ export class AppsManager extends ExtensionComponent {
     _confirmEmptyTrash() {
         const dialog = new ModalDialog.ModalDialog();
         dialog.setButtons([
-            { label: 'Cancel', action: () => dialog.close(), key: Clutter.KEY_Escape },
+            { label: _('Cancel'), action: () => dialog.close(), key: Clutter.KEY_Escape },
             { 
-                label: 'Empty Trash', 
+                label: _('Empty Trash'), 
                 action: () => {
                     dialog.close();
                     try { GLib.spawn_command_line_async('gio trash --empty'); } catch(e) {}
@@ -1404,7 +1405,7 @@ export class AppsManager extends ExtensionComponent {
         ]);
         const content = new St.Label({ 
             style_class: 'message-dialog-content',
-            text: 'Are you sure you want to delete all items in the Trash?',
+            text: _('Are you sure you want to delete all items in the Trash?'),
             x_align: Clutter.ActorAlign.CENTER
         });
         dialog.contentLayout.add_child(content);

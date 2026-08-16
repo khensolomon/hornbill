@@ -6,6 +6,7 @@ import GObject from 'gi://GObject';
 import Gdk from 'gi://Gdk';
 import { AppConfig } from '../config.js';
 import { log, logError } from '../util/logger.js';
+import { gettext as _ } from '../util/gettext.js';
 
 // The shell's own extensions service — the same one the official GNOME
 // Extensions app drives. A prefs process cannot change live shell state
@@ -110,8 +111,8 @@ export function createExtensionsUI() {
     // to take full effect (e.g. removing an extension).
     const reloadBanner = new Adw.PreferencesGroup();
     const reloadRow = new Adw.ActionRow({
-        title: 'Some changes finish after reloading',
-        subtitle: 'Log out and back in to complete pending changes.',
+        title: _('Some changes finish after reloading'),
+        subtitle: _('Log out and back in to complete pending changes.'),
     });
     const reloadIcon = new Gtk.Image({ icon_name: 'view-refresh-symbolic', valign: Gtk.Align.CENTER });
     reloadRow.add_prefix(reloadIcon);
@@ -121,7 +122,7 @@ export function createExtensionsUI() {
 
     // A transient status row while the list loads.
     const statusGroup = new Adw.PreferencesGroup();
-    const statusRow = new Adw.ActionRow({ title: 'Loading extensions…' });
+    const statusRow = new Adw.ActionRow({ title: _('Loading extensions…') });
     const spinner = new Gtk.Spinner({ valign: Gtk.Align.CENTER });
     spinner.start();
     statusRow.add_prefix(spinner);
@@ -132,12 +133,12 @@ export function createExtensionsUI() {
     const selfUuid = AppConfig.metadata?.uuid ?? 'lesion@lethil.me';
 
     const userGroup = new Adw.PreferencesGroup({
-        title: 'User Extensions',
-        description: 'Installed for your account. These can be enabled, disabled, and removed.',
+        title: _('User Extensions'),
+        description: _('Installed for your account. These can be enabled, disabled, and removed.'),
     });
     const systemGroup = new Adw.PreferencesGroup({
-        title: 'System Extensions',
-        description: 'Installed system-wide. These can be enabled or disabled, but not removed from here.',
+        title: _('System Extensions'),
+        description: _('Installed system-wide. These can be enabled or disabled, but not removed from here.'),
     });
     userGroup.set_visible(false);
     systemGroup.set_visible(false);
@@ -193,7 +194,7 @@ export function createExtensionsUI() {
         if (ext.url) {
             const linkBtn = new Gtk.Button({
                 icon_name: 'web-browser-symbolic',
-                tooltip_text: 'Open extension homepage',
+                tooltip_text: _('Open extension homepage'),
                 valign: Gtk.Align.CENTER,
                 css_classes: ['flat'],
             });
@@ -339,7 +340,7 @@ function _confirmRemove(parent, name, onConfirm) {
     const dialog = new Adw.MessageDialog({
         transient_for: parent,
         modal: true,
-        heading: 'Remove extension?',
+        heading: _('Remove extension?'),
         body: `“${name}” will be uninstalled from your account. This cannot be undone from here.`,
     });
     dialog.add_response('cancel', 'Cancel');

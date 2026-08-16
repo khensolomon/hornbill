@@ -1,3 +1,4 @@
+import { N_ } from '../util/gettext.js';
 /**
  * Configuration structure for Panel Presets.
  * @typedef {Object} PanelPreset
@@ -37,8 +38,8 @@ const FLAT_BAR = {
 
 export const PanelsPresets = [
     {
-        name: 'Default (GNOME)',
-        description: 'Standard GNOME appearance with the stock app buttons',
+        name: N_('Default (GNOME)'),
+        description: N_('Standard GNOME appearance with the stock app buttons'),
         data: {
             'panel-enabled': true,
             'panel-position': 0,
@@ -93,8 +94,8 @@ export const PanelsPresets = [
         }
     },
     {
-        name: 'macOS Light',
-        description: 'Translucent light menu bar. Status items only — pair with a dock.',
+        name: N_('macOS Light'),
+        description: N_('Translucent light menu bar. Status items only — pair with a dock.'),
         data: {
             'panel-enabled': true,
             'panel-position': 0, // Top
@@ -144,8 +145,8 @@ export const PanelsPresets = [
         }
     },
     {
-        name: 'macOS Dark',
-        description: 'Translucent dark menu bar. Status items only — pair with a dock.',
+        name: N_('macOS Dark'),
+        description: N_('Translucent dark menu bar. Status items only — pair with a dock.'),
         data: {
             'panel-enabled': true,
             'panel-position': 0, // Top
@@ -193,8 +194,8 @@ export const PanelsPresets = [
         }
     },
     {
-        name: 'Windows 11 Light',
-        description: 'Light Mica taskbar at the bottom with Start, pinned, and running apps',
+        name: N_('Windows 11 Light'),
+        description: N_('Light Mica taskbar at the bottom with Start, pinned, and running apps'),
         data: {
             'panel-enabled': true,
             'panel-position': 2, // Bottom
@@ -249,8 +250,8 @@ export const PanelsPresets = [
         }
     },
     {
-        name: 'Windows 11 Dark',
-        description: 'Dark Mica taskbar at the bottom with Start, pinned, and running apps',
+        name: N_('Windows 11 Dark'),
+        description: N_('Dark Mica taskbar at the bottom with Start, pinned, and running apps'),
         data: {
             'panel-enabled': true,
             'panel-position': 2, // Bottom

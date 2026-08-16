@@ -4,6 +4,7 @@ import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
 import { AppConfig } from '../config.js';
 import { log, logError } from '../util/logger.js';
+import { gettext as _ } from '../util/gettext.js';
 
 // Global reference to prevent Garbage Collection while dialog is open
 let _activeFileChooser = null;
@@ -16,7 +17,7 @@ export function createStylesheetUI(navigator) {
 
     if (!AppConfig.schemaId) {
         const errGroup = new Adw.PreferencesGroup();
-        errGroup.add(new Adw.ActionRow({ title: 'Error', subtitle: 'Schema ID not found in configuration.' }));
+        errGroup.add(new Adw.ActionRow({ title: _('Error'), subtitle: _('Schema ID not found in configuration.') }));
         page.add(errGroup);
         return page;
     }
@@ -80,7 +81,7 @@ function _showCssDialog(parent, title, file) {
     const header = new Adw.HeaderBar();
     toolbar.add_top_bar(header);
 
-    const copyBtn = new Gtk.Button({ icon_name: 'edit-copy-symbolic', tooltip_text: 'Copy CSS' });
+    const copyBtn = new Gtk.Button({ icon_name: 'edit-copy-symbolic', tooltip_text: _('Copy CSS') });
     copyBtn.connect('clicked', () => {
         dialog.get_clipboard().set(contents);
     });
@@ -128,8 +129,8 @@ function _extractCssDescription(file) {
 
 function _addBundledStylesGroup(page, settings) {
     const group = new Adw.PreferencesGroup({
-        title: 'Bundled Styles',
-        description: 'Demo styles shipped with the extension — view their CSS as a cheat sheet for writing your own.'
+        title: _('Bundled Styles'),
+        description: _('Demo styles shipped with the extension — view their CSS as a cheat sheet for writing your own.')
     });
     page.add(group);
 
@@ -139,8 +140,8 @@ function _addBundledStylesGroup(page, settings) {
 
     if (cssFiles.length === 0) {
         const row = new Adw.ActionRow({
-            title: 'No Styles Found',
-            subtitle: 'No .css files were found in style/bundled',
+            title: _('No Styles Found'),
+            subtitle: _('No .css files were found in style/bundled'),
         });
         group.add(row);
         return;
@@ -164,7 +165,7 @@ function _addBundledStylesGroup(page, settings) {
         // Cheat-sheet viewer: bundled styles exist to be read
         const viewButton = new Gtk.Button({
             icon_name: 'text-x-generic-symbolic',
-            tooltip_text: 'View CSS',
+            tooltip_text: _('View CSS'),
             valign: Gtk.Align.CENTER,
             css_classes: ['flat'],
         });
@@ -194,8 +195,8 @@ function _addBundledStylesGroup(page, settings) {
 
 function _addCustomStylesGroup(page, settings) {
     const group = new Adw.PreferencesGroup({
-        title: 'Custom Styles',
-        description: 'Add your own CSS files from anywhere on your computer. Files reload automatically when edited.'
+        title: _('Custom Styles'),
+        description: _('Add your own CSS files from anywhere on your computer. Files reload automatically when edited.')
     });
     page.add(group);
 
@@ -205,7 +206,7 @@ function _addCustomStylesGroup(page, settings) {
 
     const masterSwitch = new Gtk.Switch({
         valign: Gtk.Align.CENTER,
-        tooltip_text: 'Enable or disable all custom styles',
+        tooltip_text: _('Enable or disable all custom styles'),
     });
     settings.bind('custom-styles-enabled', masterSwitch, 'active',
         Gio.SettingsBindFlags.DEFAULT);
@@ -213,7 +214,7 @@ function _addCustomStylesGroup(page, settings) {
 
     const headerAdd = new Gtk.Button({
         icon_name: 'list-add-symbolic',
-        tooltip_text: 'Add Style File',
+        tooltip_text: _('Add Style File'),
         valign: Gtk.Align.CENTER,
         css_classes: ['flat'],
     });
@@ -228,7 +229,7 @@ function _addCustomStylesGroup(page, settings) {
 
     // Empty state: one clear call to action
     const emptyAdd = new Gtk.Button({
-        label: 'Add Style File…',
+        label: _('Add Style File…'),
         halign: Gtk.Align.CENTER,
         margin_top: 12
     });
@@ -286,7 +287,7 @@ function _createCustomStyleRow(uri, enabled, settings) {
 
     const openButton = new Gtk.Button({
         icon_name: 'document-open-symbolic',
-        tooltip_text: 'Open File',
+        tooltip_text: _('Open File'),
         valign: Gtk.Align.CENTER,
         css_classes: ['flat']
     });
@@ -309,7 +310,7 @@ function _createCustomStyleRow(uri, enabled, settings) {
 
     const removeButton = new Gtk.Button({
         icon_name: 'user-trash-symbolic',
-        tooltip_text: 'Remove',
+        tooltip_text: _('Remove'),
         valign: Gtk.Align.CENTER,
         css_classes: ['flat']
     });
@@ -343,7 +344,7 @@ function _onAddClicked(parentWindow, settings) {
     }
 
     const fileChooser = new Gtk.FileChooserNative({
-        title: 'Select CSS File',
+        title: _('Select CSS File'),
         action: Gtk.FileChooserAction.OPEN,
         transient_for: parentWindow,
         modal: true

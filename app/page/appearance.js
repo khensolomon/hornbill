@@ -7,6 +7,7 @@ import GObject from 'gi://GObject';
 import { AppConfig } from '../config.js';
 import { PanelsPresets } from '../data/panels.js';
 import { log, logError } from '../util/logger.js';
+import { gettext as _, N_, format } from '../util/gettext.js';
 
 export class AppearancePage extends Adw.PreferencesPage {
     static {
@@ -25,24 +26,24 @@ export class AppearancePage extends Adw.PreferencesPage {
     _initUI() {
         // --- 1. General Settings ---
         const generalGroup = new Adw.PreferencesGroup({ 
-            title: 'General Configuration',
-            description: 'Toggle the entire suite of panel customizations on or off.'
+            title: _('General Configuration'),
+            description: _('Toggle the entire suite of panel customizations on or off.')
         });
         this.add(generalGroup);
 
-        const enableRow = new Adw.SwitchRow({ title: 'Enable Panel Styling' });
+        const enableRow = new Adw.SwitchRow({ title: _('Enable Panel Styling') });
         this._settings.bind('panel-enabled', enableRow, 'active', Gio.SettingsBindFlags.DEFAULT);
         generalGroup.add(enableRow);
 
         // Reset Button
         const resetRow = new Adw.ActionRow({
-            title: 'Reset Style',
-            subtitle: 'Restore panel, popup, and button styling to defaults. Other settings are untouched'
+            title: _('Reset Style'),
+            subtitle: _('Restore panel, popup, and button styling to defaults. Other settings are untouched')
         });
         const resetBtn = new Gtk.Button({
             icon_name: 'edit-clear-symbolic', // built-in Adwaita icon
             valign: Gtk.Align.CENTER,
-            tooltip_text: 'Reset styling to defaults'
+            tooltip_text: _('Reset styling to defaults')
         });
         resetBtn.add_css_class('flat');
         resetBtn.connect('clicked', () => this._resetStyleSettings());
@@ -57,8 +58,8 @@ export class AppearancePage extends Adw.PreferencesPage {
         posModel.append('Left');   // 3
 
         const posRow = new Adw.ComboRow({ 
-            title: 'Panel Position',
-            subtitle: 'Screen edge placement (Bottom may require restart to fully settle)',
+            title: _('Panel Position'),
+            subtitle: _('Screen edge placement (Bottom may require restart to fully settle)'),
             model: posModel,
             selected: this._settings.get_enum('panel-position')
         });
@@ -81,14 +82,14 @@ export class AppearancePage extends Adw.PreferencesPage {
 
         // --- 3. Panel Background ---
         const bgGroup = new Adw.PreferencesGroup({ 
-            title: 'Panel Background',
-            description: 'Control the base color, gradients, and transparency levels.'
+            title: _('Panel Background'),
+            description: _('Control the base color, gradients, and transparency levels.')
         });
         this.add(bgGroup);
         
         bgGroup.add(this._createColorRow('Background Color', 'panel-bg-color'));
         
-        const gradSwitch = new Adw.SwitchRow({ title: 'Enable Gradient' });
+        const gradSwitch = new Adw.SwitchRow({ title: _('Enable Gradient') });
         this._settings.bind('panel-bg-gradient-enabled', gradSwitch, 'active', Gio.SettingsBindFlags.DEFAULT);
         bgGroup.add(gradSwitch);
         
@@ -102,12 +103,12 @@ export class AppearancePage extends Adw.PreferencesPage {
 
         // --- 3.5 Glass Effect (Blur) ---
         const blurGroup = new Adw.PreferencesGroup({ 
-            title: 'Glass Effect',
-            description: 'Apply backdrop blur to create a frosted glass look.'
+            title: _('Glass Effect'),
+            description: _('Apply backdrop blur to create a frosted glass look.')
         });
         this.add(blurGroup);
 
-        const blurEnable = new Adw.SwitchRow({ title: 'Enable Backdrop Blur' });
+        const blurEnable = new Adw.SwitchRow({ title: _('Enable Backdrop Blur') });
         this._settings.bind('panel-blur-enabled', blurEnable, 'active', Gio.SettingsBindFlags.DEFAULT);
         blurGroup.add(blurEnable);
 
@@ -117,8 +118,8 @@ export class AppearancePage extends Adw.PreferencesPage {
 
         // --- 3.6 Geometry (Floating) ---
         const geomGroup = new Adw.PreferencesGroup({ 
-            title: 'Geometry &amp; Floating',
-            description: 'Detach the panel from the screen edges.'
+            title: _('Geometry &amp; Floating'),
+            description: _('Detach the panel from the screen edges.')
         });
         this.add(geomGroup);
 
@@ -127,8 +128,8 @@ export class AppearancePage extends Adw.PreferencesPage {
 
         // --- 4. Panel Border ---
         const borderGroup = new Adw.PreferencesGroup({ 
-            title: 'Panel Border',
-            description: 'Define the outline of the panel.'
+            title: _('Panel Border'),
+            description: _('Define the outline of the panel.')
         });
         this.add(borderGroup);
 
@@ -139,20 +140,20 @@ export class AppearancePage extends Adw.PreferencesPage {
         borderGroup.add(this._createComboRow('Style', 'panel-border-style', borderStyles, true));
         
         const bottomOnly = new Adw.SwitchRow({ 
-            title: 'Content-Side Border Only', 
-            subtitle: 'Applies border to the bottom (if Top Panel) or top (if Bottom Panel)' 
+            title: _('Content-Side Border Only'), 
+            subtitle: _('Applies border to the bottom (if Top Panel) or top (if Bottom Panel)') 
         });
         this._settings.bind('panel-border-bottom-only', bottomOnly, 'active', Gio.SettingsBindFlags.DEFAULT);
         borderGroup.add(bottomOnly);
 
         // --- 5. Panel Shadow ---
         const shadowGroup = new Adw.PreferencesGroup({ 
-            title: 'Panel Shadow',
-            description: 'Add depth using drop shadows or inner shadow effects.'
+            title: _('Panel Shadow'),
+            description: _('Add depth using drop shadows or inner shadow effects.')
         });
         this.add(shadowGroup);
 
-        const shEnable = new Adw.SwitchRow({ title: 'Enable Shadow' });
+        const shEnable = new Adw.SwitchRow({ title: _('Enable Shadow') });
         this._settings.bind('panel-shadow-enabled', shEnable, 'active', Gio.SettingsBindFlags.DEFAULT);
         shadowGroup.add(shEnable);
 
@@ -167,14 +168,14 @@ export class AppearancePage extends Adw.PreferencesPage {
         bindShadow(this._createSpinRow('Blur', 'panel-shadow-blur', 0, 50));
         bindShadow(this._createSpinRow('Spread', 'panel-shadow-spread', -20, 50));
         
-        const insetSw = new Adw.SwitchRow({ title: 'Inset Shadow' });
+        const insetSw = new Adw.SwitchRow({ title: _('Inset Shadow') });
         this._settings.bind('panel-shadow-inset', insetSw, 'active', Gio.SettingsBindFlags.DEFAULT);
         bindShadow(insetSw);
 
         // --- 6. Panel Buttons ---
         const btnGroup = new Adw.PreferencesGroup({ 
-            title: 'Panel Buttons',
-            description: 'Fine-tune the shape and padding of panel items.'
+            title: _('Panel Buttons'),
+            description: _('Fine-tune the shape and padding of panel items.')
         });
         this.add(btnGroup);
         
@@ -183,7 +184,7 @@ export class AppearancePage extends Adw.PreferencesPage {
         btnGroup.add(this._createSpinRow('Min Padding', 'panel-btn-pad-min', 0, 50));
         btnGroup.add(this._createSpinRow('Natural Padding', 'panel-btn-pad-nat', 0, 50));
 
-        const hEnable = new Adw.SwitchRow({ title: 'Enable Hover Effect' });
+        const hEnable = new Adw.SwitchRow({ title: _('Enable Hover Effect') });
         this._settings.bind('panel-btn-hover-enabled', hEnable, 'active', Gio.SettingsBindFlags.DEFAULT);
         btnGroup.add(hEnable);
 
@@ -197,8 +198,8 @@ export class AppearancePage extends Adw.PreferencesPage {
 
         // --- 7. Popup Menus ---
         const popupGroup = new Adw.PreferencesGroup({ 
-            title: 'Popup Menus',
-            description: 'Style the dropdown menus.'
+            title: _('Popup Menus'),
+            description: _('Style the dropdown menus.')
         });
         this.add(popupGroup);
         
@@ -210,7 +211,7 @@ export class AppearancePage extends Adw.PreferencesPage {
         popupGroup.add(this._createComboRow('Border Style', 'popup-border-style', borderStyles, true));
 
         // Popup Shadow
-        const psEnable = new Adw.SwitchRow({ title: 'Enable Shadow' });
+        const psEnable = new Adw.SwitchRow({ title: _('Enable Shadow') });
         this._settings.bind('popup-shadow-enabled', psEnable, 'active', Gio.SettingsBindFlags.DEFAULT);
         popupGroup.add(psEnable);
 
@@ -234,22 +235,22 @@ export class AppearancePage extends Adw.PreferencesPage {
 
     _buildPresetsGroup() {
         const presetsGroup = new Adw.PreferencesGroup({ 
-            title: 'Presets',
-            description: 'Quickly apply a pre-defined theme.'
+            title: _('Presets'),
+            description: _('Quickly apply a pre-defined theme.')
         });
         this._settings.bind('panel-enabled', presetsGroup, 'sensitive', Gio.SettingsBindFlags.DEFAULT);
         this.add(presetsGroup);
 
         if (AppConfig.debug) { 
             const copyRow = new Adw.ActionRow({
-                title: 'Dev: Export Config',
-                subtitle: 'Generate JSON configuration for new presets.'
+                title: _('Dev: Export Config'),
+                subtitle: _('Generate JSON configuration for new presets.')
             });
 
             const viewBtn = new Gtk.Button({
                 icon_name: 'text-x-generic-symbolic',
                 valign: Gtk.Align.CENTER,
-                tooltip_text: 'View JSON Code'
+                tooltip_text: _('View JSON Code')
             });
             viewBtn.add_css_class('flat');
             
@@ -261,7 +262,7 @@ export class AppearancePage extends Adw.PreferencesPage {
             const copyBtn = new Gtk.Button({
                 icon_name: 'edit-copy-symbolic',
                 valign: Gtk.Align.CENTER,
-                tooltip_text: 'Copy to Clipboard'
+                tooltip_text: _('Copy to Clipboard')
             });
             copyBtn.add_css_class('flat');
 
@@ -276,14 +277,14 @@ export class AppearancePage extends Adw.PreferencesPage {
 
         PanelsPresets.forEach(preset => {
             const row = new Adw.ActionRow({ 
-                title: preset.name,
+                title: _(preset.name),
                 subtitle: preset.description
             });
             
             const applyBtn = new Gtk.Button({ 
                 icon_name: 'media-playback-start-symbolic',
                 valign: Gtk.Align.CENTER,
-                tooltip_text: 'Apply ' + preset.name
+                tooltip_text: format(_('Apply %s'), preset.name)
             });
             
             applyBtn.add_css_class('flat');
@@ -450,7 +451,7 @@ export class AppearancePage extends Adw.PreferencesPage {
 
     _showDebugDialog(jsonString) {
         const win = new Adw.Window({
-            title: 'Preset Configuration',
+            title: _('Preset Configuration'),
             modal: true,
             transient_for: this.get_root(),
             default_width: 500,

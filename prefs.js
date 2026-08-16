@@ -8,6 +8,7 @@ import { ExtensionPreferences } from "resource:///org/gnome/Shell/Extensions/js/
 import { createUI, installLayout } from "./app/window.js";
 import { AppConfig } from "./app/config.js";
 import { log, logError } from "./app/util/logger.js";
+import { gettext as _ } from './app/util/gettext.js';
 
 export default class GnomeSplitViewPrefs extends ExtensionPreferences {
   _settings = null;
@@ -67,7 +68,7 @@ export default class GnomeSplitViewPrefs extends ExtensionPreferences {
       // the window name survives page changes.
       // NEW (Safe to remove try/catch)
       window?.set_title?.(finalMetadata.name);
-      window?.add_css_class?.('lesion-prefs-window');
+      window?.add_css_class?.("lesion-prefs-window");
 
       // 3. Load CSS
       this._loadCustomStyles();
@@ -82,7 +83,9 @@ export default class GnomeSplitViewPrefs extends ExtensionPreferences {
       // every open (confirmed harmless — the split view above still
       // shows). Add one empty page to satisfy that check. Guarded so a
       // failure here can never block the real UI that is already set.
-      try { window.add(new Adw.PreferencesPage()); } catch (e) {}
+      try {
+        window.add(new Adw.PreferencesPage());
+      } catch (e) {}
 
       installLayout(window, splitView);
       this._setupDeepLinking(splitView);
@@ -98,7 +101,7 @@ export default class GnomeSplitViewPrefs extends ExtensionPreferences {
       console.error(`PREFS ERROR: ${e.message}`);
       // Fallback UI
       const errorPage = new Adw.StatusPage({
-        title: "Preferences Error",
+        title: _("Preferences Error"),
         description: e.message,
         icon_name: "dialog-error-symbolic",
       });
