@@ -220,6 +220,11 @@ export class Indicator {
 
   _doDisable() {
     // Defer to idle so we don't destroy the menu while its activate signal is live.
+    //
+    // This source is deliberately not tracked for removal in disable(): it is
+    // what *causes* the disable, so cancelling it during teardown would undo
+    // the user's action. It is one-shot, holds no reference to any actor, and
+    // resolves through the extension manager rather than this indicator.
     const uuid = this.extension.uuid;
     GLib.idle_add(GLib.PRIORITY_DEFAULT, () => {
       Main.extensionManager.disableExtension(uuid);

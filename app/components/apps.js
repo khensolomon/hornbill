@@ -34,7 +34,7 @@ const AppPanelButton = GObject.registerClass(
             // actor's own event handling, so while one is attached NO handler
             // — connected signal or overridden vfunc — ever sees a button
             // event. Removing it returns click handling to this button.
-            try { this.clear_actions(); } catch (e) {}
+            this.clear_actions();
 
             // Fill the panel's height so the button has real clickable area.
             // Without this the button collapsed to zero height on GNOME 50 —
@@ -146,7 +146,7 @@ const AppPanelButton = GObject.registerClass(
                 const clickAction = new Clutter.ClickAction();
                 clickAction.connect('clicked', (action) => {
                     let btn = 1;
-                    try { btn = action.get_button() || 1; } catch (e) {}
+                    btn = action.get_button() || 1;
                     this._activate(btn);
                 });
                 this.add_action(clickAction);
@@ -220,6 +220,10 @@ const AppPanelButton = GObject.registerClass(
 
         _onDestroy() {
             this._destroyed = true;
+            if (this._dragEndIdleId) {
+                GLib.source_remove(this._dragEndIdleId);
+                this._dragEndIdleId = 0;
+            }
             if (this._dragMonitor) {
                 DND.removeDragMonitor(this._dragMonitor);
                 this._dragMonitor = null;
@@ -421,8 +425,9 @@ const AppPanelButton = GObject.registerClass(
             this.iconActor.scale_y = 1.0;
 
             if (this._onDragEnd && this._container) {
-                GLib.idle_add(GLib.PRIORITY_DEFAULT, () => {
-                    if (this._onDragEnd) this._onDragEnd();
+                this._dragEndIdleId = GLib.idle_add(GLib.PRIORITY_DEFAULT, () => {
+                    this._dragEndIdleId = 0;
+                    if (!this._destroyed && this._onDragEnd) this._onDragEnd();
                     return GLib.SOURCE_REMOVE;
                 });
             }
@@ -721,7 +726,7 @@ export class AppsManager extends ExtensionComponent {
 
     onDisable() {
         if (this._clickDispatchId) {
-            try { Main.panel.disconnect(this._clickDispatchId); } catch (e) {}
+            Main.panel.disconnect(this._clickDispatchId);
             this._clickDispatchId = 0;
         }
         // FIX: a pending debounce could fire after disable and touch
@@ -766,7 +771,7 @@ export class AppsManager extends ExtensionComponent {
 
         signals.push(win.connect('unmanaged', () => {
             const ids = this._windowSignals.get(win);
-            if (ids) ids.forEach(id => { try { win.disconnect(id); } catch(e){} });
+            if (ids) ids.forEach(id => { win.disconnect(id); });
             this._windowSignals.delete(win);
             this._handleWindowChange();
         }));
@@ -798,7 +803,7 @@ export class AppsManager extends ExtensionComponent {
         ['trash', 'showgrid', 'overview'].forEach(k => {
             if (this._items[k]) {
                 if (this._items[k]._role) delete Main.panel.statusArea[this._items[k]._role];
-                try { this._items[k].destroy(); } catch(e) {}
+                this._items[k].destroy();
                 this._items[k] = null;
             }
         });
@@ -807,7 +812,7 @@ export class AppsManager extends ExtensionComponent {
     _clearGroup(group) {
         this._items[group].forEach(btn => {
             if (btn._role) delete Main.panel.statusArea[btn._role];
-            try { btn.destroy(); } catch(e) {}
+            btn.destroy();
         });
         this._items[group] = [];
     }
@@ -1234,10 +1239,9 @@ export class AppsManager extends ExtensionComponent {
         
         copyBtn.connect('clicked', () => {
             St.Clipboard.get_default().set_text(St.ClipboardType.CLIPBOARD, fullTextToCopy);
-            copyBtn.label = 'Copied!';
-            GLib.timeout_add(GLib.PRIORITY_DEFAULT, 2000, () => {
-                if (copyBtn) copyBtn.label = 'Copy Info';
-                return GLib.SOURCE_REMOVE;
+            copyBtn.label = _('Copied!');
+            this.timeoutOnce(2000, () => {
+                if (copyBtn) copyBtn.label = _('Copy Info');
             });
         });
 
@@ -1484,7 +1488,7 @@ export class AppsManager extends ExtensionComponent {
     _syncTrash() {
         if (this._items.trash) {
             if (this._items.trash._role) delete Main.panel.statusArea[this._items.trash._role];
-            try { this._items.trash.destroy(); } catch(e) {}
+            this._items.trash.destroy();
             this._items.trash = null;
         }
         if (!this.getSettings().get_boolean('apps-trash-enabled')) return;
@@ -1629,7 +1633,7 @@ export class AppsManager extends ExtensionComponent {
         // Cleanup old
         if (this._items.showgrid) {
             if (this._items.showgrid._role) delete Main.panel.statusArea[this._items.showgrid._role];
-            try { this._items.showgrid.destroy(); } catch(e) {}
+            this._items.showgrid.destroy();
             this._items.showgrid = null;
         }
 
@@ -1710,7 +1714,7 @@ export class AppsManager extends ExtensionComponent {
     _syncOverview() {
         if (this._items.overview) {
             if (this._items.overview._role) delete Main.panel.statusArea[this._items.overview._role];
-            try { this._items.overview.destroy(); } catch(e) {}
+            this._items.overview.destroy();
             this._items.overview = null;
         }
 

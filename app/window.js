@@ -85,7 +85,7 @@ export function createUI() {
         // the page is already present, navigate to it instead of re-adding.
         const existing = contentNav.find_page ? contentNav.find_page(pageData.id) : null;
         if (existing) {
-            try { contentNav.pop_to_page(existing); return; } catch (e) {}
+            contentNav.pop_to_page(existing); return;
         }
         const navPage = new Adw.NavigationPage({ title: pageData.title, tag: pageData.id });
         const toolbar = new Adw.ToolbarView();
@@ -200,7 +200,7 @@ export function createUI() {
             contentNav.replace([navPage]);
         } catch (e) {
             // Never let a navigation error abort the whole prefs UI.
-            try { contentNav.replace([]); contentNav.push(navPage); } catch (e2) {}
+            contentNav.replace([]); contentNav.push(navPage);
         }
         splitView.set_show_content(true);
     };
@@ -331,7 +331,7 @@ export function createUI() {
         const isCollapsed = splitView.collapsed;
         sidebarHeader.show_end_title_buttons = isCollapsed;
         sidebarHeader.show_start_title_buttons = isCollapsed;
-        arrowIcons.forEach(icon => { try { icon.visible = isCollapsed; } catch(e) {} });
+        arrowIcons.forEach(icon => { icon.visible = isCollapsed; });
     };
     splitView.connect('notify::collapsed', updateHeader);
     updateHeader();

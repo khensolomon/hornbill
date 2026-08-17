@@ -130,10 +130,7 @@ export class EffectsManager extends ExtensionComponent {
         this._windows = new Map();
 
         const id = global.display.connect('window-created', (d, win) => {
-            GLib.idle_add(GLib.PRIORITY_DEFAULT, () => {
-                this._maybeAttach(win);
-                return GLib.SOURCE_REMOVE;
-            });
+            this.idleOnce(() => this._maybeAttach(win), GLib.PRIORITY_DEFAULT);
         });
         this._signals.push({ obj: global.display, id });
 
@@ -231,12 +228,10 @@ export class EffectsManager extends ExtensionComponent {
 
         const actor = win.get_compositor_private();
         if (!actor) {
-            try {
-                const id = win.connect('shown', () => {
-                    try { win.disconnect(id); } catch (e) {}
-                    this._maybeAttach(win);
-                });
-            } catch (e) {}
+            const id = win.connect('shown', () => {
+                win.disconnect(id);
+                this._maybeAttach(win);
+            });
             return;
         }
 
@@ -266,7 +261,7 @@ export class EffectsManager extends ExtensionComponent {
 
         let target = actor;
         if (isX11) {
-            try { target = actor.get_first_child() ?? actor; } catch (e) {}
+            target = actor.get_first_child() ?? actor;
         }
 
         // Corner machinery (offscreen effect + replacement shadow) only

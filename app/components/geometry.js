@@ -251,7 +251,7 @@ export class GeometryManager extends ExtensionComponent {
                 const actor = win.get_compositor_private();
                 if (actor) {
                     const ffId = actor.connect('first-frame', () => {
-                        try { actor.disconnect(ffId); } catch (e) {}
+                        actor.disconnect(ffId);
                         if (!this._isAlive(win)) return;
                         this._tryResolveRestore(win, data);
                         this._authoritativeApply(win, data, 'first-frame');
@@ -269,7 +269,7 @@ export class GeometryManager extends ExtensionComponent {
             // whole sequence invisible.
             try {
                 const shownId = win.connect('shown', () => {
-                    try { win.disconnect(shownId); } catch (e) {}
+                    win.disconnect(shownId);
                     if (!this._isAlive(win)) return;
                     data.shownSeen = true;
                     this._authoritativeApply(win, data, 'shown');
@@ -529,14 +529,12 @@ export class GeometryManager extends ExtensionComponent {
         // Usage accounting: a RESTORE is the event that proves an entry's
         // value (saves fire constantly and measure nothing). Feeds the
         // frequency-aware pruning below.
-        try {
-            const entry = this._geometryCache[appId];
-            if (entry) {
-                entry.uses = (entry.uses || 0) + 1;
-                entry.last_seen = Date.now();
-                this._queueSave();
-            }
-        } catch (e) {}
+        const entry = this._geometryCache[appId];
+        if (entry) {
+            entry.uses = (entry.uses || 0) + 1;
+            entry.last_seen = Date.now();
+            this._queueSave();
+        }
 
         const geo = this._lookupGeometry(win, appId);
 
@@ -1091,12 +1089,10 @@ export class GeometryManager extends ExtensionComponent {
     _queueSave() {
         // Cap pressure between shell restarts: prune opportunistically once
         // the store meaningfully exceeds the cap, not only at enable.
-        try {
-            const count = Object.keys(this._geometryCache)
-                .filter(k => !k.startsWith('__')).length;
-            if (count > PRUNE_MAX_ENTRIES + 20)
-                this._pruneCache();
-        } catch (e) {}
+        const count = Object.keys(this._geometryCache)
+            .filter(k => !k.startsWith('__')).length;
+        if (count > PRUNE_MAX_ENTRIES + 20)
+            this._pruneCache();
 
         if (this._saveTimeoutId)
             GLib.source_remove(this._saveTimeoutId);
@@ -1138,34 +1134,30 @@ export class GeometryManager extends ExtensionComponent {
      * self-heal on load, so no manual clearing is required.
      */
     _purgeSyntheticIds() {
-        try {
-            let removed = 0;
+        let removed = 0;
 
-            for (const key of Object.keys(this._geometryCache)) {
-                if (this._isSyntheticId(key)) {
-                    delete this._geometryCache[key];
+        for (const key of Object.keys(this._geometryCache)) {
+            if (this._isSyntheticId(key)) {
+                delete this._geometryCache[key];
+                removed++;
+            }
+        }
+
+        const aliases = this._geometryCache['__aliases__'];
+        if (aliases) {
+            for (const [from, to] of Object.entries(aliases)) {
+                if (this._isSyntheticId(from) || this._isSyntheticId(to)) {
+                    delete aliases[from];
                     removed++;
                 }
             }
+            if (Object.keys(aliases).length === 0)
+                delete this._geometryCache['__aliases__'];
+        }
 
-            const aliases = this._geometryCache['__aliases__'];
-            if (aliases) {
-                for (const [from, to] of Object.entries(aliases)) {
-                    if (this._isSyntheticId(from) || this._isSyntheticId(to)) {
-                        delete aliases[from];
-                        removed++;
-                    }
-                }
-                if (Object.keys(aliases).length === 0)
-                    delete this._geometryCache['__aliases__'];
-            }
-
-            if (removed > 0) {
-                log(`[Geometry] Purged ${removed} recycled 'window:N' entries/aliases`);
-                this._queueSave();
-            }
-        } catch (e) {
-            logError('[Geometry] Purge failed', e);
+        if (removed > 0) {
+            log(`[Geometry] Purged ${removed} recycled 'window:N' entries/aliases`);
+            this._queueSave();
         }
     }
 
@@ -1174,40 +1166,36 @@ export class GeometryManager extends ExtensionComponent {
      * PRUNE_MAX_ENTRIES (oldest first), so 'geometry-data' can't grow forever.
      */
     _pruneCache() {
-        try {
-            const now = Date.now();
-            const maxAge = PRUNE_MAX_AGE_DAYS * 24 * 60 * 60 * 1000;
-            const aliases = this._geometryCache['__aliases__'];
-            let entries = Object.entries(this._geometryCache)
-                .filter(([key]) => !key.startsWith('__'))
-                .filter(([, geo]) => !geo.last_seen || (now - geo.last_seen) < maxAge);
+        const now = Date.now();
+        const maxAge = PRUNE_MAX_AGE_DAYS * 24 * 60 * 60 * 1000;
+        const aliases = this._geometryCache['__aliases__'];
+        let entries = Object.entries(this._geometryCache)
+            .filter(([key]) => !key.startsWith('__'))
+            .filter(([, geo]) => !geo.last_seen || (now - geo.last_seen) < maxAge);
 
-            if (entries.length > PRUNE_MAX_ENTRIES) {
-                // Recency floor: anything used in the last two weeks is
-                // untouchable (a brand-new app must not lose to an old
-                // high-count one). Beyond the floor, evict the least-USED
-                // first, recency as tiebreak.
-                const recentMs = PRUNE_RECENT_KEEP_DAYS * 24 * 60 * 60 * 1000;
-                const recent = entries.filter(([, g]) => (now - (g.last_seen || 0)) < recentMs);
-                const older = entries.filter(([, g]) => (now - (g.last_seen || 0)) >= recentMs);
-                older.sort((a, b) =>
-                    ((b[1].uses || 0) - (a[1].uses || 0)) ||
-                    ((b[1].last_seen || 0) - (a[1].last_seen || 0)));
-                entries = recent.concat(
-                    older.slice(0, Math.max(0, PRUNE_MAX_ENTRIES - recent.length)));
-            }
+        if (entries.length > PRUNE_MAX_ENTRIES) {
+            // Recency floor: anything used in the last two weeks is
+            // untouchable (a brand-new app must not lose to an old
+            // high-count one). Beyond the floor, evict the least-USED
+            // first, recency as tiebreak.
+            const recentMs = PRUNE_RECENT_KEEP_DAYS * 24 * 60 * 60 * 1000;
+            const recent = entries.filter(([, g]) => (now - (g.last_seen || 0)) < recentMs);
+            const older = entries.filter(([, g]) => (now - (g.last_seen || 0)) >= recentMs);
+            older.sort((a, b) =>
+                ((b[1].uses || 0) - (a[1].uses || 0)) ||
+                ((b[1].last_seen || 0) - (a[1].last_seen || 0)));
+            entries = recent.concat(
+                older.slice(0, Math.max(0, PRUNE_MAX_ENTRIES - recent.length)));
+        }
 
-            const pruned = Object.fromEntries(entries);
-            if (aliases) pruned['__aliases__'] = aliases;
-            const removed = Object.keys(this._geometryCache).length -
-                Object.keys(pruned).length;
-            if (removed > 0) {
-                this._geometryCache = pruned;
-                this._saveToDisk();
-                log(`[Geometry] Pruned ${removed} stale entries.`);
-            }
-        } catch (e) {
-            logError("[Geometry] Prune failed", e);
+        const pruned = Object.fromEntries(entries);
+        if (aliases) pruned['__aliases__'] = aliases;
+        const removed = Object.keys(this._geometryCache).length -
+            Object.keys(pruned).length;
+        if (removed > 0) {
+            this._geometryCache = pruned;
+            this._saveToDisk();
+            log(`[Geometry] Pruned ${removed} stale entries.`);
         }
     }
 }

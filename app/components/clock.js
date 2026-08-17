@@ -85,21 +85,17 @@ export class ClockManager extends ExtensionComponent {
 
         // Watch for text changes in the original clock to update the custom label
         this._clockSignal = this._originalClockDisplay.connect('notify::text', () => {
-            GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, () => {
+            this.idleOnce(() => {
                 try {
                     this._updateClockText();
                 } catch (e) {
                     logError(e);
                 }
-                return GLib.SOURCE_REMOVE;
             });
         });
 
         // Initial Sync
-        GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, () => {
-            this._sync();
-            return GLib.SOURCE_REMOVE;
-        });
+        this.idleOnce(() => this._sync());
 
         // Register Settings Observers
         this.observe('changed::clock-move-enabled', () => this._syncPos());
@@ -259,7 +255,7 @@ export class ClockManager extends ExtensionComponent {
                 if (!safe.trim()) safe = '&nbsp;';
                 
                 // Idle add to ensure markup applies correctly
-                GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, () => {
+                this.idleOnce(() => {
                     try {
                         this._timeLabel.clutter_text.set_markup(safe);
                     } catch (e) {
@@ -267,7 +263,6 @@ export class ClockManager extends ExtensionComponent {
                         this._timeLabel.clutter_text.set_use_markup(false);
                         this._timeLabel.text = text || ' ';
                     }
-                    return GLib.SOURCE_REMOVE;
                 });
             } else {
                 this._timeLabel.clutter_text.set_use_markup(false);

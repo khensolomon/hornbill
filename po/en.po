@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Lesion\n"
 "Report-Msgid-Bugs-To: https://github.com/khensolomon/lesion/issues\n"
-"POT-Creation-Date: 2026-08-16 10:43+0000\n"
+"POT-Creation-Date: 2026-08-17 14:31+0000\n"
 "PO-Revision-Date: 2026-08-16 10:43+0000\n"
 "Last-Translator: Automatically generated\n"
 "Language-Team: none\n"
@@ -17,23 +17,27 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-#: app/components/apps.js:1177
+#: app/components/apps.js:1182
 msgid "Properties"
 msgstr "Properties"
 
-#: app/components/apps.js:1230
+#: app/components/apps.js:1235 app/components/apps.js:1244
 msgid "Copy Info"
 msgstr "Copy Info"
 
-#: app/components/apps.js:1396 app/panel/indicator.js:198
+#: app/components/apps.js:1242
+msgid "Copied!"
+msgstr "Copied!"
+
+#: app/components/apps.js:1400 app/panel/indicator.js:198
 msgid "Cancel"
 msgstr "Cancel"
 
-#: app/components/apps.js:1398
+#: app/components/apps.js:1402
 msgid "Empty Trash"
 msgstr "Empty Trash"
 
-#: app/components/apps.js:1408
+#: app/components/apps.js:1412
 msgid "Are you sure you want to delete all items in the Trash?"
 msgstr "Are you sure you want to delete all items in the Trash?"
 
@@ -134,12 +138,8 @@ msgid "Reset Style"
 msgstr "Reset Style"
 
 #: app/page/appearance.js:41
-msgid ""
-"Restore panel, popup, and button styling to defaults. Other settings are "
-"untouched"
-msgstr ""
-"Restore panel, popup, and button styling to defaults. Other settings are "
-"untouched"
+msgid "Restore panel, popup, and button styling to defaults. Other settings are untouched"
+msgstr "Restore panel, popup, and button styling to defaults. Other settings are untouched"
 
 #: app/page/appearance.js:46
 msgid "Reset styling to defaults"
@@ -275,12 +275,8 @@ msgid "Positioning"
 msgstr "Positioning"
 
 #: app/page/clock.js:102
-msgid ""
-"Control where the clock appears on the panel and its position relative to "
-"other elements."
-msgstr ""
-"Control where the clock appears on the panel and its position relative to "
-"other elements."
+msgid "Control where the clock appears on the panel and its position relative to other elements."
+msgstr "Control where the clock appears on the panel and its position relative to other elements."
 
 #: app/page/clock.js:106
 msgid "Move Clock"
@@ -299,12 +295,8 @@ msgid "Appearance"
 msgstr "Appearance"
 
 #: app/page/clock.js:150
-msgid ""
-"Adjust the visual style, format the date and time strings, or choose a "
-"preset layout."
-msgstr ""
-"Adjust the visual style, format the date and time strings, or choose a "
-"preset layout."
+msgid "Adjust the visual style, format the date and time strings, or choose a preset layout."
+msgstr "Adjust the visual style, format the date and time strings, or choose a preset layout."
 
 #: app/page/clock.js:155
 msgid "Two-Line Clock"
@@ -435,12 +427,8 @@ msgid "Formatting Guide"
 msgstr "Formatting Guide"
 
 #: app/page/clock.js:268
-msgid ""
-"Reference for standard 'strftime' codes used to build custom date and time "
-"formats."
-msgstr ""
-"Reference for standard 'strftime' codes used to build custom date and time "
-"formats."
+msgid "Reference for standard 'strftime' codes used to build custom date and time formats."
+msgstr "Reference for standard 'strftime' codes used to build custom date and time formats."
 
 #: app/page/dashboard.js:35
 msgid "Panel Indicator"
@@ -543,14 +531,8 @@ msgid "Window Corners"
 msgstr "Window Corners"
 
 #: app/page/effects.js:18
-msgid ""
-"Round all four corners of application windows uniformly, so legacy apps with "
-"flat bottom corners match modern ones. Maximized and fullscreen windows are "
-"automatically square."
-msgstr ""
-"Round all four corners of application windows uniformly, so legacy apps with "
-"flat bottom corners match modern ones. Maximized and fullscreen windows are "
-"automatically square."
+msgid "Round all four corners of application windows uniformly, so legacy apps with flat bottom corners match modern ones. Maximized and fullscreen windows are automatically square."
+msgstr "Round all four corners of application windows uniformly, so legacy apps with flat bottom corners match modern ones. Maximized and fullscreen windows are automatically square."
 
 #: app/page/effects.js:23
 msgid "Uniform Rounded Corners"
@@ -573,38 +555,24 @@ msgid "Square Corners at Screen Edges"
 msgstr "Square Corners at Screen Edges"
 
 #: app/page/effects.js:45
-msgid ""
-"Corners flush against a screen edge stay square, like tiled windows; corners "
-"facing the desktop stay rounded"
-msgstr ""
-"Corners flush against a screen edge stay square, like tiled windows; corners "
-"facing the desktop stay rounded"
+msgid "Corners flush against a screen edge stay square, like tiled windows; corners facing the desktop stay rounded"
+msgstr "Corners flush against a screen edge stay square, like tiled windows; corners facing the desktop stay rounded"
 
 #: app/page/effects.js:52 app/page/geometry.js:39
 msgid "Manage X11 Windows"
 msgstr "Manage X11 Windows"
 
 #: app/page/effects.js:53
-msgid ""
-"Applies effects to apps running through Xwayland. Disable if X11 apps "
-"destabilize the session"
-msgstr ""
-"Applies effects to apps running through Xwayland. Disable if X11 apps "
-"destabilize the session"
+msgid "Applies effects to apps running through Xwayland. Disable if X11 apps destabilize the session"
+msgstr "Applies effects to apps running through Xwayland. Disable if X11 apps destabilize the session"
 
 #: app/page/effects.js:60
 msgid "Window Transparency"
 msgstr "Window Transparency"
 
 #: app/page/effects.js:61
-msgid ""
-"Make unfocused windows slightly translucent. The focused window always stays "
-"fully opaque, so the window you are actively working in — a graphics editor, "
-"say — is never affected."
-msgstr ""
-"Make unfocused windows slightly translucent. The focused window always stays "
-"fully opaque, so the window you are actively working in — a graphics editor, "
-"say — is never affected."
+msgid "Make unfocused windows slightly translucent. The focused window always stays fully opaque, so the window you are actively working in — a graphics editor, say — is never affected."
+msgstr "Make unfocused windows slightly translucent. The focused window always stays fully opaque, so the window you are actively working in — a graphics editor, say — is never affected."
 
 #: app/page/effects.js:66
 msgid "Unfocused Transparency"
@@ -619,12 +587,8 @@ msgid "Focused Opacity"
 msgstr "Focused Opacity"
 
 #: app/page/effects.js:74
-msgid ""
-"Percent — keep at 100 for graphics work; the active window is never dimmed "
-"by default"
-msgstr ""
-"Percent — keep at 100 for graphics work; the active window is never dimmed "
-"by default"
+msgid "Percent — keep at 100 for graphics work; the active window is never dimmed by default"
+msgstr "Percent — keep at 100 for graphics work; the active window is never dimmed by default"
 
 #: app/page/effects.js:87
 msgid "Unfocused Opacity"
@@ -639,16 +603,8 @@ msgid "Why is there no “square corners” mode?"
 msgstr "Why is there no “square corners” mode?"
 
 #: app/page/effects.js:105
-msgid ""
-"Apps draw their own rounded top corners; the pixels outside that curve do "
-"not exist, and an effect can only remove pixels — never invent window "
-"content. Uniformity is therefore achieved by rounding the flat corners to "
-"match."
-msgstr ""
-"Apps draw their own rounded top corners; the pixels outside that curve do "
-"not exist, and an effect can only remove pixels — never invent window "
-"content. Uniformity is therefore achieved by rounding the flat corners to "
-"match."
+msgid "Apps draw their own rounded top corners; the pixels outside that curve do not exist, and an effect can only remove pixels — never invent window content. Uniformity is therefore achieved by rounding the flat corners to match."
+msgstr "Apps draw their own rounded top corners; the pixels outside that curve do not exist, and an effect can only remove pixels — never invent window content. Uniformity is therefore achieved by rounding the flat corners to match."
 
 #: app/page/extensions.js:114
 msgid "Some changes finish after reloading"
@@ -667,22 +623,16 @@ msgid "User Extensions"
 msgstr "User Extensions"
 
 #: app/page/extensions.js:137
-msgid ""
-"Installed for your account. These can be enabled, disabled, and removed."
-msgstr ""
-"Installed for your account. These can be enabled, disabled, and removed."
+msgid "Installed for your account. These can be enabled, disabled, and removed."
+msgstr "Installed for your account. These can be enabled, disabled, and removed."
 
 #: app/page/extensions.js:140
 msgid "System Extensions"
 msgstr "System Extensions"
 
 #: app/page/extensions.js:141
-msgid ""
-"Installed system-wide. These can be enabled or disabled, but not removed "
-"from here."
-msgstr ""
-"Installed system-wide. These can be enabled or disabled, but not removed "
-"from here."
+msgid "Installed system-wide. These can be enabled or disabled, but not removed from here."
+msgstr "Installed system-wide. These can be enabled or disabled, but not removed from here."
 
 #: app/page/extensions.js:197
 msgid "Open extension homepage"
@@ -709,18 +659,12 @@ msgid "Restore Workspace"
 msgstr "Restore Workspace"
 
 #: app/page/geometry.js:33
-msgid ""
-"Reopen windows on the workspace they were closed on (recreated if needed)"
-msgstr ""
-"Reopen windows on the workspace they were closed on (recreated if needed)"
+msgid "Reopen windows on the workspace they were closed on (recreated if needed)"
+msgstr "Reopen windows on the workspace they were closed on (recreated if needed)"
 
 #: app/page/geometry.js:40
-msgid ""
-"Applies to apps running through Xwayland. Disable if X11 apps destabilize "
-"the session"
-msgstr ""
-"Applies to apps running through Xwayland. Disable if X11 apps destabilize "
-"the session"
+msgid "Applies to apps running through Xwayland. Disable if X11 apps destabilize the session"
+msgstr "Applies to apps running through Xwayland. Disable if X11 apps destabilize the session"
 
 #: app/page/geometry.js:49
 msgid "Saved Applications"
@@ -747,12 +691,8 @@ msgid "Clear Saved Geometry"
 msgstr "Clear Saved Geometry"
 
 #: app/page/geometry.js:227
-msgid ""
-"Remove all remembered window positions and sizes. Entries rebuild as you "
-"move windows"
-msgstr ""
-"Remove all remembered window positions and sizes. Entries rebuild as you "
-"move windows"
+msgid "Remove all remembered window positions and sizes. Entries rebuild as you move windows"
+msgstr "Remove all remembered window positions and sizes. Entries rebuild as you move windows"
 
 #: app/page/geometry.js:233
 msgid "Clear all saved window geometry"
@@ -1007,10 +947,8 @@ msgid "Note"
 msgstr "Note"
 
 #: app/page/layout.js:498
-msgid ""
-"Enter a themed icon name (e.g., start-here-symbolic) or a full file path."
-msgstr ""
-"Enter a themed icon name (e.g., start-here-symbolic) or a full file path."
+msgid "Enter a themed icon name (e.g., start-here-symbolic) or a full file path."
+msgstr "Enter a themed icon name (e.g., start-here-symbolic) or a full file path."
 
 #: app/page/layout.js:523
 msgid "Hide \"Activities\" Button"
@@ -1045,12 +983,8 @@ msgid "Bundled Styles"
 msgstr "Bundled Styles"
 
 #: app/page/stylesheet.js:133
-msgid ""
-"Demo styles shipped with the extension — view their CSS as a cheat sheet for "
-"writing your own."
-msgstr ""
-"Demo styles shipped with the extension — view their CSS as a cheat sheet for "
-"writing your own."
+msgid "Demo styles shipped with the extension — view their CSS as a cheat sheet for writing your own."
+msgstr "Demo styles shipped with the extension — view their CSS as a cheat sheet for writing your own."
 
 #: app/page/stylesheet.js:143
 msgid "No Styles Found"
@@ -1069,12 +1003,8 @@ msgid "Custom Styles"
 msgstr "Custom Styles"
 
 #: app/page/stylesheet.js:199
-msgid ""
-"Add your own CSS files from anywhere on your computer. Files reload "
-"automatically when edited."
-msgstr ""
-"Add your own CSS files from anywhere on your computer. Files reload "
-"automatically when edited."
+msgid "Add your own CSS files from anywhere on your computer. Files reload automatically when edited."
+msgstr "Add your own CSS files from anywhere on your computer. Files reload automatically when edited."
 
 #: app/page/stylesheet.js:209
 msgid "Enable or disable all custom styles"
@@ -1109,10 +1039,8 @@ msgid "Master switch for all wallpaper features"
 msgstr "Master switch for all wallpaper features"
 
 #: app/page/wallpaper.js:109
-msgid ""
-"Instantly apply a pre-configured theme with matching colors and effects."
-msgstr ""
-"Instantly apply a pre-configured theme with matching colors and effects."
+msgid "Instantly apply a pre-configured theme with matching colors and effects."
+msgstr "Instantly apply a pre-configured theme with matching colors and effects."
 
 #: app/page/wallpaper.js:224
 msgid "Background Image"
@@ -1163,12 +1091,8 @@ msgid "Colors"
 msgstr "Colors"
 
 #: app/page/wallpaper.js:294
-msgid ""
-"Define solid colors or gradients. These appear when no image is set or "
-"behind transparent wallpapers."
-msgstr ""
-"Define solid colors or gradients. These appear when no image is set or "
-"behind transparent wallpapers."
+msgid "Define solid colors or gradients. These appear when no image is set or behind transparent wallpapers."
+msgstr "Define solid colors or gradients. These appear when no image is set or behind transparent wallpapers."
 
 #: app/page/wallpaper.js:444
 #, javascript-format

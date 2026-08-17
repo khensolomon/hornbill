@@ -196,18 +196,14 @@ export class PanelsManager extends ExtensionComponent {
     // --- Blur ---
     _removeBlur() {
         if (this._blurActor) {
-            try {
-                if (this._isValid(this._blurActor))
-                    this._blurActor.destroy();
-            } catch (e) {}
+            if (this._isValid(this._blurActor))
+                this._blurActor.destroy();
             this._blurActor = null;
         }
         // Legacy cleanup: earlier builds put the effect on Main.panel itself
         if (this._blurEffect) {
             if (this._isValid(Main.panel)) {
-                try {
-                    Main.panel.remove_effect(this._blurEffect);
-                } catch (e) {}
+                Main.panel.remove_effect(this._blurEffect);
             }
             this._blurEffect = null;
         }
@@ -494,9 +490,7 @@ export class PanelsManager extends ExtensionComponent {
         // or on its menu object.
         for (const [, sigs] of this._buttonSignals) {
             sigs.forEach(sig => {
-                try {
-                    if (this._isValid(sig.obj)) sig.obj.disconnect(sig.id);
-                } catch (e) {}
+                if (this._isValid(sig.obj)) sig.obj.disconnect(sig.id);
             });
         }
         this._buttonSignals.clear();
@@ -539,9 +533,7 @@ export class PanelsManager extends ExtensionComponent {
 
                     sigs.push({ obj: btn, id: btn.connect('button-press-event', () => {
                         if (!this._isValid(btn)) return false;
-                        try {
-                            btn.set_style(`${base} background-color: ${activeBg}; box-shadow: inset 0 0 4px rgba(0,0,0,0.2);`);
-                        } catch (e) {}
+                        btn.set_style(`${base} background-color: ${activeBg}; box-shadow: inset 0 0 4px rgba(0,0,0,0.2);`);
                         return false; 
                     }) });
 

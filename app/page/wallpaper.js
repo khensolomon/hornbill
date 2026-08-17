@@ -76,15 +76,9 @@ export function createWallpaperUI() {
             }
         `;
 
-        try {
-            if (typeof cssProvider.load_from_string === 'function') {
-                cssProvider.load_from_string(cssContent);
-            } else {
-                cssProvider.load_from_data(cssContent, -1);
-            }
-        } catch (e) {
-            try { cssProvider.load_from_data(cssContent, -1); } catch (err) { logError("CSS Provider Error", err); }
-        }
+        // load_from_string requires GTK 4.12; the oldest shell supported here
+        // (GNOME 46) ships GTK 4.14, so no load_from_data fallback is needed.
+        cssProvider.load_from_string(cssContent);
 
         Gtk.StyleContext.add_provider_for_display(
             Gdk.Display.get_default(),

@@ -71,9 +71,7 @@ export function createAboutUI(navigator, goToPage) {
         tooltip_text: _('Copy UUID'),
     });
     copyBtn.connect('clicked', () => {
-        try {
-            Gdk.Display.get_default().get_clipboard().set(AppConfig.uuid);
-        } catch (e) {}
+        Gdk.Display.get_default()?.get_clipboard()?.set(AppConfig.uuid);
     });
     uuidRow.add_suffix(copyBtn);
     sysGroup.add(uuidRow);

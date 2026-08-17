@@ -83,9 +83,7 @@ export default class GnomeSplitViewPrefs extends ExtensionPreferences {
       // every open (confirmed harmless — the split view above still
       // shows). Add one empty page to satisfy that check. Guarded so a
       // failure here can never block the real UI that is already set.
-      try {
-        window.add(new Adw.PreferencesPage());
-      } catch (e) {}
+      window.add(new Adw.PreferencesPage());
 
       installLayout(window, splitView);
       this._setupDeepLinking(splitView);

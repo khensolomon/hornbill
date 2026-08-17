@@ -1,4 +1,5 @@
 import Gio from 'gi://Gio';
+import GLib from 'gi://GLib';
 import { AppConfig } from '../config.js';
 import { logError } from '../util/logger.js';
 
@@ -11,6 +12,7 @@ export class ExtensionComponent {
         this._extension = extension;
         this._settings = null;
         this._signals = [];
+        this._sources = new Set();
         this._isEnabled = false;
     }
 
@@ -37,6 +39,44 @@ export class ExtensionComponent {
         const settings = this.getSettings();
         const id = settings.connect(signal, callback);
         this._signals.push({ obj: settings, id: id });
+    }
+
+    /**
+     * Run `fn` once on the next idle, tracking the source so a pending
+     * callback cannot outlive disable(). The id is untracked as soon as the
+     * callback runs, and the guard skips work if the component was disabled
+     * between scheduling and dispatch.
+     * @param {Function} fn
+     * @param {number} [priority]
+     * @returns {number} GLib source id
+     */
+    idleOnce(fn, priority = GLib.PRIORITY_DEFAULT_IDLE) {
+        let id = 0;
+        id = GLib.idle_add(priority, () => {
+            this._sources.delete(id);
+            if (this._isEnabled) fn();
+            return GLib.SOURCE_REMOVE;
+        });
+        this._sources.add(id);
+        return id;
+    }
+
+    /**
+     * Run `fn` once after `ms`, with the same tracking and guard as idleOnce().
+     * @param {number} ms
+     * @param {Function} fn
+     * @param {number} [priority]
+     * @returns {number} GLib source id
+     */
+    timeoutOnce(ms, fn, priority = GLib.PRIORITY_DEFAULT) {
+        let id = 0;
+        id = GLib.timeout_add(priority, ms, () => {
+            this._sources.delete(id);
+            if (this._isEnabled) fn();
+            return GLib.SOURCE_REMOVE;
+        });
+        this._sources.add(id);
+        return id;
     }
 
     /**
@@ -80,6 +120,18 @@ export class ExtensionComponent {
             }
         });
         this._signals = [];
+
+        // Pending one-shot sources must go too, or a queued callback fires
+        // after disable() and touches actors that are already destroyed.
+        this._sources.forEach(id => {
+            try {
+                GLib.source_remove(id);
+            } catch (e) {
+                logError('Failed to remove pending source during cleanup', e);
+            }
+        });
+        this._sources.clear();
+
         this._settings = null;
     }
 }
