@@ -18,7 +18,6 @@ export default class GnomeSplitViewPrefs extends ExtensionPreferences {
     // Bundled icons: recent adwaita-icon-theme trims removed several
     // symbolics the UI relies on (edit-undo, view-refresh, link, ...),
     // so the extension ships its own and registers the search path once.
-    // NEW (Safe to remove try/catch)
     const display = window.get_display();
     const theme = Gtk.IconTheme.get_for_display(display);
     const iconDir = GLib.build_filenamev([this.path, "icon"]);
@@ -66,7 +65,6 @@ export default class GnomeSplitViewPrefs extends ExtensionPreferences {
       // it when it is already open (Adw retitles per visible page, so
       // the title alone is not a stable identifier). A hidden marker in
       // the window name survives page changes.
-      // NEW (Safe to remove try/catch)
       window?.set_title?.(finalMetadata.name);
       window?.add_css_class?.("lesion-prefs-window");
 
@@ -111,7 +109,6 @@ export default class GnomeSplitViewPrefs extends ExtensionPreferences {
    * Helper: Reads metadata.json using Gio.File (Robust)
    */
   _loadLocalMetadata(extensionPath) {
-    // NEW (Safe to remove try/catch)
     const jsonPath = GLib.build_filenamev([extensionPath, "metadata.json"]);
     const file = Gio.File.new_for_path(jsonPath);
 
@@ -124,7 +121,6 @@ export default class GnomeSplitViewPrefs extends ExtensionPreferences {
   }
 
   _loadCustomStyles() {
-    // NEW (Safe to remove try/catch)
     const cssPath = GLib.build_filenamev([this.path, "style", "prefs.css"]);
     const file = Gio.File.new_for_path(cssPath);
 
@@ -140,7 +136,6 @@ export default class GnomeSplitViewPrefs extends ExtensionPreferences {
   }
 
   _setupDeepLinking(splitView) {
-    // NEW (Safe to remove try/catch)
     this._settings = AppConfig.getSettings();
     if (!this._settings) return; // Exit early safely
 

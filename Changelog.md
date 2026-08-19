@@ -3,6 +3,121 @@
 Notable changes to the Lesion extension. Version names follow `yy.mm.dd`
 (EGO `version-name` allows letters, numbers, spaces, and periods only).
 
+## 26.08.18.67 (version 116) — build and packaging fixes
+
+Tooling and packaging only. No behavioural change to any component.
+
+An attempted try/catch reduction across the components was reverted before
+release: it broke the Panel, Clock and Geometry features. See "Reverted" below
+for what went wrong and why the guards are staying.
+
+### Fixed — packaging (both bugs would have reached users)
+
+- `schemas/gschemas.compiled` was excluded from every package. `.gitignore`
+  carries `*.compiled` to keep it out of version control, and build.py reads
+  patterns from `.gitignore` and `.extensionignore` alike, so the file was
+  dropped from the zip. app/config.js resolves its GSettings schema from
+  exactly that path, so an EGO install would have failed to open preferences.
+  Both scripts now support gitignore-style `!negation`, and `.extensionignore`
+  re-includes the file explicitly.
+- `build.py --ego` stripped `links` and `developer-name` from metadata.json,
+  and app/page/about.js reads both directly. The submission build would have
+  shown "Unknown Developer" and no Documentation group. Both keys are now kept
+  in the EGO package; EGO ignores keys it does not recognise.
+
+### Changed — one locale compiler
+
+`po/manage.py` is now both a CLI and an importable module. It exports
+`compile_catalogs()`, `update_template()` and `add_language()`, and remains the
+only implementation of the translation pipeline.
+
+- build.py and install.py load `po/manage.py` by path (via `importlib`, since
+  `po/` is not a package) and call `compile_catalogs()`. Neither script contains
+  compile logic; changing how catalogs are built now means changing one file.
+- build.py compiles catalogs and GSettings schemas before packaging, so a zip
+  can no longer ship a stale `.mo` or a schema that has drifted from
+  `schemas/*.gschema.xml`. `--no-compile` opts out. Failures are fatal only
+  under `--ego`.
+- install.py compiles in both modes. In remote mode this runs on the extracted
+  source *before* copying, because `.extensionignore` strips `po/` from the
+  installed copy and that is the last moment the sources exist.
+- A missing gettext warns and falls back to the committed `.mo` files rather
+  than failing: gettext is a developer dependency, not an end-user one.
+- `update` now names any file listed in POTFILES.in that does not exist,
+  instead of letting xgettext fail part-way through on a stale list.
+
+### Changed — EGO preparation
+
+- metadata.json: removed `"51"` from `shell-version`. GNOME 50 was released on
+  18 March 2026 and 51 is unreleased, so EGO's validator would reject it.
+  Removed `prefs-page`, which nothing in the source reads.
+- .extensionignore: added `check.sh`, which was leaking into the package.
+- Removed eleven `// NEW (Safe to remove try/catch)` marker comments from
+  extension.js and prefs.js. EGO rejects submissions whose comments read as
+  notes to a code generator. Comment lines only; no code was touched.
+
+### Tooling
+
+- Added `check.sh`, which pipes every JS file through
+  `node --input-type=module --check`.
+
+  `node --check FILE` treats a bare `.js` as CommonJS and does **not** validate
+  ES module syntax. It returns 0 on a function containing `try {` with no
+  `catch`. Every release since the syntax gate was introduced has been checked
+  with that command, so the gate has been weaker than the Changelog implied.
+  The new form immediately caught three real breaks that `node --check` passed.
+
+### Reverted — try/catch reduction across components
+
+A sweep that cut 164 clauses to 64 was reverted in full. All component sources
+are byte-identical to version 115. Two failure classes caused it, both worth
+recording so the next attempt avoids them:
+
+1. **Removing a guard whose absence changed control flow.** base.js
+   `_isEnabled` was dropped as redundant, but panels.js `_queueRefresh` reads
+   it: `if (!this._isEnabled) return GLib.SOURCE_REMOVE;`. With the flag gone
+   the value was `undefined`, so the debounced refresh returned immediately and
+   `_refreshAll()` never ran — the entire Panel feature, silently dead.
+2. **Removing duck-type guards on heterogeneous actor trees.** Checks like
+   `actor.has_style_class_name && ...` in `_setClockPillNeutralized` and
+   `_iterateButtons` are not redundant: the panel tree contains ClutterText and
+   other non-St actors that do not declare that method, so the call raises
+   TypeError. The same pattern was removed from effects.js
+   (`win.get_client_type &&`, `win.get_wm_class?.()`).
+
+The EGO rule that functions which never throw must not be wrapped is sound, but
+"never throws" has to be established per call site, not per method name. Where
+this codebase wraps a call, a comment usually records the bug that put it there
+— base.js `_cleanup` documents a disposed object aborting a cleanup loop, which
+is direct evidence that `disconnect()` does throw here. Those notes outrank the
+general guideline.
+
+Two findings from the sweep still stand and can be acted on separately:
+
+- `typeof win.is_destroyed === 'function'` in app/components/geometry.js is
+  dead code. `is_destroyed` is a method of `Meta.WindowActor`, not
+  `Meta.Window` (Meta API 51 reference), so the check is always false and the
+  branch never runs. `get_compositor_private() !== null` is already the real
+  test. Harmless, but it can go.
+- `win.is_modal()` in `_shouldManage` has the same problem: `Meta.Window`
+  declares no `is_modal`, so that branch has never fired. Removing it changes
+  nothing; keeping the `typeof` guard around it is what makes it inert.
+
+### Known EGO risks, unchanged in this release
+
+- app/page/extensions.js manages other extensions over D-Bus. The review
+  guidelines treat extensions that interact with the extension system as
+  case-by-case and reject at the reviewer's discretion.
+- app/components/apps.js is roughly 75 KB. Very large files can make the EGO
+  review page lag while loading diffs; splitting it would help review.
+- app/components/apps.js spawns `gnome-control-center` and `gio trash --empty`.
+  The guidelines ask that external shell commands be avoided in favour of D-Bus.
+- app/util/compat.js imports Clutter and Meta and is shell-process only, but it
+  sits in `app/util/` next to modules that both processes share. The guidelines
+  ask that process-specific modules be obvious from the directory layout.
+- The try/catch count is unchanged at 164. The guideline still applies; it needs
+  a per-call-site approach with testing between changes.
+
 ## 26.08.15.66 (version 115) — try/catch reduction in entry points
 
 ### Changed

@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Lesion\n"
 "Report-Msgid-Bugs-To: https://github.com/khensolomon/lesion/issues\n"
-"POT-Creation-Date: 2026-08-16 10:43+0000\n"
+"POT-Creation-Date: 2026-08-18 13:40+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -17,23 +17,27 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 
-#: app/components/apps.js:1177
+#: app/components/apps.js:1165
 msgid "Properties"
 msgstr ""
 
-#: app/components/apps.js:1230
+#: app/components/apps.js:1218 app/components/apps.js:1227
 msgid "Copy Info"
 msgstr ""
 
-#: app/components/apps.js:1396 app/panel/indicator.js:198
+#: app/components/apps.js:1225
+msgid "Copied!"
+msgstr ""
+
+#: app/components/apps.js:1383 app/panel/indicator.js:182
 msgid "Cancel"
 msgstr ""
 
-#: app/components/apps.js:1398
+#: app/components/apps.js:1385
 msgid "Empty Trash"
 msgstr ""
 
-#: app/components/apps.js:1408
+#: app/components/apps.js:1400
 msgid "Are you sure you want to delete all items in the Trash?"
 msgstr ""
 
@@ -93,19 +97,19 @@ msgstr ""
 msgid "Mono Minimal"
 msgstr ""
 
-#: app/page/about.js:53
+#: app/page/about.js:54
 msgid "System"
 msgstr ""
 
-#: app/page/about.js:58
+#: app/page/about.js:59
 msgid "Session"
 msgstr ""
 
-#: app/page/about.js:64
+#: app/page/about.js:65
 msgid "Extension UUID"
 msgstr ""
 
-#: app/page/about.js:71
+#: app/page/about.js:72
 msgid "Copy UUID"
 msgstr ""
 
@@ -235,7 +239,7 @@ msgstr ""
 msgid "Style the dropdown menus."
 msgstr ""
 
-#: app/page/appearance.js:238 app/page/wallpaper.js:108
+#: app/page/appearance.js:238 app/page/wallpaper.js:98
 msgid "Presets"
 msgstr ""
 
@@ -434,99 +438,99 @@ msgid ""
 "formats."
 msgstr ""
 
-#: app/page/dashboard.js:35
+#: app/page/dashboard.js:36
 msgid "Panel Indicator"
 msgstr ""
 
-#: app/page/dashboard.js:36
+#: app/page/dashboard.js:37
 msgid "Control the main menu icon in the top bar"
 msgstr ""
 
-#: app/page/dashboard.js:41
+#: app/page/dashboard.js:42
 msgid "Show Indicator"
 msgstr ""
 
-#: app/page/dashboard.js:42
+#: app/page/dashboard.js:43
 msgid "Toggle visibility"
 msgstr ""
 
-#: app/page/dashboard.js:53
+#: app/page/dashboard.js:54
 msgid "Features"
 msgstr ""
 
-#: app/page/dashboard.js:54
+#: app/page/dashboard.js:55
 msgid "Quick access to core modules"
 msgstr ""
 
-#: app/page/dashboard.js:67
+#: app/page/dashboard.js:68
 msgid "Data Management"
 msgstr ""
 
-#: app/page/dashboard.js:68
+#: app/page/dashboard.js:69
 msgid "Backup or restore your configuration"
 msgstr ""
 
-#: app/page/dashboard.js:74
+#: app/page/dashboard.js:75
 msgid "Export Configuration"
 msgstr ""
 
-#: app/page/dashboard.js:75
+#: app/page/dashboard.js:76
 msgid "Save settings to a JSON file"
 msgstr ""
 
-#: app/page/dashboard.js:88
+#: app/page/dashboard.js:89
 msgid "Import Configuration"
 msgstr ""
 
-#: app/page/dashboard.js:89
+#: app/page/dashboard.js:90
 msgid "Restore settings from a JSON file"
 msgstr ""
 
-#: app/page/dashboard.js:103 app/page/dashboard.js:109
+#: app/page/dashboard.js:104 app/page/dashboard.js:110
 msgid "Reset All Settings"
 msgstr ""
 
-#: app/page/dashboard.js:104
+#: app/page/dashboard.js:105
 msgid "Restore every Lesion setting to its default value"
 msgstr ""
 
-#: app/page/dashboard.js:137
+#: app/page/dashboard.js:138
 msgid "Custom Icon"
 msgstr ""
 
-#: app/page/dashboard.js:138
+#: app/page/dashboard.js:139
 msgid "Default"
 msgstr ""
 
-#: app/page/dashboard.js:181
+#: app/page/dashboard.js:182
 msgid "Reset to Default"
 msgstr ""
 
-#: app/page/dashboard.js:192
+#: app/page/dashboard.js:193
 msgid "Select File"
 msgstr ""
 
-#: app/page/dashboard.js:208
+#: app/page/dashboard.js:209
 msgid "Select Panel Icon"
 msgstr ""
 
-#: app/page/dashboard.js:249
+#: app/page/dashboard.js:250
 msgid "Export Settings"
 msgstr ""
 
-#: app/page/dashboard.js:284
+#: app/page/dashboard.js:285
 msgid "Export Failed"
 msgstr ""
 
-#: app/page/dashboard.js:306
+#: app/page/dashboard.js:307
 msgid "Import Settings"
 msgstr ""
 
-#: app/page/dashboard.js:341
+#: app/page/dashboard.js:342
 msgid "Import Failed"
 msgstr ""
 
-#: app/page/dashboard.js:358
+#: app/page/dashboard.js:359
 msgid "Reset All Settings?"
 msgstr ""
 
@@ -567,7 +571,7 @@ msgid ""
 "facing the desktop stay rounded"
 msgstr ""
 
-#: app/page/effects.js:52 app/page/geometry.js:39
+#: app/page/effects.js:52 app/page/geometry.js:40
 msgid "Manage X11 Windows"
 msgstr ""
 
@@ -665,68 +669,68 @@ msgstr ""
 msgid "Remove extension?"
 msgstr ""
 
-#: app/page/geometry.js:20
+#: app/page/geometry.js:21
 msgid "Settings"
 msgstr ""
 
-#: app/page/geometry.js:25
+#: app/page/geometry.js:26
 msgid "Enable Geometry Saving"
 msgstr ""
 
-#: app/page/geometry.js:26
+#: app/page/geometry.js:27
 msgid "Remember window size and position"
 msgstr ""
 
-#: app/page/geometry.js:32
+#: app/page/geometry.js:33
 msgid "Restore Workspace"
 msgstr ""
 
-#: app/page/geometry.js:33
+#: app/page/geometry.js:34
 msgid ""
 "Reopen windows on the workspace they were closed on (recreated if needed)"
 msgstr ""
 
-#: app/page/geometry.js:40
+#: app/page/geometry.js:41
 msgid ""
 "Applies to apps running through Xwayland. Disable if X11 apps destabilize "
 "the session"
 msgstr ""
 
-#: app/page/geometry.js:49
+#: app/page/geometry.js:50
 msgid "Saved Applications"
 msgstr ""
 
-#: app/page/geometry.js:50
+#: app/page/geometry.js:51
 msgid "Manage currently stored window positions"
 msgstr ""
 
-#: app/page/geometry.js:119
+#: app/page/geometry.js:115
 msgid "No Saved Windows"
 msgstr ""
 
-#: app/page/geometry.js:120
+#: app/page/geometry.js:116
 msgid "Move windows around to populate this list"
 msgstr ""
 
-#: app/page/geometry.js:164
+#: app/page/geometry.js:160
 msgid "Forget this window"
 msgstr ""
 
-#: app/page/geometry.js:226
+#: app/page/geometry.js:222
 msgid "Clear Saved Geometry"
 msgstr ""
 
-#: app/page/geometry.js:227
+#: app/page/geometry.js:223
 msgid ""
 "Remove all remembered window positions and sizes. Entries rebuild as you "
 "move windows"
 msgstr ""
 
-#: app/page/geometry.js:233
+#: app/page/geometry.js:229
 msgid "Clear all saved window geometry"
 msgstr ""
 
-#: app/page/index.js:16 app/window.js:160
+#: app/page/index.js:16 app/window.js:152
 msgid "General"
 msgstr ""
 
@@ -778,7 +782,7 @@ msgstr ""
 msgid "Window"
 msgstr ""
 
-#: app/page/index.js:75 app/page/wallpaper.js:258
+#: app/page/index.js:75 app/page/wallpaper.js:246
 msgid "Effects"
 msgstr ""
 
@@ -822,176 +826,176 @@ msgstr ""
 msgid "Learn more about this application"
 msgstr ""
 
-#: app/page/layout.js:42
+#: app/page/layout.js:43
 msgid "Global Appearance"
 msgstr ""
 
-#: app/page/layout.js:43
+#: app/page/layout.js:44
 msgid "Configure the look and feel of your panel buttons."
 msgstr ""
 
-#: app/page/layout.js:50
+#: app/page/layout.js:51
 msgid "Icon Size"
 msgstr ""
 
-#: app/page/layout.js:60
+#: app/page/layout.js:61
 msgid "Item Padding"
 msgstr ""
 
-#: app/page/layout.js:61
+#: app/page/layout.js:62
 msgid "Horizontal space inside each item, independent of panel button padding"
 msgstr ""
 
-#: app/page/layout.js:70
+#: app/page/layout.js:71
 msgid "Monochrome Icons"
 msgstr ""
 
-#: app/page/layout.js:77
+#: app/page/layout.js:78
 msgid "Running Opacity"
 msgstr ""
 
-#: app/page/layout.js:78
+#: app/page/layout.js:79
 msgid "Opacity for running apps (0-255)"
 msgstr ""
 
-#: app/page/layout.js:87
+#: app/page/layout.js:88
 msgid "Stopped Opacity"
 msgstr ""
 
-#: app/page/layout.js:88
+#: app/page/layout.js:89
 msgid "Opacity for inactive favorites (0-255)"
 msgstr ""
 
-#: app/page/layout.js:101
+#: app/page/layout.js:102
 msgid "Running Indicator"
 msgstr ""
 
-#: app/page/layout.js:102
+#: app/page/layout.js:103
 msgid "Customize the visual indicator for running applications."
 msgstr ""
 
-#: app/page/layout.js:112
+#: app/page/layout.js:113
 msgid "Custom"
 msgstr ""
 
-#: app/page/layout.js:113
+#: app/page/layout.js:114
 msgid "Dot Below"
 msgstr ""
 
-#: app/page/layout.js:114
+#: app/page/layout.js:115
 msgid "Dot Above"
 msgstr ""
 
-#: app/page/layout.js:115
+#: app/page/layout.js:116
 msgid "Line Below"
 msgstr ""
 
-#: app/page/layout.js:116
+#: app/page/layout.js:117
 msgid "Line Above"
 msgstr ""
 
-#: app/page/layout.js:117
+#: app/page/layout.js:118
 msgid "Bar Left"
 msgstr ""
 
-#: app/page/layout.js:118
+#: app/page/layout.js:119
 msgid "Bar Right"
 msgstr ""
 
-#: app/page/layout.js:125
+#: app/page/layout.js:126
 msgid "Style Preset"
 msgstr ""
 
-#: app/page/layout.js:126
+#: app/page/layout.js:127
 msgid "Quickly apply common indicator styles"
 msgstr ""
 
-#: app/page/layout.js:222 app/page/layout.js:337
+#: app/page/layout.js:223 app/page/layout.js:338
 msgid "Position"
 msgstr ""
 
-#: app/page/layout.js:249
+#: app/page/layout.js:250
 msgid "Offset"
 msgstr ""
 
-#: app/page/layout.js:250
+#: app/page/layout.js:251
 msgid "Distance from edge"
 msgstr ""
 
-#: app/page/layout.js:258
+#: app/page/layout.js:259
 msgid "Width"
 msgstr ""
 
-#: app/page/layout.js:266
+#: app/page/layout.js:267
 msgid "Height"
 msgstr ""
 
-#: app/page/layout.js:274
+#: app/page/layout.js:275
 msgid "Radius"
 msgstr ""
 
-#: app/page/layout.js:275
+#: app/page/layout.js:276
 msgid "Corner rounding (0=Square, 99=Round)"
 msgstr ""
 
-#: app/page/layout.js:282
+#: app/page/layout.js:283
 msgid "Color"
 msgstr ""
 
-#: app/page/layout.js:329
+#: app/page/layout.js:330
 msgid "Show in Panel"
 msgstr ""
 
-#: app/page/layout.js:354
+#: app/page/layout.js:355
 msgid "Sort Order"
 msgstr ""
 
-#: app/page/layout.js:383
+#: app/page/layout.js:384
 msgid "Display Mode"
 msgstr ""
 
-#: app/page/layout.js:384
+#: app/page/layout.js:385
 msgid "Choose how the button appears in the panel."
 msgstr ""
 
-#: app/page/layout.js:405
+#: app/page/layout.js:406
 msgid "Icon Name"
 msgstr ""
 
-#: app/page/layout.js:441
+#: app/page/layout.js:442
 msgid "Icon File"
 msgstr ""
 
-#: app/page/layout.js:454
+#: app/page/layout.js:455
 msgid "Select Icon"
 msgstr ""
 
-#: app/page/layout.js:489
+#: app/page/layout.js:490
 msgid "Label Text"
 msgstr ""
 
-#: app/page/layout.js:497
+#: app/page/layout.js:498
 msgid "Note"
 msgstr ""
 
-#: app/page/layout.js:498
+#: app/page/layout.js:499
 msgid ""
 "Enter a themed icon name (e.g., start-here-symbolic) or a full file path."
 msgstr ""
 
-#: app/page/layout.js:523
+#: app/page/layout.js:524
 msgid "Hide \"Activities\" Button"
 msgstr ""
 
-#: app/page/layout.js:524
+#: app/page/layout.js:525
 msgid "Hide the default GNOME Shell Activities button"
 msgstr ""
 
-#: app/page/layout.js:547
+#: app/page/layout.js:548
 msgid "Manage Favorites"
 msgstr ""
 
-#: app/page/layout.js:548
+#: app/page/layout.js:549
 msgid "Drag and drop items to reorder."
 msgstr ""
 
@@ -1003,151 +1007,151 @@ msgstr ""
 msgid "Schema ID not found in configuration."
 msgstr ""
 
-#: app/page/stylesheet.js:84
+#: app/page/stylesheet.js:86
 msgid "Copy CSS"
 msgstr ""
 
-#: app/page/stylesheet.js:132
+#: app/page/stylesheet.js:133
 msgid "Bundled Styles"
 msgstr ""
 
-#: app/page/stylesheet.js:133
+#: app/page/stylesheet.js:134
 msgid ""
 "Demo styles shipped with the extension — view their CSS as a cheat sheet for "
 "writing your own."
 msgstr ""
 
-#: app/page/stylesheet.js:143
+#: app/page/stylesheet.js:144
 msgid "No Styles Found"
 msgstr ""
 
-#: app/page/stylesheet.js:144
+#: app/page/stylesheet.js:145
 msgid "No .css files were found in style/bundled"
 msgstr ""
 
-#: app/page/stylesheet.js:168
+#: app/page/stylesheet.js:169
 msgid "View CSS"
 msgstr ""
 
-#: app/page/stylesheet.js:198
+#: app/page/stylesheet.js:199
 msgid "Custom Styles"
 msgstr ""
 
-#: app/page/stylesheet.js:199
+#: app/page/stylesheet.js:200
 msgid ""
 "Add your own CSS files from anywhere on your computer. Files reload "
 "automatically when edited."
 msgstr ""
 
-#: app/page/stylesheet.js:209
+#: app/page/stylesheet.js:210
 msgid "Enable or disable all custom styles"
 msgstr ""
 
-#: app/page/stylesheet.js:217
+#: app/page/stylesheet.js:218
 msgid "Add Style File"
 msgstr ""
 
-#: app/page/stylesheet.js:232
+#: app/page/stylesheet.js:233
 msgid "Add Style File…"
 msgstr ""
 
-#: app/page/stylesheet.js:290
+#: app/page/stylesheet.js:285
 msgid "Open File"
 msgstr ""
 
-#: app/page/stylesheet.js:313
+#: app/page/stylesheet.js:308
 msgid "Remove"
 msgstr ""
 
-#: app/page/stylesheet.js:347
+#: app/page/stylesheet.js:343
 msgid "Select CSS File"
 msgstr ""
 
-#: app/page/wallpaper.js:100
+#: app/page/wallpaper.js:90
 msgid "Enable Wallpaper Management"
 msgstr ""
 
-#: app/page/wallpaper.js:101
+#: app/page/wallpaper.js:91
 msgid "Master switch for all wallpaper features"
 msgstr ""
 
-#: app/page/wallpaper.js:109
+#: app/page/wallpaper.js:99
 msgid ""
 "Instantly apply a pre-configured theme with matching colors and effects."
 msgstr ""
 
-#: app/page/wallpaper.js:224
+#: app/page/wallpaper.js:212
 msgid "Background Image"
 msgstr ""
 
-#: app/page/wallpaper.js:225
+#: app/page/wallpaper.js:213
 msgid "Choose specific images for Light and Dark system themes."
 msgstr ""
 
-#: app/page/wallpaper.js:230
+#: app/page/wallpaper.js:218
 msgid "Show Image"
 msgstr ""
 
-#: app/page/wallpaper.js:231
+#: app/page/wallpaper.js:219
 msgid "Toggle the desktop background wallpaper"
 msgstr ""
 
-#: app/page/wallpaper.js:246
+#: app/page/wallpaper.js:234
 msgid "Scaling Options"
 msgstr ""
 
-#: app/page/wallpaper.js:247
+#: app/page/wallpaper.js:235
 msgid "Control how the wallpaper image fits your screen."
 msgstr ""
 
-#: app/page/wallpaper.js:259
+#: app/page/wallpaper.js:247
 msgid "Apply visual filters like blur or desaturation to the background."
 msgstr ""
 
-#: app/page/wallpaper.js:264
+#: app/page/wallpaper.js:252
 msgid "Monochrome"
 msgstr ""
 
-#: app/page/wallpaper.js:265
+#: app/page/wallpaper.js:253
 msgid "Desaturate the background"
 msgstr ""
 
-#: app/page/wallpaper.js:270
+#: app/page/wallpaper.js:258
 msgid "Blur Amount"
 msgstr ""
 
-#: app/page/wallpaper.js:280
+#: app/page/wallpaper.js:268
 msgid "Brightness"
 msgstr ""
 
-#: app/page/wallpaper.js:293
+#: app/page/wallpaper.js:281
 msgid "Colors"
 msgstr ""
 
-#: app/page/wallpaper.js:294
+#: app/page/wallpaper.js:282
 msgid ""
 "Define solid colors or gradients. These appear when no image is set or "
 "behind transparent wallpapers."
 msgstr ""
 
-#: app/page/wallpaper.js:444
+#: app/page/wallpaper.js:423
 #, javascript-format
 msgid "Select %s"
 msgstr ""
 
-#: app/page/wallpaper.js:519
+#: app/page/wallpaper.js:496
 msgid "Picture Style"
 msgstr ""
 
-#: app/page/wallpaper.js:560
+#: app/page/wallpaper.js:537
 msgid "Color Mode"
 msgstr ""
 
-#: app/panel/indicator.js:189
+#: app/panel/indicator.js:173
 msgid "Disable Lesion?"
 msgstr ""
 
-#: app/panel/indicator.js:204
+#: app/panel/indicator.js:188
 msgid "Disable"
 msgstr ""
 
@@ -1163,15 +1167,15 @@ msgstr ""
 msgid "Search settings..."
 msgstr ""
 
-#: app/window.js:160
+#: app/window.js:152
 #, javascript-format
 msgid "Options for %s"
 msgstr ""
 
-#: app/window.js:295
+#: app/window.js:282
 msgid "No Results Found"
 msgstr ""
 
-#: prefs.js:104
+#: prefs.js:105
 msgid "Preferences Error"
 msgstr ""

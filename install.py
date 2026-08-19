@@ -48,6 +48,7 @@ import sys
 import shutil
 import json
 import argparse
+import importlib.util
 import subprocess
 import tarfile
 import tempfile
@@ -71,6 +72,53 @@ YELLOW = "\033[93m"
 GREEN = "\033[92m"
 RESET = "\033[0m"
 
+def load_po_manager(root_dir):
+    """
+    Load po/manage.py as a module from `root_dir`.
+
+    po/ is not a Python package, so it is loaded by path. This keeps
+    po/manage.py the single implementation of the translation pipeline —
+    this script never compiles catalogs itself.
+
+    Returns the module, or None when po/manage.py is not present (the curl
+    one-liner runs before any source exists, and an installed copy has no po/).
+    """
+    manage_py = os.path.join(root_dir, "po", "manage.py")
+    if not os.path.isfile(manage_py):
+        return None
+    spec = importlib.util.spec_from_file_location("lesion_po_manage", manage_py)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def compile_locales(root_dir):
+    """
+    Refresh locale/<lang>/LC_MESSAGES/*.mo via po/manage.py.
+
+    Best effort: gettext is a developer dependency, not an end-user one, and
+    the repository ships prebuilt .mo files. A missing msgfmt therefore warns
+    rather than failing the install.
+    """
+    manage = load_po_manager(root_dir)
+    if manage is None:
+        return False
+
+    try:
+        written = manage.compile_catalogs(root_dir, verbose=True)
+    except manage.MissingToolError as e:
+        print(f"{YELLOW}Locale compilation skipped: {e}{RESET}")
+        print("Using the .mo files already in locale/.")
+        return False
+    except subprocess.CalledProcessError as e:
+        print(f"{YELLOW}Locale compilation failed: msgfmt exited {e.returncode}{RESET}")
+        return False
+
+    if written:
+        print(f"{GREEN}Compiled {len(written)} translation catalog(s).{RESET}")
+    return bool(written)
+
+
 def check_dependencies():
     """Validates required system binaries are present."""
     missing = []
@@ -82,46 +130,74 @@ def check_dependencies():
     if missing:
         sys.exit(f"{RED}Error: Missing required system dependencies:\n- " + "\n- ".join(missing) + f"{RESET}")
 
-def load_ignore_patterns(src_dir):
-    """Parses patterns from .gitignore and .extensionignore files."""
-    patterns = []
-    for ignore_file in [".gitignore", ".extensionignore"]:
-        target_file = os.path.join(src_dir, ignore_file)
-        if os.path.exists(target_file):
-            with open(target_file, 'r', encoding='utf-8') as f:
-                for line in f:
-                    line = line.strip()
-                    if line and not line.startswith('#'):
-                        patterns.append(line)
-    return patterns
+def load_ignore_patterns(*roots):
+    """
+    Parse .gitignore and .extensionignore into (excludes, negations).
 
-def should_exclude(filename, patterns):
-    """Checks if a filename matches any loaded ignore pattern."""
-    normalized = filename.replace(os.sep, '/')
-    parts = normalized.split('/')
-    
+    Negation ('!pattern', gitignore syntax) is supported because the two files
+    have different jobs: .gitignore keeps build artefacts out of version
+    control, while packaging REQUIRES some of them. schemas/gschemas.compiled
+    is the case that matters — '*.compiled' in .gitignore was silently dropping
+    it from every zip, and the extension looks for that exact file at runtime.
+    """
+    excludes, negations = [], []
+    root = roots[0] if roots else "."
+    for ignore_file in [".gitignore", ".extensionignore"]:
+        target = os.path.join(root, ignore_file)
+        if not os.path.exists(target):
+            continue
+        with open(target, "r", encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if not line or line.startswith("#"):
+                    continue
+                if line.startswith("!"):
+                    negations.append(line[1:].strip())
+                else:
+                    excludes.append(line)
+    return excludes, negations
+
+
+def _matches(filename, patterns):
+    """True when `filename` matches any pattern (path, basename, or parent dir)."""
+    normalized = filename.replace(os.sep, "/")
+    parts = normalized.split("/")
+
     for pattern in patterns:
         pattern = pattern.strip()
-        if not pattern: 
+        if not pattern:
             continue
-        
-        clean_pattern = pattern.rstrip('/')
-        
+        clean_pattern = pattern.rstrip("/")
+
+        # 1. Full path match (handles "tests/*" and exact paths)
         if fnmatch.fnmatch(normalized, pattern) or fnmatch.fnmatch(normalized, clean_pattern):
             return True
-            
+
+        # 2. Basename match (handles extensions like "*.zip")
         if fnmatch.fnmatch(parts[-1], clean_pattern):
             return True
-            
-        for i in range(len(parts) - 1): 
+
+        # 3. Parent directory match (nested files inside ignored folders)
+        for i in range(len(parts) - 1):
             if fnmatch.fnmatch(parts[i], clean_pattern):
                 return True
-            
-            dir_to_check = '/'.join(parts[:i+1])
-            if fnmatch.fnmatch(dir_to_check, clean_pattern):
+            if fnmatch.fnmatch("/".join(parts[: i + 1]), clean_pattern):
                 return True
-                
+
     return False
+
+
+def should_exclude(filename, patterns):
+    """
+    Check `filename` against loaded ignore patterns.
+
+    `patterns` is the (excludes, negations) tuple from load_ignore_patterns();
+    a negation match always wins.
+    """
+    excludes, negations = patterns
+    if _matches(filename, negations):
+        return False
+    return _matches(filename, excludes)
 
 def copy_with_ignore(src, dest, ignore_patterns):
     """Recursively copies files while adhering to ignore patterns."""
@@ -308,9 +384,14 @@ def install_remote(args, target_base):
             else:
                 shutil.rmtree(dest_dir)
 
+        # Compile catalogs in the extracted source BEFORE copying: .extensionignore
+        # excludes po/ from the installed copy, so this is the last moment the
+        # sources are available.
+        compile_locales(src_dir)
+
         # Parse ignore files from the downloaded source
         ignore_patterns = load_ignore_patterns(src_dir)
-        
+
         # Install files using the custom copy function
         copy_with_ignore(src_dir, dest_dir, ignore_patterns)
         print(f"Installed to: {dest_dir} (Ignored {len(ignore_patterns)} patterns)")
@@ -355,6 +436,10 @@ def install_local(args, target_base):
     # 1. Schemas (Execute this FIRST to ensure reset functionality)
     local_schemas_dir = os.path.join(src_dir, "schemas")
     found_ids = install_schemas(local_schemas_dir)
+
+    # 1b. Translations. The symlink means locale/ is read straight from the
+    #     working tree, so compiling here is what makes edited .po files show up.
+    compile_locales(src_dir)
 
     # 2. Reset Settings (Execute this BEFORE symlink check)
     if args.reset_settings:

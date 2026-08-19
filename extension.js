@@ -29,7 +29,6 @@ export default class LesionExtension extends Extension {
   disable() {
     log("System stopping.");
     if (this._winCreatedId) {
-      // NEW (Safe to remove try/catch)
       // Clear it immediately
       global.display.disconnect(this._winCreatedId);
       this._winCreatedId = null;
@@ -88,14 +87,12 @@ export default class LesionExtension extends Extension {
       );
       const id = win.connect("unmanaged", () => {
         if (this._prefsWindow === win) this._prefsWindow = null;
-        // NEW (Safe to remove try/catch)
         win.disconnect(id);
       });
       return true;
     };
 
     // Adopt anything already open (e.g. after the extension is re-enabled).
-    // NEW (Safe to remove try/catch)
     for (const w of global?.display?.list_all_windows()) {
       if (adopt(w)) break;
     }
@@ -120,7 +117,6 @@ export default class LesionExtension extends Extension {
   _getPreferencesWindow() {
     const w = this._prefsWindow;
     if (!w) return null;
-    // NEW (Safe to remove try/catch)
     return global?.display?.list_all_windows()?.includes(w) ? w : null;
   }
 
@@ -138,7 +134,6 @@ export default class LesionExtension extends Extension {
   openPreferences(page) {
     // Save the requested page so the prefs window reads it on load.
     if (page) {
-      // NEW (Safe to remove try/catch)
       const schema = AppConfig.schemaId || this.metadata["settings-schema"];
       if (schema) {
         const s = this.getSettings(schema);
@@ -167,7 +162,6 @@ export default class LesionExtension extends Extension {
 
     // Otherwise open it. GNOME's built-in also focuses an existing window if
     // one is open, so this is a safe fallback.
-    // NEW (Safe to remove try/catch)
     const result = super.openPreferences();
     if (result && typeof result.then === "function") {
       result.catch((err) => logError("openPreferences() rejected", err));

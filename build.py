@@ -34,6 +34,8 @@ import zipfile
 import shutil
 import fnmatch
 import argparse
+import importlib.util
+import subprocess
 import sys
 
 # --- CONFIGURATION ---
@@ -45,8 +47,87 @@ EGO_METADATA_KEYS = [
     "uuid", "name", "description", "shell-version", "url",
     "version", "version-name", "settings-schema", "gettext-domain",
     "session-modes", "donations",
+    # Not part of EGO's own schema, but app/page/about.js reads both directly:
+    # stripping them blanks the developer label and removes the entire
+    # Documentation group from the About page in the submitted build.
+    # EGO ignores keys it does not recognise.
+    "developer-name", "links",
 ]
 # ---------------------
+
+def load_po_manager(root_dir):
+    """
+    Load po/manage.py as a module from `root_dir`.
+
+    po/ is not a Python package, so it is loaded by path. This keeps
+    po/manage.py the single implementation of the translation pipeline —
+    this script never compiles catalogs itself.
+
+    Returns the module, or None when po/manage.py is not present (an installed
+    copy of the extension has no po/ directory).
+    """
+    manage_py = os.path.join(root_dir, "po", "manage.py")
+    if not os.path.isfile(manage_py):
+        return None
+    spec = importlib.util.spec_from_file_location("lesion_po_manage", manage_py)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def compile_locales(root_dir, required=False):
+    """
+    Refresh locale/<lang>/LC_MESSAGES/*.mo via po/manage.py.
+
+    Returns True when catalogs were compiled. When gettext is missing this
+    warns and returns False unless `required` is set, because the repository
+    ships prebuilt .mo files and a stale catalog is better than a failed run.
+    """
+    manage = load_po_manager(root_dir)
+    if manage is None:
+        return False
+
+    try:
+        written = manage.compile_catalogs(root_dir, verbose=True)
+    except manage.MissingToolError as e:
+        message = f"Locale compilation skipped: {e}"
+        if required:
+            sys.exit(f"Error: {message}")
+        print(f"   Warning: {message}")
+        print("   Using the .mo files already in locale/.")
+        return False
+    except subprocess.CalledProcessError as e:
+        message = f"msgfmt failed with status {e.returncode}"
+        if required:
+            sys.exit(f"Error: {message}")
+        print(f"   Warning: {message}")
+        return False
+
+    return bool(written)
+
+
+def compile_schemas(root_dir, required=False):
+    """
+    Compile schemas/*.gschema.xml into schemas/gschemas.compiled.
+
+    EGO installs the package as-is, so the compiled schema has to be current
+    in the zip; an out-of-date one produces a "Preferences Error" for users.
+    """
+    schemas_dir = os.path.join(root_dir, "schemas")
+    if not os.path.isdir(schemas_dir):
+        return False
+    if shutil.which("glib-compile-schemas") is None:
+        message = "glib-compile-schemas not found (install glib2-devel / libglib2.0-dev)"
+        if required:
+            sys.exit(f"Error: {message}")
+        print(f"   Warning: {message}")
+        print("   Using schemas/gschemas.compiled as it stands.")
+        return False
+
+    subprocess.run(["glib-compile-schemas", schemas_dir], check=True)
+    print(f"   Compiled schemas in {schemas_dir}")
+    return True
+
 
 def parse_arguments():
     """Defines and parses command line arguments."""
@@ -74,60 +155,90 @@ def parse_arguments():
         ),
     )
 
+    parser.add_argument(
+        "--no-compile",
+        action="store_false",
+        dest="compile_assets",
+        help="Do NOT recompile translation catalogs and GSettings schemas before packaging.",
+    )
+
     # Default is True (include self)
-    parser.set_defaults(include_self=True)
+    parser.set_defaults(include_self=True, compile_assets=True)
 
     return parser.parse_args()
 
-def load_ignore_patterns():
-    """Parses patterns from .gitignore and .extensionignore files."""
-    patterns = []
-    for ignore_file in [".gitignore", ".extensionignore"]:
-        if os.path.exists(ignore_file):
-            with open(ignore_file, 'r', encoding='utf-8') as f:
-                for line in f:
-                    line = line.strip()
-                    if line and not line.startswith('#'):
-                        patterns.append(line)
-    return patterns
+def load_ignore_patterns(*roots):
+    """
+    Parse .gitignore and .extensionignore into (excludes, negations).
 
-def should_exclude(filename, patterns):
-    """Checks if a filename matches any loaded ignore pattern."""
-    # Normalize path to use forward slashes for cross-OS compatibility
-    normalized = filename.replace(os.sep, '/')
-    parts = normalized.split('/')
-    
+    Negation ('!pattern', gitignore syntax) is supported because the two files
+    have different jobs: .gitignore keeps build artefacts out of version
+    control, while packaging REQUIRES some of them. schemas/gschemas.compiled
+    is the case that matters — '*.compiled' in .gitignore was silently dropping
+    it from every zip, and the extension looks for that exact file at runtime.
+    """
+    excludes, negations = [], []
+    root = roots[0] if roots else "."
+    for ignore_file in [".gitignore", ".extensionignore"]:
+        target = os.path.join(root, ignore_file)
+        if not os.path.exists(target):
+            continue
+        with open(target, "r", encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if not line or line.startswith("#"):
+                    continue
+                if line.startswith("!"):
+                    negations.append(line[1:].strip())
+                else:
+                    excludes.append(line)
+    return excludes, negations
+
+
+def _matches(filename, patterns):
+    """True when `filename` matches any pattern (path, basename, or parent dir)."""
+    normalized = filename.replace(os.sep, "/")
+    parts = normalized.split("/")
+
     for pattern in patterns:
         pattern = pattern.strip()
-        if not pattern: 
+        if not pattern:
             continue
-        
-        clean_pattern = pattern.rstrip('/')
-        
-        # 1. Full path match (handles patterns like "tests/*" or exact paths)
+        clean_pattern = pattern.rstrip("/")
+
+        # 1. Full path match (handles "tests/*" and exact paths)
         if fnmatch.fnmatch(normalized, pattern) or fnmatch.fnmatch(normalized, clean_pattern):
             return True
-            
-        # 2. File basename match (handles extensions like "*.zip")
+
+        # 2. Basename match (handles extensions like "*.zip")
         if fnmatch.fnmatch(parts[-1], clean_pattern):
             return True
-            
-        # 3. Parent directory match (handles nested files inside ignored folders)
-        for i in range(len(parts) - 1): 
-            # Check individual directory name (e.g., 'ui' in 'src/ui/file.js')
+
+        # 3. Parent directory match (nested files inside ignored folders)
+        for i in range(len(parts) - 1):
             if fnmatch.fnmatch(parts[i], clean_pattern):
                 return True
-            
-            # Check cumulative path (e.g., 'src/ui' in 'src/ui/file.js')
-            dir_to_check = '/'.join(parts[:i+1])
-            if fnmatch.fnmatch(dir_to_check, clean_pattern):
+            if fnmatch.fnmatch("/".join(parts[: i + 1]), clean_pattern):
                 return True
-                
+
     return False
+
+
+def should_exclude(filename, patterns):
+    """
+    Check `filename` against loaded ignore patterns.
+
+    `patterns` is the (excludes, negations) tuple from load_ignore_patterns();
+    a negation match always wins.
+    """
+    excludes, negations = patterns
+    if _matches(filename, negations):
+        return False
+    return _matches(filename, excludes)
 
 def main():
     args = parse_arguments()
-    ignore_patterns = load_ignore_patterns()
+    ignore_patterns = load_ignore_patterns(os.getcwd())
 
     # 1. Read metadata.json
     meta_file = "metadata.json"
@@ -149,7 +260,15 @@ def main():
         print(f"Error: Failed to parse {meta_file}. Check the JSON syntax.")
         sys.exit(1)
 
-    # 2. Define Filename
+    # 2. Compile bundled assets so the package never ships a stale catalog or
+    #    a schema that no longer matches schemas/*.gschema.xml.
+    if args.compile_assets:
+        print("Compiling translation catalogs...")
+        compile_locales(os.getcwd(), required=args.ego)
+        print("Compiling GSettings schemas...")
+        compile_schemas(os.getcwd(), required=args.ego)
+
+    # 3. Define Filename
     if args.ego:
         zip_filename = f"{uuid}.shell-extension.zip"
         print(f"Packaging (EGO submission): {zip_filename}")
@@ -157,7 +276,7 @@ def main():
         zip_filename = f"{uuid}_v{version}.zip"
         print(f"Packaging: {zip_filename}")
 
-    # 3. Create Zip File
+    # 4. Create Zip File
     try:
         with zipfile.ZipFile(zip_filename, 'w', zipfile.ZIP_DEFLATED) as zipf:
             for root, dirs, files in os.walk("."):
@@ -202,7 +321,7 @@ def main():
         print(f"Error creating zip: {e}")
         sys.exit(1)
 
-    # 4. Move to Target Directory
+    # 5. Move to Target Directory
     try:
         if not os.path.exists(TARGET_DIR):
             os.makedirs(TARGET_DIR)
