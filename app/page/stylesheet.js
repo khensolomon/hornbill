@@ -3,7 +3,7 @@ import Gtk from 'gi://Gtk';
 import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
 import { AppConfig } from '../config.js';
-import { log, logError } from '../util/logger.js';
+import { logError } from '../util/logger.js';
 import { gettext as _ } from '../util/gettext.js';
 
 // Global reference to prevent Garbage Collection while dialog is open

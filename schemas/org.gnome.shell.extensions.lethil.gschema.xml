@@ -150,14 +150,14 @@
     </key>
 
     <!-- Geometry -->
-    <key name="corners-enabled" type="b"><default>false</default></key>
+    <key name="corners-enabled" type="b"><default>true</default></key>
     <key name="transparency-enabled" type="b"><default>false</default></key>
     <key name="transparency-opacity" type="i"><default>92</default></key>
     <key name="transparency-focused-opacity" type="i"><default>100</default></key>
     <key name="corners-radius" type="i"><default>12</default></key>
     <key name="corners-smart-edges" type="b"><default>true</default></key>
     <key name="geometry-enabled" type="b">
-      <default>false</default>
+      <default>true</default>
       <summary>Save and restore window geometry</summary>
     </key>
     <key name="geometry-restore-workspace" type="b"><default>true</default></key>
@@ -172,9 +172,9 @@
     <key name="clock-move-enabled" type="b"><default>true</default></key>
     <key name="clock-target" enum="org.gnome.shell.extensions.lethil.ClockTarget"><default>'right'</default></key>
     <key name="clock-position" enum="org.gnome.shell.extensions.lethil.ClockPosition"><default>'before'</default></key>
-    <key name="clock-format-mode" enum="org.gnome.shell.extensions.lethil.ClockFormatMode"><default>'default'</default></key>
-    <key name="clock-custom-format" type="s"><default>'%H:%M  %A %d'</default></key>
-    <key name="clock-multiline" type="b"><default>false</default></key>
+    <key name="clock-format-mode" enum="org.gnome.shell.extensions.lethil.ClockFormatMode"><default>'custom'</default></key>
+    <key name="clock-custom-format" type="s"><default>'%H:%M %d.%m.%y'</default></key>
+    <key name="clock-multiline" type="b"><default>true</default></key>
     <key name="clock-dim-separator" type="b"><default>false</default></key>
     <key name="clock-custom-time" type="s"><default>'%H:%M'</default></key>
     <key name="clock-custom-date" type="s"><default>'%A, %d %B'</default></key>
@@ -234,7 +234,7 @@
     
     <!-- Panel: Bar -->
     <key name="panel-position" enum="org.gnome.shell.extensions.lethil.BoxPosition"><default>'top'</default></key>
-    <key name="panel-bg-color" type="s"><default>'rgba(0,0,0,1)'</default></key>
+    <key name="panel-bg-color" type="s"><default>'rgba(0,0,0,0.80)'</default></key>
     <key name="panel-bg-gradient-enabled" type="b"><default>false</default></key>
     <key name="panel-bg-gradient-color" type="s"><default>'rgba(0,0,0,0)'</default></key>
     <key name="panel-bg-gradient-dir" type="i"><default>0</default></key>
@@ -269,7 +269,7 @@
 
     <!-- Popup Menu -->
     <key name="popup-radius" type="i"><default>12</default></key>
-    <key name="popup-shadow-enabled" type="b"><default>true</default></key>
+    <key name="popup-shadow-enabled" type="b"><default>false</default></key>
     <key name="popup-shadow-color" type="s"><default>'rgba(0,0,0,0.5)'</default></key>
     <key name="popup-shadow-x" type="i"><default>0</default></key>
     <key name="popup-shadow-y" type="i"><default>4</default></key>

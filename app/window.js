@@ -4,6 +4,7 @@ import GObject from 'gi://GObject';
 import GLib from 'gi://GLib';
 
 import { getPages } from './page/index.js';
+import { logError } from './util/logger.js';
 import { gettext as _, format } from './util/gettext.js';
 
 // NEW: Export a helper to attach responsive behaviors to the parent window explicitly
@@ -100,7 +101,7 @@ export function createUI() {
             try {
                 const existing2 = contentNav.find_page ? contentNav.find_page(pageData.id) : null;
                 if (existing2) contentNav.pop_to_page(existing2);
-            } catch (e2) {}
+            } catch (e2) { logError('[Window] could not recover existing page after duplicate push', e2); }
         }
     };
 

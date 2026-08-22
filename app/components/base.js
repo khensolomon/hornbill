@@ -1,4 +1,3 @@
-import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
 import { AppConfig } from '../config.js';
 import { logError } from '../util/logger.js';

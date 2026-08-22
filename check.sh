@@ -20,4 +20,10 @@ done < <(find . -name '*.js' -not -path './tmp/*' | sort)
 if [ "$fail" -eq 0 ]; then
     echo "All modules parse cleanly."
 fi
+
+# Parsing is not enough: a file can parse and still reference an
+# un-imported namespace, or import a name the target module never exports.
+# Both only surface at runtime inside GNOME Shell.
+node check-symbols.js || fail=1
+
 exit "$fail"

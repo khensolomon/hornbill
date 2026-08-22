@@ -7,7 +7,7 @@ import { ExtensionPreferences } from "resource:///org/gnome/Shell/Extensions/js/
 
 import { createUI, installLayout } from "./app/window.js";
 import { AppConfig } from "./app/config.js";
-import { log, logError } from "./app/util/logger.js";
+import { log } from "./app/util/logger.js";
 import { gettext as _ } from './app/util/gettext.js';
 
 export default class GnomeSplitViewPrefs extends ExtensionPreferences {

@@ -2,4 +2,4 @@
 *tmp/
 *.compiled
 *.zip
-
+__pycache__

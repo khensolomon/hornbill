@@ -10,7 +10,6 @@ import { gettext as _, N_ } from '../util/gettext.js';
 /**
  * Creates the Applications Preferences Page UI.
  * This page handles configuration for:
- * - Global appearance (Icon size, opacity, saturation)
  * - Running Indicators (Style, position, color)
  * - Specific App Groups (Show Apps, Overview, Favorites, Running, Disks, Trash)
  * * @returns {Adw.PreferencesPage} The constructed preferences page.
@@ -33,65 +32,6 @@ export function createLayoutUI() {
         icon.add_css_class('dim-label');
         group.set_header_suffix(icon);
     };
-
-    /**
-     * SECTION: Global Appearance
-     * Configures the general look and feel of panel buttons.
-     */
-    const globalGroup = new Adw.PreferencesGroup({
-        title: _('Global Appearance'),
-        description: _('Configure the look and feel of your panel buttons.')
-    });
-    addGroupIcon(globalGroup, 'preferences-desktop-appearance-symbolic');
-    page.add(globalGroup);
-
-    /** Setting: Icon Size */
-    const sizeRow = new Adw.SpinRow({
-        title: _('Icon Size'),
-        adjustment: new Gtk.Adjustment({ lower: 12, upper: 64, step_increment: 2 }),
-        value: settings.get_int('apps-icon-size')
-    });
-    settings.bind('apps-icon-size', sizeRow, 'value', Gio.SettingsBindFlags.DEFAULT);
-    globalGroup.add(sizeRow);
-
-    /** Setting: Item Padding (inner padding of custom buttons, independent
-     *  of Style -> Panel Buttons padding) */
-    const padRow = new Adw.SpinRow({
-        title: _('Item Padding'),
-        subtitle: _('Horizontal space inside each item, independent of panel button padding'),
-        adjustment: new Gtk.Adjustment({ lower: 0, upper: 24, step_increment: 1 }),
-        value: settings.get_int('apps-btn-padding')
-    });
-    settings.bind('apps-btn-padding', padRow, 'value', Gio.SettingsBindFlags.DEFAULT);
-    globalGroup.add(padRow);
-
-    /** Setting: Desaturation (Monochrome) */
-    const desatRow = new Adw.SwitchRow({
-        title: _('Monochrome Icons'),
-    });
-    settings.bind('apps-icon-desaturate', desatRow, 'active', Gio.SettingsBindFlags.DEFAULT);
-    globalGroup.add(desatRow);
-
-    /** Setting: Running Opacity */
-    const opRunRow = new Adw.SpinRow({
-        title: _('Running Opacity'),
-        subtitle: _('Opacity for running apps (0-255)'),
-        adjustment: new Gtk.Adjustment({ lower: 0, upper: 255, step_increment: 5 }),
-        value: settings.get_int('apps-opacity-running')
-    });
-    settings.bind('apps-opacity-running', opRunRow, 'value', Gio.SettingsBindFlags.DEFAULT);
-    globalGroup.add(opRunRow);
-
-    /** Setting: Stopped/Inactive Opacity */
-    const opStopRow = new Adw.SpinRow({
-        title: _('Stopped Opacity'),
-        subtitle: _('Opacity for inactive favorites (0-255)'),
-        adjustment: new Gtk.Adjustment({ lower: 0, upper: 255, step_increment: 5 }),
-        value: settings.get_int('apps-opacity-stopped')
-    });
-    settings.bind('apps-opacity-stopped', opStopRow, 'value', Gio.SettingsBindFlags.DEFAULT);
-    globalGroup.add(opStopRow);
-
 
     /**
      * SECTION: Indicator Settings
@@ -387,7 +327,6 @@ export function createLayoutUI() {
             });
             
             modeRow.connect('notify::selected', () => {
-                const vals = ['icon', 'file', 'text'];
                 settings.set_enum('apps-showgrid-mode', idxToEnum(modeRow.selected));
                 updateVisibility(modeRow.selected);
             });

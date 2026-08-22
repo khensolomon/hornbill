@@ -4,6 +4,7 @@ import Gio from 'gi://Gio';
 import Gdk from 'gi://Gdk';
 import GLib from 'gi://GLib';
 import { AppConfig } from '../config.js';
+import { logError } from '../util/logger.js';
 import { gettext as _ } from '../util/gettext.js';
 
 export function createGeometryUI() {
@@ -246,7 +247,7 @@ export function createGeometryUI() {
             const cur = JSON.parse(settings.get_string('geometry-data'));
             if (cur && cur['__aliases__'])
                 cleared = JSON.stringify({ '__aliases__': cur['__aliases__'] });
-        } catch (e) {}
+        } catch (e) { logError('[Geometry prefs] stored geometry-data is not valid JSON; clearing', e); }
         settings.set_string('geometry-data', cleared);
     });
 

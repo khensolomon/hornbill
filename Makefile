@@ -2,7 +2,10 @@
 EXT ?= lesion@lethil.me
 
 # Mark targets as PHONY so Make doesn't look for files with these names
-.PHONY: uninstall disable enable refresh reload logs
+.PHONY: check uninstall disable enable refresh reload logs
+
+check:
+	@./check.sh
 
 prefs:
 	@echo "-- Opening preferences for extension $(EXT) ..."

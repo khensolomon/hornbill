@@ -381,7 +381,7 @@ const AppPanelButton = GObject.registerClass(
                     if (targetIndex !== currentIndex && targetIndex !== lastIndex) {
                         try {
                             this._container.set_child_at_index(this._placeholder, targetIndex);
-                        } catch (error) {}
+                        } catch (error) { log('_startDragMonitoring: set_child_at_index() failed', error); }
                         lastIndex = targetIndex;
                     }
 
@@ -441,7 +441,7 @@ const AppPanelButton = GObject.registerClass(
                 this._dot.width = width;
                 this._dot.height = height;
                 this._dot.style = `background-color: ${color}; border-radius: ${radius}px;`;
-            } catch(e) {}
+            } catch (e) { log('updateDotStyle failed', e); }
         }
 
         updateDotLayout(posEnum, offset) {
@@ -455,7 +455,7 @@ const AppPanelButton = GObject.registerClass(
                     case 2: this._dot.x_align = Clutter.ActorAlign.CENTER; this._dot.y_align = Clutter.ActorAlign.END; this._dot.translation_y = -offset; break;
                     case 3: this._dot.x_align = Clutter.ActorAlign.START; this._dot.y_align = Clutter.ActorAlign.CENTER; this._dot.translation_x = offset; break;
                 }
-            } catch(e) {}
+            } catch (e) { log('updateDotLayout failed', e); }
         }
 
 
@@ -491,7 +491,7 @@ const AppPanelButton = GObject.registerClass(
                     duration: 250,
                     mode: Clutter.AnimationMode.EASE_OUT_BACK
                 });
-            } catch(e) {}
+            } catch (e) { log('setVisualState failed', e); }
         }
 
         setSecondaryLabel(text, visible) {
@@ -585,9 +585,8 @@ export class AppsManager extends ExtensionComponent {
             const file = Gio.File.new_for_uri('trash:///');
             const info = file.query_info('standard::display-name', Gio.FileQueryInfoFlags.NONE, null);
             this._trashName = info.get_display_name();
-        } catch (e) {}
+        } catch (e) { logError('[Apps] trash display-name lookup failed', e); }
 
-        const updateAll = () => this._updateState();
         const visualUpdate = () => this._updateVisuals();
 
         // FIX: Rebuild on icon changes, not just updateState
@@ -749,7 +748,7 @@ export class AppsManager extends ExtensionComponent {
 
         if (this._windowSignals) {
             for (const [win, ids] of this._windowSignals) {
-                ids.forEach(id => { try { win.disconnect(id); } catch(e){} });
+                ids.forEach(id => { try { win.disconnect(id); } catch (e) { log('onDisable: disconnect() failed', e); } });
             }
             this._windowSignals.clear();
         }
@@ -971,7 +970,7 @@ export class AppsManager extends ExtensionComponent {
                 else if (isRunning) targetOpacity = opacityRunning;
 
                 btn.setVisualState(targetOpacity, isRunning);
-            } catch(e) {}
+            } catch (e) { log('_updateVisuals failed', e); }
         };
 
         if (this._items.trash) {
@@ -1029,7 +1028,7 @@ export class AppsManager extends ExtensionComponent {
     }
 
     _appendAction(menu, label, callback, destructive = false) {
-        const item = new PopupMenu.PopupMenuItem(label);
+        const item = new PopupMenu.PopupMenuItem(_(label));
         if (destructive) item.actor.add_style_class_name('button-destructive-action');
         item.connect('activate', () => callback());
         menu.addMenuItem(item);
@@ -1402,7 +1401,7 @@ export class AppsManager extends ExtensionComponent {
                 label: _('Empty Trash'), 
                 action: () => {
                     dialog.close();
-                    try { GLib.spawn_command_line_async('gio trash --empty'); } catch(e) {}
+                    try { GLib.spawn_command_line_async('gio trash --empty'); } catch (e) { logError('_confirmEmptyTrash: spawn_command_line_async() failed', e); }
                 },
                 key: Clutter.KEY_Return
             }
@@ -1504,7 +1503,7 @@ export class AppsManager extends ExtensionComponent {
             if (info && info.has_attribute('standard::icon')) {
                 gicon = info.get_icon();
             }
-        } catch (e) {}
+        } catch (e) { log('_syncTrash: new_for_uri() failed', e); }
 
         if (!gicon) {
              const iconName = 'user-trash-symbolic';
@@ -1548,7 +1547,7 @@ export class AppsManager extends ExtensionComponent {
                         hasTrash = true;
                     }
                     enumerator.close(null);
-                } catch (e) {}
+                } catch (e) { log('_syncTrash: new_for_uri() failed', e); }
 
                 if (hasTrash) {
                     this._appendSeparator(menu);

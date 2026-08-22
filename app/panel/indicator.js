@@ -2,7 +2,6 @@ import St from "gi://St";
 import Gio from "gi://Gio";
 import GLib from "gi://GLib";
 import Clutter from "gi://Clutter";
-import GObject from "gi://GObject";
 import * as PanelMenu from "resource:///org/gnome/shell/ui/panelMenu.js";
 import * as PopupMenu from "resource:///org/gnome/shell/ui/popupMenu.js";
 import * as ModalDialog from "resource:///org/gnome/shell/ui/modalDialog.js";
@@ -10,7 +9,7 @@ import * as Dialog from "resource:///org/gnome/shell/ui/dialog.js";
 import * as Main from "resource:///org/gnome/shell/ui/main.js";
 
 import { AppConfig } from "../config.js";
-import { log, logError } from "../util/logger.js";
+import { logError } from "../util/logger.js";
 import { gettext as _ } from '../util/gettext.js';
 
 export class Indicator {
@@ -240,19 +239,13 @@ export class Indicator {
 
     const isPrefsOpen = this.extension.isPreferencesOpen === true;
 
+    // Order: Preferences, Extensions, Disable, About, Close.
+    // Disable is fenced by separators because it is the destructive item.
     if (!isPrefsOpen) {
       const prefsItem = new PopupMenu.PopupMenuItem("Preferences");
       prefsItem.connect("activate", () => this.extension.openPreferences());
       menu.addMenuItem(prefsItem);
     }
-
-    const aboutItem = new PopupMenu.PopupMenuItem("About");
-    aboutItem.connect("activate", () => {
-      this.extension.openPreferences("about");
-    });
-    menu.addMenuItem(aboutItem);
-
-    menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
 
     const extensionsItem = new PopupMenu.PopupMenuItem("Extensions");
     extensionsItem.connect("activate", () =>
@@ -268,16 +261,13 @@ export class Indicator {
     });
     menu.addMenuItem(quitItem);
 
-    // Build stamp — optional chaining is enough; no try needed.
-    const vn = AppConfig.metadata?.["version-name"] ?? "?";
-    const vi = AppConfig.metadata?.version ?? "?";
     menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
-    const stamp = new PopupMenu.PopupMenuItem(`Lesion ${vn} (${vi})`, {
-      reactive: false,
-      can_focus: false,
+
+    const aboutItem = new PopupMenu.PopupMenuItem("About");
+    aboutItem.connect("activate", () => {
+      this.extension.openPreferences("about");
     });
-    stamp.label.add_style_class_name("dim-label");
-    menu.addMenuItem(stamp);
+    menu.addMenuItem(aboutItem);
 
     if (isPrefsOpen) {
       const closeItem = new PopupMenu.PopupMenuItem("Close");

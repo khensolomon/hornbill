@@ -7,7 +7,7 @@ import GObject from 'gi://GObject';
 import { AppConfig } from '../config.js';
 import { PanelsPresets } from '../data/panels.js';
 import { log, logError } from '../util/logger.js';
-import { gettext as _, N_, format } from '../util/gettext.js';
+import { gettext as _, format } from '../util/gettext.js';
 
 export class AppearancePage extends Adw.PreferencesPage {
     static {
@@ -50,37 +50,8 @@ export class AppearancePage extends Adw.PreferencesPage {
         resetRow.add_suffix(resetBtn);
         generalGroup.add(resetRow);
 
-        // Panel Position
-        const posModel = new Gtk.StringList();
-        posModel.append('Top');    // 0
-        posModel.append('Right');  // 1
-        posModel.append('Bottom'); // 2
-        posModel.append('Left');   // 3
 
-        const posRow = new Adw.ComboRow({ 
-            title: _('Panel Position'),
-            subtitle: _('Screen edge placement (Bottom may require restart to fully settle)'),
-            model: posModel,
-            selected: this._settings.get_enum('panel-position')
-        });
-
-        posRow.connect('notify::selected', () => {
-            this._settings.set_enum('panel-position', posRow.selected);
-        });
-        
-        // Listen for external changes (e.g. from Presets) to update UI
-        const posSignal = this._settings.connect('changed::panel-position', () => {
-            posRow.selected = this._settings.get_enum('panel-position');
-        });
-        
-        this._settings.bind('panel-enabled', posRow, 'sensitive', Gio.SettingsBindFlags.DEFAULT);
-        generalGroup.add(posRow);
-
-
-        // --- 2. Presets ---
-        this._buildPresetsGroup();
-
-        // --- 3. Panel Background ---
+        // --- 2. Panel Background ---
         const bgGroup = new Adw.PreferencesGroup({ 
             title: _('Panel Background'),
             description: _('Control the base color, gradients, and transparency levels.')
@@ -196,6 +167,35 @@ export class AppearancePage extends Adw.PreferencesPage {
         this._settings.bind('panel-btn-hover-enabled', aColorRow, 'sensitive', Gio.SettingsBindFlags.DEFAULT);
         btnGroup.add(aColorRow);
 
+        // --- 6b. App Buttons ---
+        // These keys drive the buttons Lesion adds to the panel (Show Apps,
+        // favorites, running apps, drives, trash) and are read by
+        // components/apps.js. They live next to Panel Buttons because that is
+        // where users look for them, but they are NOT bound to 'panel-enabled':
+        // that key only gates components/panels.js, and the app buttons keep
+        // rendering with panel styling switched off.
+        const appBtnGroup = new Adw.PreferencesGroup({
+            title: _('App Buttons'),
+            description: _('Icon size, padding, and opacity for Lesion\u2019s own panel buttons.')
+        });
+        this.add(appBtnGroup);
+
+        appBtnGroup.add(this._createSpinRow('Icon Size', 'apps-icon-size', 12, 64, 2));
+        appBtnGroup.add(this._createSpinRow(
+            'Item Padding', 'apps-btn-padding', 0, 24, 1,
+            _('Horizontal space inside each item, independent of panel button padding')));
+
+        const desatRow = new Adw.SwitchRow({ title: _('Monochrome Icons') });
+        this._settings.bind('apps-icon-desaturate', desatRow, 'active', Gio.SettingsBindFlags.DEFAULT);
+        appBtnGroup.add(desatRow);
+
+        appBtnGroup.add(this._createSpinRow(
+            'Running Opacity', 'apps-opacity-running', 0, 255, 5,
+            _('Opacity for running apps (0-255)')));
+        appBtnGroup.add(this._createSpinRow(
+            'Stopped Opacity', 'apps-opacity-stopped', 0, 255, 5,
+            _('Opacity for inactive favorites (0-255)')));
+
         // --- 7. Popup Menus ---
         const popupGroup = new Adw.PreferencesGroup({ 
             title: _('Popup Menus'),
@@ -231,6 +231,9 @@ export class AppearancePage extends Adw.PreferencesPage {
         groups.forEach(g => {
             this._settings.bind('panel-enabled', g, 'sensitive', Gio.SettingsBindFlags.DEFAULT);
         });
+
+        // --- 9. Presets (last: applying one rewrites every group above) ---
+        this._buildPresetsGroup();
     }
 
     _buildPresetsGroup() {
@@ -504,12 +507,13 @@ export class AppearancePage extends Adw.PreferencesPage {
         return row;
     }
 
-    _createSpinRow(title, key, min, max) {
+    _createSpinRow(title, key, min, max, step = 1, subtitle = null) {
         const row = new Adw.SpinRow({
             title: title,
-            adjustment: new Gtk.Adjustment({ lower: min, upper: max, step_increment: 1 }),
+            adjustment: new Gtk.Adjustment({ lower: min, upper: max, step_increment: step }),
             value: this._settings.get_int(key)
         });
+        if (subtitle) row.set_subtitle(subtitle);
         this._settings.bind(key, row, 'value', Gio.SettingsBindFlags.DEFAULT);
         return row;
     }

@@ -148,7 +148,7 @@ export class EffectsManager extends ExtensionComponent {
                         rec.actor.get_parent() === global.window_group) {
                         global.window_group.set_child_below_sibling(rec.shadow, rec.actor);
                     }
-                } catch (e) {}
+                } catch (e) { logError('onEnable: get_parent() failed', e); }
             }
         });
         this._signals.push({ obj: global.display, id: restackId });
@@ -211,7 +211,7 @@ export class EffectsManager extends ExtensionComponent {
             if (win.gtk_application_id === 'com.rastersoft.ding' ||
                 win.gtkApplicationId === 'com.rastersoft.ding')
                 return false;
-        } catch (e) {}
+        } catch (e) { log('_shouldRound failed', e); }
         const t = win.get_window_type();
         return t === Meta.WindowType.NORMAL ||
                t === Meta.WindowType.DIALOG ||
@@ -248,7 +248,7 @@ export class EffectsManager extends ExtensionComponent {
         try {
             isX11 = win.get_client_type &&
                 win.get_client_type() === Meta.WindowClientType.X11;
-        } catch (e) {}
+        } catch (e) { log('_maybeAttach: get_client_type() failed', e); }
 
         if (isX11) {
             try {
@@ -256,7 +256,7 @@ export class EffectsManager extends ExtensionComponent {
                     log('[Effects] Skipping X11 client (effects-manage-x11 is off)');
                     return;
                 }
-            } catch (e) {}
+            } catch (e) { log('_maybeAttach: getSettings() failed', e); }
         }
 
         let target = actor;
@@ -335,7 +335,7 @@ export class EffectsManager extends ExtensionComponent {
 
         try {
             shadow.add_effect_with_name('lesion-clip-shadow', new ClipShadowEffect());
-        } catch (e) {}
+        } catch (e) { log('_createShadow: add_effect_with_name() failed', e); }
 
         global.window_group.insert_child_below(shadow, actor);
 
@@ -362,7 +362,7 @@ export class EffectsManager extends ExtensionComponent {
             try {
                 bindings.push(actor.bind_property(prop, shadow, prop,
                     GObject.BindingFlags.SYNC_CREATE));
-            } catch (e) {}
+            } catch (e) { log('_createShadow: push() failed', e); }
         }
 
         return { shadow, bindings };
@@ -446,7 +446,7 @@ export class EffectsManager extends ExtensionComponent {
             }
             if (actor.opacity !== op)
                 actor.opacity = op;
-        } catch (e) {}
+        } catch (e) { log('_updateTransparency failed', e); }
     }
 
     /**
@@ -531,7 +531,7 @@ export class EffectsManager extends ExtensionComponent {
                 rec.shadow.visible = rec.actor.visible;
                 rec.bindings.push(rec.actor.bind_property('visible', rec.shadow, 'visible',
                     GObject.BindingFlags.SYNC_CREATE));
-            } catch (e) {}
+            } catch (e) { log('_updateShadow: push() failed', e); }
         }
     }
 
@@ -544,33 +544,33 @@ export class EffectsManager extends ExtensionComponent {
             rec.transparencyRetryId = 0;
         }
         rec.sigs.forEach(id => {
-            try { win.disconnect(id); } catch (e) {}
+            try { win.disconnect(id); } catch (e) { log('_detachWindow: disconnect() failed', e); }
         });
         (rec.targetSigs || []).forEach(sig => {
-            try { sig.obj.disconnect(sig.id); } catch (e) {}
+            try { sig.obj.disconnect(sig.id); } catch (e) { log('_detachWindow: disconnect() failed', e); }
         });
         (rec.bindings || []).forEach(b => {
-            try { b.unbind(); } catch (e) {}
+            try { b.unbind(); } catch (e) { log('_detachWindow: unbind() failed', e); }
         });
         try {
             if (rec.shadow) {
                 rec.shadow.get_constraints().forEach(c => {
-                    try { rec.shadow.remove_constraint(c); } catch (e) {}
+                    try { rec.shadow.remove_constraint(c); } catch (e) { log('_detachWindow: remove_constraint() failed', e); }
                 });
                 rec.shadow.clear_effects();
                 rec.shadow.destroy();
             }
-        } catch (e) {}
+        } catch (e) { log('_detachWindow: remove_constraint() failed', e); }
         try {
             const target = rec.target ?? rec.actor ?? win.get_compositor_private();
             if (target) target.remove_effect_by_name('lesion-corners');
-        } catch (e) {}
+        } catch (e) { log('_detachWindow: get_compositor_private() failed', e); }
         try {
             // Restore full opacity if transparency was managing this window
             if (rec.actor && rec.actor.opacity !== 255 &&
                 !rec.actor.get_transition('opacity'))
                 rec.actor.opacity = 255;
-        } catch (e) {}
+        } catch (e) { log('_detachWindow: get_transition() failed', e); }
 
         this._windows.delete(win);
     }

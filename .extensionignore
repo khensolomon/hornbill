@@ -21,7 +21,15 @@ app.js
 ext.sh
 build.py
 install.py
+check.sh
+check-symbols.js
 
 Makefile
 Todo.md
 Changelog.md
+
+# .gitignore carries `*.compiled` to keep the binary out of version control,
+# and build.py/install.py read both ignore files. Without this negation the
+# schema is dropped from every package and app/config.js cannot resolve its
+# GSettings schema, so preferences fail to open on a clean install.
+!schemas/gschemas.compiled

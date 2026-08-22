@@ -23,16 +23,6 @@ export function gettext(str) {
     return GLib.dgettext(DOMAIN, str);
 }
 
-/** Translate with singular/plural selection based on `n`. */
-export function ngettext(singular, plural, n) {
-    return GLib.dngettext(DOMAIN, singular, plural, n);
-}
-
-/** Translate with a disambiguating context. */
-export function pgettext(context, str) {
-    return GLib.dpgettext2(DOMAIN, context, str);
-}
-
 /**
  * Mark a string for extraction without translating it at definition time.
  * Use for strings kept in data tables: store N_('…') so xgettext collects it,

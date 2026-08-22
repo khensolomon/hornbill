@@ -2,10 +2,9 @@ import Adw from 'gi://Adw';
 import Gtk from 'gi://Gtk';
 import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
-import GObject from 'gi://GObject';
 import Gdk from 'gi://Gdk';
 import { AppConfig } from '../config.js';
-import { log, logError } from '../util/logger.js';
+import { logError } from '../util/logger.js';
 import { gettext as _ } from '../util/gettext.js';
 
 // The shell's own extensions service — the same one the official GNOME
@@ -16,13 +15,10 @@ const OBJECT_PATH = '/org/gnome/Shell/Extensions';
 const IFACE = 'org.gnome.Shell.Extensions';
 
 // Extension "type" as reported by the service.
-const TYPE_SYSTEM = 1;
 const TYPE_USER = 2;
 
-// Extension "state" (relevant subset).
+// Extension "state" (only the values this page tests for).
 const STATE_ENABLED = 1;
-const STATE_DISABLED = 2;
-const STATE_ERROR = 3;
 const STATE_UNINSTALLED = 99;
 
 function _proxyAsync(callback) {
@@ -129,7 +125,9 @@ export function createExtensionsUI() {
     statusGroup.add(statusRow);
     page.add(statusGroup);
 
-    // The extension's own uuid, so it never offers to disable/remove itself.
+    // The extension's own uuid. Lesion may be disabled from here (behind a
+    // confirmation) but never removed, since uninstalling the running prefs
+    // process's own extension is not recoverable from this page.
     const selfUuid = AppConfig.metadata?.uuid ?? 'lesion@lethil.me';
 
     const userGroup = new Adw.PreferencesGroup({
@@ -173,8 +171,8 @@ export function createExtensionsUI() {
     };
 
     const buildRow = (ext) => {
-        // Lesion is included here like any other extension (see request);
-        // its own toggle/remove are still guarded further below.
+        // Lesion is listed like any other extension. Its toggle works and is
+        // confirmed; only its remove button stays insensitive.
         const isUser = ext.type === TYPE_USER;
         const isSelf = ext.uuid === selfUuid;
         const enabled = ext.state === STATE_ENABLED;
@@ -232,10 +230,37 @@ export function createExtensionsUI() {
         const toggle = new Gtk.Switch({
             active: enabled,
             valign: Gtk.Align.CENTER,
-            sensitive: !isSelf,
-            tooltip_text: isSelf ? 'This extension is enabled while you configure it' : '',
+            tooltip_text: isSelf
+                ? _('Turning this off disables the extension you are configuring')
+                : '',
         });
-        toggle.connect('state-set', (_sw, state) => {
+
+        // Set while the handler puts the switch back after a cancelled
+        // self-disable. set_active() re-emits 'state-set', and without this
+        // the revert would be read as the user switching Lesion back on and
+        // fire EnableExtension against an extension that never went off.
+        let reverting = false;
+
+        toggle.connect('state-set', (sw, state) => {
+            if (reverting) return false;
+
+            // Disabling Lesion from Lesion's own preferences is worth a
+            // confirmation, matching the indicator's Disable Extension item.
+            if (isSelf && !state) {
+                _confirmSelfDisable(row.get_root(),
+                    () => doAction('DisableExtension', ext.uuid, null),
+                    () => {
+                        reverting = true;
+                        sw.set_active(true);
+                        sw.set_state(true);
+                        reverting = false;
+                    });
+                // Hold the underlying state until the user answers. On
+                // confirm, ExtensionStateChanged refreshes the whole list and
+                // the row is rebuilt from the real state.
+                return true;
+            }
+
             doAction(state ? 'EnableExtension' : 'DisableExtension', ext.uuid, null);
             return false; // allow the switch to move immediately
         });
@@ -334,6 +359,25 @@ export function createExtensionsUI() {
     });
 
     return page;
+}
+
+function _confirmSelfDisable(parent, onConfirm, onCancel) {
+    const dialog = new Adw.MessageDialog({
+        transient_for: parent,
+        modal: true,
+        heading: _('Disable Lesion?'),
+        body: _('The panel customisations and window features provided by this extension will stop. You can re-enable it from this list.'),
+    });
+    dialog.add_response('cancel', _('Cancel'));
+    dialog.add_response('disable', _('Disable'));
+    dialog.set_response_appearance('disable', Adw.ResponseAppearance.DESTRUCTIVE);
+    dialog.set_default_response('cancel');
+    dialog.set_close_response('cancel');
+    dialog.connect('response', (_d, response) => {
+        if (response === 'disable') onConfirm?.();
+        else onCancel?.();
+    });
+    dialog.present();
 }
 
 function _confirmRemove(parent, name, onConfirm) {

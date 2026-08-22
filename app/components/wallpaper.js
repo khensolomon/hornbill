@@ -109,7 +109,7 @@ export class WallpaperManager extends ExtensionComponent {
     _cleanupFeatures() {
         if (this._featureSignals) {
             this._featureSignals.forEach(sig => {
-                try { sig.obj.disconnect(sig.id); } catch(e) {}
+                try { sig.obj.disconnect(sig.id); } catch (e) { log('_cleanupFeatures: disconnect() failed', e); }
             });
             this._featureSignals = null;
         }
@@ -235,7 +235,7 @@ export class WallpaperManager extends ExtensionComponent {
                     const legacy = Gio.File.new_for_path(this._getLegacyBackupPath());
                     legacy.copy(Gio.File.new_for_path(backupPath), Gio.FileCopyFlags.NONE, null, null);
                     legacy.delete(null);
-                } catch (e) {}
+                } catch (e) { logError('[Wallpaper] backup: could not resolve current wallpaper path', e); }
             }
             if (!GLib.file_test(backupPath, GLib.FileTest.EXISTS)) {
                 const backupData = {
@@ -271,6 +271,6 @@ export class WallpaperManager extends ExtensionComponent {
                     file.delete(null);
                 }
             }
-        } catch (e) {}
+        } catch (e) { logError('[Wallpaper] restore failed', e); }
     }
 }

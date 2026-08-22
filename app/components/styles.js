@@ -71,7 +71,11 @@ export class StyleManager extends ExtensionComponent {
 
     _clearMonitors() {
         for (const m of this._monitors ?? []) {
-            try { m.cancel(); } catch (e) {}
+            // Guarded deliberately. This runs from onDisable(), where a
+            // monitor's underlying GObject may already be disposed; the
+            // throw would abort the loop and leak every later monitor.
+            // Same failure mode as base.js _cleanup. Do not unwrap.
+            try { m.cancel(); } catch (e) { log('_clearMonitors: cancel() failed', e); }
         }
         this._monitors = [];
     }
@@ -102,28 +106,25 @@ export class StyleManager extends ExtensionComponent {
             }
         }
 
-        // B. Load Custom User Styles (behind the master switch)
-        try {
-            if (!settings.get_boolean('custom-styles-enabled'))
-                throw null; // skip customs entirely; bundled remain
+        // B. Load Custom User Styles. The master switch skips customs
+        // entirely; bundled styles above remain applied either way.
+        if (settings.get_boolean('custom-styles-enabled')) {
             const customStyles = settings.get_value('custom-styles').deep_unpack();
             for (const [uri, enabled] of customStyles) {
-                if (enabled) {
-                    try {
-                        const file = Gio.File.new_for_uri(uri);
-                        if (file.query_exists(null)) {
-                            theme.load_stylesheet(file);
-                            this._stylesheetFiles.push(file);
-                            this._watchFile(file);
-                            log(`Applied custom style: ${uri}`);
-                        }
-                    } catch (e) {
-                        logError(`Error loading custom style ${uri}`, e);
+                if (!enabled)
+                    continue;
+                try {
+                    const file = Gio.File.new_for_uri(uri);
+                    if (file.query_exists(null)) {
+                        theme.load_stylesheet(file);
+                        this._stylesheetFiles.push(file);
+                        this._watchFile(file);
+                        log(`Applied custom style: ${uri}`);
                     }
+                } catch (e) {
+                    logError(`Error loading custom style ${uri}`, e);
                 }
             }
-        } catch (e) {
-            if (e) logError("Error parsing custom-styles", e);
         }
 
         themeContext.set_theme(theme);

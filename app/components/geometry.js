@@ -72,7 +72,7 @@ export class GeometryManager extends ExtensionComponent {
         this._lastWrittenJson = null;
         try {
             log(`[Geometry] Session type: ${Meta.is_wayland_compositor() ? 'Wayland' : 'X11'}`);
-        } catch (e) {}
+        } catch (e) { log('[Geometry] session type probe failed', e); }
         this._loadCache();
         this._pruneCache();
 
@@ -84,7 +84,7 @@ export class GeometryManager extends ExtensionComponent {
         // _lastWrittenJson and ignored.
         this.observe('changed::geometry-data', () => {
             let json = null;
-            try { json = this.getSettings().get_string('geometry-data'); } catch (e) {}
+            try { json = this.getSettings().get_string('geometry-data'); } catch (e) { logError('onEnable: get_string() failed', e); }
             if (json === null || json === this._lastWrittenJson) return;
             log('[Geometry] Store edited externally — reloading');
             this._loadCache();
@@ -172,7 +172,7 @@ export class GeometryManager extends ExtensionComponent {
         try {
             const kind = this._isX11(win) ? 'X11' : 'wl';
             log(`[Geometry] >> ${op} (${kind})${detail ? ' ' + detail : ''}`);
-        } catch (e) {}
+        } catch (e) { log('_trace: _isX11() failed', e); }
     }
 
     _isX11(win) {
@@ -186,7 +186,8 @@ export class GeometryManager extends ExtensionComponent {
     _isAlive(win) {
         if (!win || !this._windowData.has(win)) return false;
         try {
-            if (typeof win.is_destroyed === 'function' && win.is_destroyed()) return false;
+            // get_compositor_private() is the real liveness test; a
+            // destroyed window returns null.
             return win.get_compositor_private() !== null;
         } catch (e) {
             return false;
@@ -202,16 +203,14 @@ export class GeometryManager extends ExtensionComponent {
             if (this._isX11(win) &&
                 !this.getSettings().get_boolean('geometry-manage-x11'))
                 return false;
-        } catch (e) {}
+        } catch (e) { log('_shouldManage: _isX11() failed', e); }
         // NORMAL only: dialogs, popups, tooltips, docks and menus must not
         // read from or write to the per-app slot.
         if (win.get_window_type() !== Meta.WindowType.NORMAL) return false;
         try {
             if (typeof win.get_transient_for === 'function' && win.get_transient_for()) return false;
             if (typeof win.is_skip_taskbar === 'function' && win.is_skip_taskbar()) return false;
-            // Modality is often set before the transient parent is wired up
-            if (typeof win.is_modal === 'function' && win.is_modal()) return false;
-        } catch (e) {}
+        } catch (e) { log('_shouldManage: get_transient_for() failed', e); }
         return true;
     }
 
@@ -257,7 +256,7 @@ export class GeometryManager extends ExtensionComponent {
                         this._authoritativeApply(win, data, 'first-frame');
                     });
                 }
-            } catch (e) {}
+            } catch (e) { log('_trackWindow: get_compositor_private() failed', e); }
 
             // THE PLACEMENT OVERRIDE (found via journal analysis: every
             // restore was followed by "moved itself; reapplying" — a 100%
@@ -274,7 +273,7 @@ export class GeometryManager extends ExtensionComponent {
                     data.shownSeen = true;
                     this._authoritativeApply(win, data, 'shown');
                 });
-            } catch (e) {}
+            } catch (e) { log('_trackWindow: connect() failed', e); }
 
             const resolved = this._tryResolveRestore(win, data);
             let idNow = null;
@@ -310,7 +309,7 @@ export class GeometryManager extends ExtensionComponent {
                 if (actor.opacity < 255) actor.opacity = 255;
                 if (actor.translation_x !== 0) actor.translation_x = 0;
             }
-        } catch (e) {}
+        } catch (e) { log('_untrackWindow: get_compositor_private() failed', e); }
 
         for (const slot of ['timerId', 'verifyTimerId', 'settleTimerId', 'x11TimerId']) {
             if (data[slot]) {
@@ -319,7 +318,7 @@ export class GeometryManager extends ExtensionComponent {
             }
         }
         data.signals.forEach(id => {
-            try { win.disconnect(id); } catch (e) {}
+            try { win.disconnect(id); } catch (e) { log('_untrackWindow: disconnect() failed', e); }
         });
         this._windowData.delete(win);
     }
@@ -366,15 +365,10 @@ export class GeometryManager extends ExtensionComponent {
     _identityFor(win) {
         if (!win) return null;
         try {
-            if (typeof win.is_destroyed === 'function' && win.is_destroyed()) return null;
-        } catch (e) {
-            return null;
-        }
-        try {
             const app = Shell.WindowTracker.get_default().get_window_app(win);
             const id = app?.get_id()?.replace(/\.desktop$/, '');
             if (id && !this._isSyntheticId(id)) return id;
-        } catch (e) {}
+        } catch (e) { log('_identityFor: get_default() failed', e); }
         try {
             return win.get_wm_class() || null;
         } catch (e) {
@@ -423,7 +417,7 @@ export class GeometryManager extends ExtensionComponent {
         // wm_class; keep them reachable so nobody loses saved geometry.
         if (!this._geometryCache[effective]) {
             let wmClass = null;
-            try { wmClass = win.get_wm_class(); } catch (e) {}
+            try { wmClass = win.get_wm_class(); } catch (e) { log('_tryResolveRestore: get_wm_class() failed', e); }
             if (wmClass && this._geometryCache[wmClass]) {
                 log(`[Geometry] Legacy key hit: '${effective}' -> '${wmClass}'`);
                 effective = wmClass;
@@ -474,7 +468,7 @@ export class GeometryManager extends ExtensionComponent {
                     this._tryResolveRestore(win, data);
                 });
                 data.signals.push(data.wmClassSignalId);
-            } catch (e) {}
+            } catch (e) { log('_scheduleRestore: connect() failed', e); }
         }
 
         data.timerId = GLib.timeout_add(GLib.PRIORITY_DEFAULT,
@@ -598,7 +592,7 @@ export class GeometryManager extends ExtensionComponent {
                         log(`[Geometry] ${appId} kept its own size; enforcing position only`);
                         // Instant for the same reason as verify retries
                         win.move_frame(true, t.x, t.y);
-                    } catch (e) {}
+                    } catch (e) { log('_verifyRestore: _clampToWorkArea() failed', e); }
                 }
                 this._settleLater(win, data);
             }
@@ -672,7 +666,7 @@ export class GeometryManager extends ExtensionComponent {
             }
             if (Number.isInteger(geo.mi) && monitors[geo.mi])
                 return monitors[geo.mi];
-        } catch (e) {}
+        } catch (e) { log('_resolveMonitor: find() failed', e); }
         return null;
     }
 
@@ -695,7 +689,7 @@ export class GeometryManager extends ExtensionComponent {
                 x = Math.max(wa.x, Math.min(x, wa.x + wa.width - w));
                 y = Math.max(wa.y, Math.min(y, wa.y + wa.height - h));
             }
-        } catch (e) {}
+        } catch (e) { log('_clampToWorkArea failed', e); }
 
         // Hard safety rail: X11 geometry fields are 16-bit signed. Values
         // beyond that range have been implicated in Xwayland termination,
@@ -724,13 +718,13 @@ export class GeometryManager extends ExtensionComponent {
                 const t = entry.titles[title.substring(0, 80)];
                 if (t) return t;
             }
-        } catch (e) {}
+        } catch (e) { log('_lookupGeometry: get_title() failed', e); }
         return entry;
     }
 
     _writeTitleGeo(entry, win, geo) {
         let title = null;
-        try { title = win.get_title(); } catch (e) {}
+        try { title = win.get_title(); } catch (e) { log('_writeTitleGeo: get_title() failed', e); }
         if (!title) return;
         title = title.substring(0, 80);
 
@@ -815,7 +809,7 @@ export class GeometryManager extends ExtensionComponent {
                 this._reveal(win, data);
                 return GLib.SOURCE_REMOVE;
             });
-        } catch (e) {}
+        } catch (e) { log('_cloak failed', e); }
     }
 
     _reveal(win, data) {
@@ -849,7 +843,7 @@ export class GeometryManager extends ExtensionComponent {
                     mode: Clutter.AnimationMode.EASE_OUT_QUAD,
                 });
             }
-        } catch (e) {}
+        } catch (e) { log('_reveal failed', e); }
     }
 
     /**
@@ -870,7 +864,7 @@ export class GeometryManager extends ExtensionComponent {
         }
 
         let actor = null;
-        try { actor = win.get_compositor_private(); } catch (e) {}
+        try { actor = win.get_compositor_private(); } catch (e) { log('_fadeMove: get_compositor_private() failed', e); }
         if (!actor) {
             applyFn();
             return;
@@ -892,7 +886,7 @@ export class GeometryManager extends ExtensionComponent {
                 duration: FADE_OUT_MS,
                 mode: Clutter.AnimationMode.EASE_OUT_QUAD,
                 onStopped: () => {
-                    try { applyFn(); } catch (e) {}
+                    try { applyFn(); } catch (e) { log('_fadeMove failed', e); }
                     actor.ease({
                         opacity: prev,
                         duration: FADE_IN_MS,
@@ -941,7 +935,7 @@ export class GeometryManager extends ExtensionComponent {
                 this._trace(win, 'change_workspace_by_index', `${target}`);
                 win.change_workspace_by_index(target, true);
             }
-        } catch (e) {}
+        } catch (e) { log('_applyWorkspace failed', e); }
     }
 
     /**
@@ -1069,7 +1063,7 @@ export class GeometryManager extends ExtensionComponent {
         try {
             if (!win.is_on_all_workspaces())
                 ws = win.get_workspace()?.index() ?? null;
-        } catch (e) {}
+        } catch (e) { log('_onWindowChanged: is_on_all_workspaces() failed', e); }
         const monInfo = this._monitorInfoFor(win, rect);
 
         const snapshot = {

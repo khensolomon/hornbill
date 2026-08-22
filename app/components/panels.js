@@ -75,7 +75,7 @@ export class PanelsManager extends ExtensionComponent {
         // it invalidates every other consumer. Disconnect only the signals added here.
         if (this._settings) {
             this._settingsSignals.forEach(id => {
-                try { this._settings.disconnect(id); } catch (e) {}
+                try { this._settings.disconnect(id); } catch (e) { log('onDisable: disconnect() failed', e); }
             });
             this._settingsSignals = [];
         }
@@ -85,7 +85,7 @@ export class PanelsManager extends ExtensionComponent {
                 if (this._isValid(sig.actor)) {
                     try {
                         sig.actor.disconnect(sig.id);
-                    } catch (e) {}
+                    } catch (e) { log('onDisable: disconnect() failed', e); }
                 }
             });
             this._boxSignals = [];
@@ -342,7 +342,7 @@ export class PanelsManager extends ExtensionComponent {
                             callback(child);
                         }
                     }
-                } catch (e) {}
+                } catch (e) { log('_iterateButtons: has_style_class_name() failed', e); }
             });
         });
     }
@@ -373,7 +373,7 @@ export class PanelsManager extends ExtensionComponent {
                 btn.set_style(btnCss);
                 btn.queue_relayout(); 
                 btn._baseCss = btnCss; 
-            } catch (e) {}
+            } catch (e) { log('_applyButtonStaticStyles failed', e); }
         });
     }
 
@@ -439,7 +439,7 @@ export class PanelsManager extends ExtensionComponent {
 
             const theme = St.ThemeContext.get_for_stage(global.stage).get_theme();
             if (this._clockCssFile) {
-                try { theme.unload_stylesheet(this._clockCssFile); } catch (e) {}
+                try { theme.unload_stylesheet(this._clockCssFile); } catch (e) { log('_updateClockCss: unload_stylesheet() failed', e); }
             }
             this._clockCssFile = Gio.File.new_for_path(path);
             theme.load_stylesheet(this._clockCssFile);
@@ -453,7 +453,7 @@ export class PanelsManager extends ExtensionComponent {
         try {
             const theme = St.ThemeContext.get_for_stage(global.stage).get_theme();
             theme.unload_stylesheet(this._clockCssFile);
-        } catch (e) {}
+        } catch (e) { log('_unloadClockCss: get_for_stage() failed', e); }
         this._clockCssFile = null;
     }
 
@@ -473,14 +473,14 @@ export class PanelsManager extends ExtensionComponent {
                      actor.has_style_class_name('clock-display-box'))) {
                     actor.set_style(neutralize ? NEUTRAL : null);
                 }
-            } catch (e) {}
+            } catch (e) { log('_setClockPillNeutralized: has_style_class_name() failed', e); }
             try {
                 let child = actor.get_first_child ? actor.get_first_child() : null;
                 while (child) {
                     walk(child);
                     child = child.get_next_sibling();
                 }
-            } catch (e) {}
+            } catch (e) { log('_setClockPillNeutralized: get_first_child() failed', e); }
         };
         walk(btn);
     }
@@ -526,7 +526,7 @@ export class PanelsManager extends ExtensionComponent {
                             } else {
                                 btn.set_style(base || null);
                             }
-                        } catch (e) {}
+                        } catch (e) { log('_refreshButtonListeners: set_style() failed', e); }
                     };
 
                     sigs.push({ obj: btn, id: btn.connect('notify::hover', applyState) });
@@ -556,7 +556,7 @@ export class PanelsManager extends ExtensionComponent {
                 }) });
 
                 this._buttonSignals.set(btn, sigs);
-            } catch (e) {}
+            } catch (e) { log('_refreshButtonListeners failed', e); }
         });
     }
 
@@ -566,14 +566,14 @@ export class PanelsManager extends ExtensionComponent {
                 try {
                     const indicator = Main.panel.statusArea[key];
                     if (indicator && indicator.menu) callback(indicator.menu);
-                } catch (e) {}
+                } catch (e) { log('_iterateMenus failed', e); }
             }
         }
         if (Main.panel.menuManager && Main.panel.menuManager._menus) {
             Main.panel.menuManager._menus.forEach(menu => {
                 try {
                     callback(menu);
-                } catch (e) {}
+                } catch (e) { log('_iterateMenus failed', e); }
             });
         }
     }
@@ -584,7 +584,7 @@ export class PanelsManager extends ExtensionComponent {
             if (menu.boxPointer) return menu.boxPointer;
             if (this._isValid(menu.actor) && typeof menu.actor.setArrowSide === 'function') return menu.actor;
             if (menu._boxPointer) return menu._boxPointer;
-        } catch (e) {}
+        } catch (e) { log('_getBoxPointer: _isValid() failed', e); }
         return null;
     }
 
@@ -594,7 +594,7 @@ export class PanelsManager extends ExtensionComponent {
             const content = menu.box;
             if (this._isValid(bubble)) bubble.set_style(null);
             if (this._isValid(content)) content.set_style(null);
-        } catch (e) {}
+        } catch (e) { log('_resetMenuStyle: _getBoxPointer() failed', e); }
     }
 
     _styleSingleMenu(menu) {
@@ -640,6 +640,6 @@ export class PanelsManager extends ExtensionComponent {
                 }
                 content.set_style(contentCss);
             }
-        } catch (e) {}
+        } catch (e) { log('_styleSingleMenu failed', e); }
     }
 }

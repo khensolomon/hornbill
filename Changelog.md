@@ -3,6 +3,224 @@
 Notable changes to the Lesion extension. Version names follow `yy.mm.dd`
 (EGO `version-name` allows letters, numbers, spaces, and periods only).
 
+## 26.08.22.70 (version 119) — indicator menu, self-disable switch
+
+### Changed — indicator menu
+
+- Removed the `Lesion <version-name> (<version>)` build stamp. The same
+  information is on About, which is one click away in the same menu.
+- Reordered to Preferences, Extensions, Disable Extension, About, Close.
+  Preferences still hides while preferences are open and Close still appears
+  only then, so the menu is Extensions/Disable/About in that state.
+- Disable Extension sits between two separators rather than at the end. It is
+  the only destructive item, and it now has neighbours on both sides.
+
+Item labels are unchanged; "Disable Extension" keeps its existing wording
+rather than being shortened to "Disable".
+
+### Changed — Advanced -> Extensions can now disable Lesion
+
+Lesion's own switch was created with `sensitive: !isSelf`, so it rendered
+permanently greyed out. It is now live, guarded by a confirmation that mirrors
+the indicator's shell-side dialog: same heading, same explanation, Cancel as
+the default response and Disable marked destructive.
+
+The handler needs two pieces of care that are worth recording:
+
+- The `state-set` handler returns `true` for a self-disable, which holds the
+  switch's underlying state while the dialog is up. On confirm, the service
+  emits `ExtensionStateChanged`, the list refreshes, and the row is rebuilt
+  from the real state rather than from anything this handler assumed.
+- On cancel the switch has to be put back, but `set_active()` re-emits
+  `state-set`. Without a guard that revert reads as the user switching Lesion
+  back on and fires `EnableExtension` against an extension that never went
+  off. A `reverting` flag suppresses the re-entrant pass.
+
+The remove button stays insensitive for Lesion. Disabling is recoverable from
+the same list; uninstalling the extension that owns the running preferences
+process is not.
+
+### Removed — Panel -> Appearance -> Panel Position
+
+The Panel Position combo row is gone from General Configuration. The
+`panel-position` key itself is untouched and still read by
+components/panels.js, still written by the five presets in data/panels.js, and
+still reset by Reset Style. Only the direct control is removed, so position is
+now set by applying a preset.
+
+### Changed — default settings
+
+| Key | Was | Now |
+| --- | --- | --- |
+| `popup-shadow-enabled` | `true` | `false` |
+
+All five presets set this key explicitly, so applying any preset still turns
+popup shadows on.
+
+## 26.08.21.69 (version 118) — preferences layout, defaults, error visibility
+
+### Changed — default settings
+
+Six schema defaults changed. These affect new installs and any key a user has
+never touched; existing dconf values are left alone.
+
+| Key | Was | Now |
+| --- | --- | --- |
+| `panel-bg-color` | `rgba(0,0,0,1)` | `rgba(0,0,0,0.80)` |
+| `clock-format-mode` | `default` | `custom` |
+| `clock-custom-format` | `%H:%M  %A %d` | `%H:%M %d.%m.%y` |
+| `clock-multiline` | `false` | `true` |
+| `geometry-enabled` | `false` | `true` |
+| `corners-enabled` | `false` | `true` |
+
+`clock-target` (`right`), `clock-position` (`before`) and `clock-move-enabled`
+(`true`) already held the requested values and were not touched.
+
+Note that `geometry-enabled` and `corners-enabled` now default on, so a fresh
+install starts with window geometry tracking and rounded corners active rather
+than opt-in. Reset Style on Panel -> Appearance calls `settings.reset()`, so it
+picks these up with no code change.
+
+### Changed — Panel -> Appearance
+
+- Presets moved from second position to the bottom of the page. Applying a
+  preset rewrites every group above it, so it now reads as the action it is
+  rather than something encountered before the settings it overwrites.
+- New "App Buttons" group, directly below "Panel Buttons", holding the five
+  rows that used to be Panel -> Layout -> Global Appearance: icon size, item
+  padding, monochrome icons, running opacity, stopped opacity.
+
+  These were deliberately **not** merged into the Panel Buttons group itself.
+  That group is bound to `panel-enabled`, which gates components/panels.js
+  only. The `apps-*` keys are read by components/apps.js and its buttons keep
+  rendering with panel styling switched off, so folding them in would have made
+  live settings uneditable. A sibling group gets the same grouping on screen
+  without that side effect.
+- `_createSpinRow` gained optional `step` and `subtitle` parameters, both
+  defaulted so the twenty existing call sites are unaffected. The moved rows
+  need step 2 (icon size) and step 5 (opacity), which the old fixed
+  `step_increment: 1` could not express.
+
+### Changed — Panel -> Layout
+
+Global Appearance group removed; the page now starts at Running Indicator. No
+key was dropped — all five moved to Panel -> Appearance.
+
+### Changed — every blank catch now reports
+
+All 72 `catch {}` / `catch (e) {}` bodies were empty. Each now logs, split two
+ways, because `logError()` is not gated on `AppConfig.debug` and `log()` is:
+
+- **`logError` (12 sites)** — paths that run once per enable/disable or once
+  per explicit user action: component `onEnable`, wallpaper backup/restore,
+  Empty Trash, and the preferences pages. A throw here is a real fault and
+  should reach the journal on a stock install.
+- **`log` (60 sites)** — per-window, per-actor and per-menu paths, plus the
+  teardown loops that call `disconnect()`, `unbind()`, `remove_constraint()`
+  and `cancel()` on possibly-disposed objects. These throw as a matter of
+  course, so `logError` would have written to every user's journal on every
+  panel refresh and every disable. They are visible with `debug: true`.
+
+No guard was removed and no control flow changed; each catch body gained one
+statement. Messages name the enclosing method and the guarded call, e.g.
+`_detachWindow: disconnect() failed`.
+
+### Removed — unused symbols
+
+- app/page/extensions.js: `TYPE_SYSTEM`, `STATE_DISABLED`, `STATE_ERROR`.
+- app/util/gettext.js: `ngettext()`, `pgettext()`. No call site in the tree;
+  `gettext()` and `N_()` remain.
+- app/components/apps.js: `updateAll`, an arrow function bound to nothing.
+- app/page/layout.js: `vals`, a dead array literal inside a callback.
+- app/page/appearance.js: the unused `posSignal` handle. The `connect()` call
+  it wrapped is unchanged — only the discarded return value is gone.
+
+### Tooling — check-symbols.js gains a shadowed-logger check
+
+Adding the log calls above exposed a gap: `log` and `logError` are also GJS
+globals, so a file that calls them without importing from util/logger.js still
+runs — it silently binds to the wrong function. The project's `log()` is
+debug-gated and the global one is not, so that leaks debug output into every
+user's journal. Two files (app/window.js, app/page/geometry.js) hit exactly
+this and are now fixed.
+
+The checker reports any file calling `log()` or `logError()` without importing
+it. Verified by removing an import and confirming the failure.
+
+## 26.08.20.68 (version 117) — code quality
+
+### Fixed — gschemas.compiled still missing from every package
+
+Version 116 recorded this as fixed. Half of it was: build.py and install.py
+both learned gitignore-style `!negation`. The `.extensionignore` line that
+uses it was never added, so `*.compiled` in `.gitignore` continued to strip
+`schemas/gschemas.compiled` from the zip, and the version 116 package shipped
+without it. app/config.js resolves its GSettings schema from exactly that
+path, so a clean EGO install would still have failed to open preferences.
+
+`!schemas/gschemas.compiled` is now present, with a comment explaining why
+removing it breaks installs. Verified by listing the built archive.
+
+The rest of this release is code quality. No behavioural change intended:
+every edit is a provably inert branch, an unreferenced import, or a comment.
+Component behaviour is otherwise byte-identical to version 116.
+
+### Removed — inert branches in app/components/geometry.js
+
+The two findings left standing by the version 116 revert are now applied.
+`Meta.Window` declares neither method, so both conditions were always false
+and neither branch had ever run.
+
+- `_isAlive` and `_identityFor`: dropped `typeof win.is_destroyed === 'function'`.
+  `is_destroyed` belongs to `Meta.WindowActor`. In `_identityFor` the check was
+  the only statement in its try block, so the whole block went with it;
+  `_isAlive` keeps `get_compositor_private() !== null`, which is the real test.
+- `_shouldManage`: dropped `typeof win.is_modal === 'function' && win.is_modal()`.
+
+`get_transient_for` and `is_skip_taskbar` are real `Meta.Window` methods and
+their guards are untouched, as are the documented version shims in
+app/util/compat.js. Nine `typeof` guards are now six.
+
+### Removed — unreferenced imports
+
+Nine bindings with no reference anywhere in the tree. Each was confirmed to
+occur exactly once in its file, on its own import line.
+
+- app/components/base.js — `Gio`
+- app/page/appearance.js — `N_`
+- app/page/extensions.js — `GObject`, `log`
+- app/page/stylesheet.js — `log`
+- app/page/wallpaper.js — `N_`
+- app/panel/indicator.js — `GObject`, `log`
+- prefs.js — `logError`
+
+### Changed — app/components/styles.js
+
+- `_applyStyles` used `throw null` to skip the custom-stylesheet section when
+  the master switch is off, caught by an outer handler that then had to test
+  `if (e)` to tell control flow from a real error. Now a plain
+  `if (settings.get_boolean('custom-styles-enabled'))` guard. The outer
+  try/catch is gone: `custom-styles` and `custom-styles-enabled` are both
+  declared in the schema, so `get_value`/`get_boolean` cannot raise a catchable
+  exception. The inner per-URI handler around `load_stylesheet()` is unchanged.
+- `_clearMonitors` keeps its guard around `cancel()`, now with a comment saying
+  why. It runs from `onDisable()`, where a throw would abort the loop and leak
+  every remaining monitor — the failure mode base.js `_cleanup` documents.
+  Marked "do not unwrap" so a future sweep leaves it alone.
+
+### Tooling — check-symbols.js
+
+`check.sh` proves each file parses. It cannot see a file that references an
+un-imported namespace, or imports a name the target module never exports. Both
+fail only at runtime inside GNOME Shell, where the symptom is a silently dead
+feature — the `_isEnabled` class of bug.
+
+`check-symbols.js` adds three textual checks: undefined GI namespace, named
+import with no matching export, and unused import. It was validated by
+injecting one fault of each class and confirming all three were reported.
+`check.sh` now runs it, `make check` runs `check.sh`, and `.extensionignore`
+excludes both from the package.
+
 ## 26.08.18.67 (version 116) — build and packaging fixes
 
 Tooling and packaging only. No behavioural change to any component.

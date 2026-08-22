@@ -7,7 +7,7 @@ import Cairo from 'cairo';
 import { logError } from '../util/logger.js';
 import { AppConfig } from '../config.js';
 import { WallpaperPresets } from '../data/wallpaper.js';
-import { gettext as _, N_, format } from '../util/gettext.js';
+import { gettext as _, format } from '../util/gettext.js';
 
 // Global reference to prevent GC closing the dialog
 let _activeWallpaperChooser = null;
@@ -186,7 +186,7 @@ export function createWallpaperUI() {
                         pictureWidget.set_vexpand(true);
                         overlay.add_overlay(pictureWidget);
                     }
-                } catch(e) {}
+                } catch (e) { logError('[Wallpaper prefs] preview thumbnail failed', e); }
             }
 
             // --- LAYER 3: Label ---
@@ -485,7 +485,7 @@ function _createColorRow(settings, key, title) {
             // Handle empty string gracefully
             if (!str || !rgba.parse(str)) rgba.parse("#000000");
             colorBtn.set_rgba(rgba);
-        } catch (e) {}
+        } catch (e) { logError('[Wallpaper prefs] colour row init failed', e); }
     };
 
     updateColor();
@@ -580,7 +580,7 @@ function _createShadingRow(settings, dependencies) {
                     dependencies.set_sensitive(sensitive);
                 }
             }
-        } catch(e) {}
+        } catch (e) { logError('[Wallpaper prefs] dependency sensitivity update failed', e); }
     };
 
     updateState();
