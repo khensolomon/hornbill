@@ -1,60 +1,33 @@
-/* Compact Panel */
-/* General button padding (for single icons and overall compactness) */
-/* Top Panel - Base styles (fallback) */
-
-#panel {
-  background-blend-mode: overlay;
-  background-gradient-direction: vertical;
-  background-gradient-start: rgba(30, 30, 30, 0.815);
-  background-gradient-end: rgba(24, 24, 24, 0.445);
-
-  /* Inner shadow */
-  box-shadow: inset 0 -1px 2px rgba(0, 0, 0, 0.349);
-}
-
+/* Compact Panel and Buttons */
 #panel .panel-button {
-  background-gradient-direction: vertical;
-  border-radius: 8px;
-  /* background-color: tomato; */
-
-  /* Default is often ~12px; lower for tighter spacing */
-  -natural-hpadding: 4px;
-  /* Minimum padding; set low to allow compactness */
-  -minimum-hpadding: 2px;
-
+    border-radius: 8px;
+    padding: 2px 6px;
+    margin: 0 2px;
+    min-width: 25px;
+    color: #ffffff;
 }
-
-#panel .panel-button.app {
-    -natural-hpadding: 10px;   /* Reduce horizontal padding around the whole button */
-    -minimum-hpadding: 0px;   /* Minimum to prevent total collapse */
-}
-
 
 #panel .panel-button:hover {
-  background-gradient-start: rgba(77, 77, 77, 0.37);
-  background-gradient-end: rgba(48, 47, 47, 0.219);
+    background-color: rgba(77, 77, 77, 0.37);
 }
 
 #panel .panel-button:active {
-  background-gradient-start: rgba(77, 77, 77, 0.08);
-  background-gradient-end: rgba(48, 47, 47, 0.11);
+    background-color: rgba(77, 77, 77, 0.11);
 }
 
-/* Alternative/more precise for the container holding the icons */
-/* #panel .system-status-icon {  background-color: red;} */
-
-/* Left / Center / Right boxes */
 #panel .panel-box {
-  spacing: 0px;
+    spacing: 2px;
 }
 
-/* App menu button */
-#panel .panel-button > StBoxLayout {
-  spacing: 0px;
+.workspace-indicator {
+    margin: 0 2px;
 }
 
-/* CRITICAL: The "gap" between buttons is often defined by the 
-   container's 'spacing' property, not just the button's margin. 
-   Add this to remove the space between the buttons themselves. */
-/* #panelLeft, #panelCenter, #panelRight {} */
+#panel .aggregate-menu.panel-button {
+    padding: 2px 4px;
+}
 
+#panel .system-status-icon {
+    padding: 0 2px;
+    margin: 0;
+}

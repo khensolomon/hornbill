@@ -1,11 +1,10 @@
-/* Accent Blue Theme */
-.panel {
-    background-color: #1E90FF; /* Solid blue background */
-    color: #ffffff;            /* White text */
+/* Accent Blue Theme and Notifications */
+#panel.solid {
+    background-color: #1E90FF;
 }
 
-.panel-button {
-    color: #ffffff;            /* Button icons/text */
+.notification-banner {
+    border: 2px solid #1E90FF;
+    border-radius: 12px;
+    background-color: rgba(30, 30, 30, 0.95);
 }
-
-/* Avoid unsupported units or trailing semicolons */
