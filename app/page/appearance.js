@@ -65,11 +65,11 @@ export class AppearancePage extends Adw.PreferencesPage {
         bgGroup.add(gradSwitch);
         
         const gradColorRow = this._createColorRow('Gradient End Color', 'panel-bg-gradient-color');
-        this._settings.bind('panel-bg-gradient-enabled', gradColorRow, 'sensitive', Gio.SettingsBindFlags.DEFAULT);
+        this._settings.bind('panel-bg-gradient-enabled', gradColorRow, 'sensitive', Gio.SettingsBindFlags.GET);
         bgGroup.add(gradColorRow);
 
         const gradDirRow = this._createComboRow('Gradient Direction', 'panel-bg-gradient-dir', ['Vertical', 'Horizontal'], false);
-        this._settings.bind('panel-bg-gradient-enabled', gradDirRow, 'sensitive', Gio.SettingsBindFlags.DEFAULT);
+        this._settings.bind('panel-bg-gradient-enabled', gradDirRow, 'sensitive', Gio.SettingsBindFlags.GET);
         bgGroup.add(gradDirRow);
 
         // --- 3.5 Glass Effect (Blur) ---
@@ -84,7 +84,7 @@ export class AppearancePage extends Adw.PreferencesPage {
         blurGroup.add(blurEnable);
 
         const sigmaRow = this._createSpinRow('Blur Radius', 'panel-blur-sigma', 0, 100);
-        this._settings.bind('panel-blur-enabled', sigmaRow, 'sensitive', Gio.SettingsBindFlags.DEFAULT);
+        this._settings.bind('panel-blur-enabled', sigmaRow, 'sensitive', Gio.SettingsBindFlags.GET);
         blurGroup.add(sigmaRow);
 
         // --- 3.6 Geometry (Floating) ---
@@ -129,7 +129,7 @@ export class AppearancePage extends Adw.PreferencesPage {
         shadowGroup.add(shEnable);
 
         const bindShadow = (widget) => {
-            this._settings.bind('panel-shadow-enabled', widget, 'sensitive', Gio.SettingsBindFlags.DEFAULT);
+            this._settings.bind('panel-shadow-enabled', widget, 'sensitive', Gio.SettingsBindFlags.GET);
             shadowGroup.add(widget);
         };
 
@@ -160,11 +160,11 @@ export class AppearancePage extends Adw.PreferencesPage {
         btnGroup.add(hEnable);
 
         const hColorRow = this._createColorRow('Hover Background', 'panel-btn-bg-hover');
-        this._settings.bind('panel-btn-hover-enabled', hColorRow, 'sensitive', Gio.SettingsBindFlags.DEFAULT);
+        this._settings.bind('panel-btn-hover-enabled', hColorRow, 'sensitive', Gio.SettingsBindFlags.GET);
         btnGroup.add(hColorRow);
 
         const aColorRow = this._createColorRow('Active Background', 'panel-btn-bg-active');
-        this._settings.bind('panel-btn-hover-enabled', aColorRow, 'sensitive', Gio.SettingsBindFlags.DEFAULT);
+        this._settings.bind('panel-btn-hover-enabled', aColorRow, 'sensitive', Gio.SettingsBindFlags.GET);
         btnGroup.add(aColorRow);
 
         // --- 6b. App Buttons ---
@@ -216,7 +216,7 @@ export class AppearancePage extends Adw.PreferencesPage {
         popupGroup.add(psEnable);
 
         const bindPopupShadow = (widget) => {
-            this._settings.bind('popup-shadow-enabled', widget, 'sensitive', Gio.SettingsBindFlags.DEFAULT);
+            this._settings.bind('popup-shadow-enabled', widget, 'sensitive', Gio.SettingsBindFlags.GET);
             popupGroup.add(widget);
         };
 
@@ -227,9 +227,12 @@ export class AppearancePage extends Adw.PreferencesPage {
         bindPopupShadow(this._createSpinRow('Shadow Spread', 'popup-shadow-spread', -50, 50));
 
         // Lock all groups if main enable is off
-        const groups = [bgGroup, borderGroup, shadowGroup, btnGroup, popupGroup];
+        // Every group whose keys the backend ignores while panel-enabled is
+        // off. App Buttons is deliberately absent: those keys belong to
+        // components/apps.js, which panel-enabled does not gate.
+        const groups = [bgGroup, blurGroup, geomGroup, borderGroup, shadowGroup, btnGroup, popupGroup];
         groups.forEach(g => {
-            this._settings.bind('panel-enabled', g, 'sensitive', Gio.SettingsBindFlags.DEFAULT);
+            this._settings.bind('panel-enabled', g, 'sensitive', Gio.SettingsBindFlags.GET);
         });
 
         // --- 9. Presets (last: applying one rewrites every group above) ---
@@ -241,7 +244,7 @@ export class AppearancePage extends Adw.PreferencesPage {
             title: _('Presets'),
             description: _('Quickly apply a pre-defined theme.')
         });
-        this._settings.bind('panel-enabled', presetsGroup, 'sensitive', Gio.SettingsBindFlags.DEFAULT);
+        this._settings.bind('panel-enabled', presetsGroup, 'sensitive', Gio.SettingsBindFlags.GET);
         this.add(presetsGroup);
 
         if (AppConfig.debug) { 
@@ -302,8 +305,11 @@ export class AppearancePage extends Adw.PreferencesPage {
      *  button styling, and the apps toggles the presets touch). A full
      *  reset of every setting lives on Dashboard -> Data Management. */
     _resetStyleSettings() {
-        // Use delay/apply here too for consistency
-        this._settings.delay();
+        // Batch on a throwaway object. delay() is permanent for the lifetime
+        // of the object it is called on, so using the shared one here would
+        // strand every later write in this process (see AppConfig.createSettings).
+        const batch = AppConfig.createSettings();
+        batch.delay();
         
         const keys = [
             'panel-enabled', 'panel-position',
@@ -320,16 +326,32 @@ export class AppearancePage extends Adw.PreferencesPage {
         ];
 
         keys.forEach(key => {
-            this._settings.reset(key);
+            batch.reset(key);
         });
-        
-        this._settings.apply(); // Commit bulk changes
+
+        batch.apply(); // Commit bulk changes
         log('Panel settings reset to defaults.');
+
+        // Colour buttons and combo rows read their values at construction, so
+        // without a rebuild the page would keep showing pre-reset state. Same
+        // reason _applyPreset rebuilds.
+        this._reloadPage();
+    }
+
+    /** Re-enter this page so every control re-reads its value. */
+    _reloadPage() {
+        if (!this._goToPage) return;
+        try {
+            this._goToPage('panel-appearance');
+        } catch (e) {
+            logError('Settings applied but page refresh failed', e);
+        }
     }
 
     _applyPreset(presetData) {
-        // START BATCHING
-        this._settings.delay();
+        // START BATCHING — on a throwaway object, never the shared one.
+        const batch = AppConfig.createSettings();
+        batch.delay();
         
         // Keys backed by schema enums must go through set_enum.
         // NOTE: 'panel-bg-gradient-dir' is a plain int key (type="i") and was
@@ -345,33 +367,26 @@ export class AppearancePage extends Adw.PreferencesPage {
             const type = typeof val;
 
             if (enumKeys.includes(key)) {
-                this._settings.set_enum(key, val);
+                batch.set_enum(key, val);
                 return;
             }
 
             if (type === 'boolean') {
-                this._settings.set_boolean(key, val);
+                batch.set_boolean(key, val);
             } else if (type === 'string') {
-                this._settings.set_string(key, val);
+                batch.set_string(key, val);
             } else if (type === 'number') {
-                this._settings.set_int(key, val);
+                batch.set_int(key, val);
             }
         });
         
         // COMMIT BATCH
-        this._settings.apply();
+        batch.apply();
 
         // The controls on this page read their values at construction, so
         // after a preset writes new ones the page would keep showing the
-        // old state (colours in particular). Rebuilding the page re-reads
-        // everything, so what is displayed matches what was applied.
-        if (this._goToPage) {
-            try {
-                this._goToPage('panel-appearance');
-            } catch (e) {
-                console.error('Preset applied but page refresh failed', e);
-            }
-        }
+        // old state (colours in particular). Rebuilding re-reads everything.
+        this._reloadPage();
     }
 
     _generateConfigJSON() {

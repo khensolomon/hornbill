@@ -81,7 +81,22 @@ export const AppConfig = {
      */
     getSettings() {
         if (this._settings) return this._settings;
+        this._settings = this.createSettings();
+        return this._settings;
+    },
 
+    /**
+     * Returns a NEW, uncached Gio.Settings for the extension schema.
+     *
+     * Use this for any batch that calls delay()/apply(). g_settings_delay()
+     * switches an object into delayed-apply mode permanently — apply() commits
+     * the pending writes but does NOT return the object to normal mode, and
+     * there is no undelay(). Calling delay() on the shared object returned by
+     * getSettings() therefore strands every later write in that process: the
+     * preferences UI reads its own pending values back and looks correct while
+     * gnome-shell never sees them. Batch on a throwaway object instead.
+     */
+    createSettings() {
         let source = Gio.SettingsSchemaSource.get_default();
         if (this.path) {
             const dir = GLib.build_filenamev([this.path, 'schemas']);
@@ -94,7 +109,6 @@ export const AppConfig = {
         if (!schema)
             throw new Error(`Schema '${this.schemaId}' could not be found for extension ${this.uuid}`);
 
-        this._settings = new Gio.Settings({ settings_schema: schema });
-        return this._settings;
+        return new Gio.Settings({ settings_schema: schema });
     }
 };

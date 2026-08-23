@@ -1028,7 +1028,7 @@ export class AppsManager extends ExtensionComponent {
     }
 
     _appendAction(menu, label, callback, destructive = false) {
-        const item = new PopupMenu.PopupMenuItem(_(label));
+        const item = new PopupMenu.PopupMenuItem(label);
         if (destructive) item.actor.add_style_class_name('button-destructive-action');
         item.connect('activate', () => callback());
         menu.addMenuItem(item);

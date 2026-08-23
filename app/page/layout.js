@@ -302,8 +302,8 @@ export function createLayoutUI() {
             extraWidgetsCallback(group);
         }
 
-        settings.bind(`apps-${keySuffix}-enabled`, posRow, 'sensitive', Gio.SettingsBindFlags.DEFAULT);
-        settings.bind(`apps-${keySuffix}-enabled`, idxRow, 'sensitive', Gio.SettingsBindFlags.DEFAULT);
+        settings.bind(`apps-${keySuffix}-enabled`, posRow, 'sensitive', Gio.SettingsBindFlags.GET);
+        settings.bind(`apps-${keySuffix}-enabled`, idxRow, 'sensitive', Gio.SettingsBindFlags.GET);
     };
 
     /** SECTION: Show Applications Button */

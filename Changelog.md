@@ -3,6 +3,100 @@
 Notable changes to the Lesion extension. Version names follow `yy.mm.dd`
 (EGO `version-name` allows letters, numbers, spaces, and periods only).
 
+## 26.08.23.71 (version 120) — Panel -> Appearance settings not reaching the shell
+
+Four reported symptoms, two root causes. Both are reproduced and verified.
+
+### Fixed — delay() poisoned the shared settings object
+
+Root cause of "after applying a Preset, changing background colour does not
+work anymore" and of "Enable Panel Styling only changes the UI".
+
+`g_settings_delay()` puts a `Gio.Settings` into delayed-apply mode **for the
+lifetime of that object**. `apply()` commits the pending writes but does not
+return the object to immediate mode, and there is no `undelay()`.
+`AppConfig.getSettings()` returns a cached singleton shared by every
+preferences page, and `_applyPreset`, `_resetStyleSettings` and the Dashboard
+full reset all called `delay()` on it.
+
+So one click on any Preset switched the whole preferences process to
+delayed-apply permanently. Every later write — a colour button, a spin row,
+the Enable Panel Styling switch — landed in the pending set and was never
+committed. The UI still looked right because a delayed object reads its own
+pending values back, so the switch moved, the groups greyed out, and the
+colour changed on screen while gnome-shell went on seeing the old value.
+
+Reproduced with two `Gio.Settings` objects on one schema, standing in for the
+prefs process and the shell:
+
+```
+1. plain write       -> shell sees blue
+2. batched preset    -> shell sees purple
+3. later plain write -> shell sees purple   (prefs UI shows green)
+```
+
+Fix: `AppConfig.createSettings()` returns a new, uncached object.
+`getSettings()` now caches the result of one such call, and all three batch
+sites build a throwaway object, call `delay()` on that, and let it go. The
+shared object never leaves immediate mode. Same sequence after the fix:
+
+```
+3. later plain write -> shell sees green   (shared object delayed? False)
+```
+
+### Fixed — panel buttons added after a refresh were never styled
+
+Root cause of "changing Monochrome Icons changes panel button padding and
+roundness to some random size".
+
+`_applyButtonStaticStyles` styles buttons by walking the three panel boxes, so
+it only reaches the buttons that exist when a refresh runs. `panels.js` had a
+`_boxSignals` array — allocated in the constructor, disconnected in
+`onDisable`, and never populated. Nothing watched the boxes.
+
+Toggling Monochrome Icons (or Icon Size, or any app group) makes apps.js
+rebuild its buttons. The replacements are new actors carrying only
+`min-width/min-height`, and no panel key changed, so no refresh ran. The new
+buttons kept the stock theme's radius and padding while their untouched
+neighbours stayed styled — which reads as the panel randomising button size.
+
+Fix: `_boxSignals` is now wired to `child-added` on `_leftBox`, `_centerBox`
+and `_rightBox`, queueing a refresh. `_queueRefresh` already debounces at
+100 ms, so a rebuild adding a dozen buttons still costs one pass. Nothing in
+the refresh path adds children to a panel box, so this cannot recurse.
+
+### Fixed — Reset Style left the page showing pre-reset values
+
+`_applyPreset` rebuilds the page afterwards because colour buttons and combo
+rows read their values once at construction. `_resetStyleSettings` did not, so
+after a reset those controls kept displaying the old state even though the
+keys had been reset. Both now go through `_reloadPage()`.
+
+### Fixed — Enable Panel Styling left parts of the panel styled
+
+- Glass Effect and Geometry & Floating were not in the group list bound to
+  `panel-enabled`, although the backend ignores their keys while it is off.
+  Both are now gated. App Buttons stays ungated on purpose: those keys belong
+  to components/apps.js, which `panel-enabled` does not gate.
+- Popup menus were only un-styled in `onDisable()`, so switching the master
+  toggle off left every menu with its configured radius, border and shadow.
+  `_refreshAll` now resets menu styling on that path too.
+
+### Fixed — sensitivity bindings could write back to their own key
+
+Fifteen `bind(key, widget, 'sensitive', DEFAULT)` calls across four pages were
+two-way, so a widget's sensitivity could write back to the key controlling it.
+app/page/geometry.js and app/page/effects.js already used `GET` for the same
+pattern; the other four pages are now consistent with them. Sensitivity
+follows a setting and must never drive one.
+
+### Fixed — debounce could remove a running source
+
+`_queueRefresh` cleared `_refreshTimeoutId` after `_refreshAll()` returned, and
+not at all on the `!_isEnabled` path. If a refresh ever queued another refresh,
+`source_remove()` would be called on the source that was still executing. The
+id is now cleared before `_refreshAll()` runs.
+
 ## 26.08.22.70 (version 119) — indicator menu, self-disable switch
 
 ### Changed — indicator menu

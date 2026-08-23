@@ -45,7 +45,7 @@ export class DashboardPage extends Adw.PreferencesPage {
         indicatorGroup.add(indEnableRow);
 
         const iconRow = this._createIconSelector();
-        this._settings.bind('indicator-enabled', iconRow, 'sensitive', Gio.SettingsBindFlags.DEFAULT);
+        this._settings.bind('indicator-enabled', iconRow, 'sensitive', Gio.SettingsBindFlags.GET);
         indicatorGroup.add(iconRow);
 
         // --- 3. FEATURE SHORTCUTS ---
@@ -367,11 +367,14 @@ export class DashboardPage extends Adw.PreferencesPage {
         dialog.connect('response', (d, response) => {
             if (response !== 'reset') return;
             try {
-                this._settings.delay();
+                // Throwaway object: delay() is permanent for the object it is
+                // called on, and the shared one must stay in immediate mode.
+                const batch = AppConfig.createSettings();
+                batch.delay();
                 // Every key in the schema — future keys included automatically
-                for (const key of this._settings.settings_schema.list_keys())
-                    this._settings.reset(key);
-                this._settings.apply();
+                for (const key of batch.settings_schema.list_keys())
+                    batch.reset(key);
+                batch.apply();
             } catch (e) {
                 console.error('Full reset failed', e);
             }

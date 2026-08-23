@@ -57,6 +57,22 @@ export class PanelsManager extends ExtensionComponent {
             this._applyPosition();
         });
 
+        // Panel button styling is applied by walking the three panel boxes, so
+        // it only ever reaches the buttons that exist at refresh time. Anything
+        // added afterwards keeps the stock theme's radius and padding while its
+        // neighbours stay styled — which is what made rebuilding the app
+        // buttons (Monochrome Icons, Icon Size, any group toggle) look like it
+        // was randomising panel button size. Watch the boxes and restyle.
+        // _queueRefresh debounces, so a rebuild that adds a dozen buttons
+        // still costs one pass.
+        [Main.panel._leftBox, Main.panel._centerBox, Main.panel._rightBox].forEach(box => {
+            if (!this._isValid(box)) return;
+            this._boxSignals.push({
+                actor: box,
+                id: box.connect('child-added', () => this._queueRefresh()),
+            });
+        });
+
         // DEBUG LOG: Verify what the extension actually sees on startup
         const startColor = this._settings.get_string('panel-bg-color');
         log(`[Panels] Enabled. Schema: ${AppConfig.schemaId}. Loaded BG Color: ${startColor}`);
@@ -133,9 +149,12 @@ export class PanelsManager extends ExtensionComponent {
             GLib.source_remove(this._refreshTimeoutId);
         }
         this._refreshTimeoutId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 100, () => {
+            // Clear the id first. The source is already finishing, so if
+            // _refreshAll() ends up queueing another refresh, source_remove()
+            // must not be called on this one.
+            this._refreshTimeoutId = 0;
             if (!this._isEnabled) return GLib.SOURCE_REMOVE;
             this._refreshAll();
-            this._refreshTimeoutId = 0;
             return GLib.SOURCE_REMOVE;
         });
     }
@@ -157,6 +176,10 @@ export class PanelsManager extends ExtensionComponent {
             });
             this._unloadClockCss();
             this._cleanupButtonSignals();
+            // Popup menus were only ever un-styled in onDisable(), so turning
+            // Enable Panel Styling off left every menu with its configured
+            // radius, border and shadow still applied.
+            this._iterateMenus((menu) => this._resetMenuStyle(menu));
             return;
         }
 

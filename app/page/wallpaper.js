@@ -228,11 +228,11 @@ export function createWallpaperUI() {
         imgGroup.add(showImageRow);
 
         const lightRow = _createImageRow(bgSettings, 'picture-uri', 'Light Mode Image');
-        extSettings.bind('wallpaper-show-image', lightRow, 'sensitive', Gio.SettingsBindFlags.DEFAULT);
+        extSettings.bind('wallpaper-show-image', lightRow, 'sensitive', Gio.SettingsBindFlags.GET);
         imgGroup.add(lightRow);
 
         const darkRow = _createImageRow(bgSettings, 'picture-uri-dark', 'Dark Mode Image');
-        extSettings.bind('wallpaper-show-image', darkRow, 'sensitive', Gio.SettingsBindFlags.DEFAULT);
+        extSettings.bind('wallpaper-show-image', darkRow, 'sensitive', Gio.SettingsBindFlags.GET);
         imgGroup.add(darkRow);
 
         // --- SCALING OPTIONS ---
@@ -243,7 +243,7 @@ export function createWallpaperUI() {
         page.add(optGroup);
         
         const optionsRow = _createOptionsRow(bgSettings);
-        extSettings.bind('wallpaper-show-image', optionsRow, 'sensitive', Gio.SettingsBindFlags.DEFAULT);
+        extSettings.bind('wallpaper-show-image', optionsRow, 'sensitive', Gio.SettingsBindFlags.GET);
         optGroup.add(optionsRow);
 
 
