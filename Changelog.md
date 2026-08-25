@@ -3,6 +3,92 @@
 Notable changes to the Lesion extension. Version names follow `yy.mm.dd`
 (EGO `version-name` allows letters, numbers, spaces, and periods only).
 
+## 26.08.24.72 (version 121) — wallpaper silently reverting to the system default
+
+Reported symptom: the wallpaper set in Desktop -> Wallpaper reverts to the
+Ubuntu default at unpredictable moments — sometimes on restart, sometimes on
+logout, sometimes only after several cycles, and always unannounced.
+
+### Fixed — restore-on-disable destroyed the user's wallpaper
+
+`WallpaperManager._backupWallpaper()` wrote its snapshot only when the backup
+file was absent:
+
+```js
+if (!GLib.file_test(backupPath, GLib.FileTest.EXISTS)) { ... }
+```
+
+so `~/.local/state/lesion/backup.wallpaper.v1.json` held whatever was set the
+very first time the component enabled — the distribution default — and was
+never refreshed. `onDisable()` then called `_restoreWallpaper()`, which wrote
+all five keys of that stale snapshot back over the user's current choice and
+deleted the file. The next `onEnable()` found no backup and snapshotted the
+now-default wallpaper, making the reset permanent.
+
+The user's choice was destroyed rather than reapplied because the extension
+kept no record of it: `_applyPreset()` and the image rows wrote straight into
+`org.gnome.desktop.background`, and `wallpaper-restore-options` only stores the
+scaling mode. The system keys were the sole copy. Colours never had this
+problem precisely because they *are* stored in the extension schema and pushed
+again on every enable.
+
+**Why it was intermittent.** The restore only landed if two independent things
+both happened during teardown:
+
+1. `disable()` actually ran. A session-mode change (screen lock) runs it
+   cleanly; logout and reboot frequently just terminate the shell, in which
+   case the backup survived and sat armed for the next cycle.
+2. The dconf writes committed. `set_string()` hands the write to dconf-service
+   over D-Bus, but `file.delete(null)` is synchronous local I/O and succeeded
+   regardless — giving a third outcome, *backup deleted and wallpaper
+   untouched*, after which the next login re-snapshotted the correct wallpaper
+   and everything looked fine until the wallpaper was changed again.
+
+That third outcome is why it could take more than one restart to appear.
+
+Aggravating factor: `_backupWallpaper()` and `_restoreWallpaper()` were called
+unconditionally from `onEnable`/`onDisable` with no check on
+`wallpaper-enabled`, so the component rewrote the desktop background of users
+who had never enabled wallpaper management and had only ever changed their
+wallpaper in GNOME Settings.
+
+### Changed — the extension now owns what it writes
+
+New keys `wallpaper-image-light` and `wallpaper-image-dark` mirror
+`picture-uri` / `picture-uri-dark`, matching how the colour keys already work.
+The preferences image rows and `_applyPreset()` write to these; the component
+pushes them to the system on activation and on change. Nothing the extension
+sets lives only in the system keys any more.
+
+Both directions converge by value comparison rather than a re-entrancy flag:
+a push only writes when the values differ, so after any push system == ext and
+the adopt handler is a no-op; an external change makes them differ, so the
+extension adopts it. New `changed::` handlers on `picture-uri`,
+`picture-uri-dark`, `primary-color` and `secondary-color` mean a wallpaper set
+in GNOME Settings is taken up rather than overwritten on the next login.
+
+### Changed — restore moved off the teardown path
+
+`onDisable()` is now teardown only: signals, effects, monitors-changed. The
+desktop is left exactly as the user sees it. The pre-extension state is put
+back only on the `wallpaper-enabled -> false` transition, the one explicit and
+reversible opt-out. `Gio.Settings.sync()` flushes those writes before the
+backup file that would allow a retry is deleted.
+
+`_updateMasterState()` was split into `_activate()` / `_deactivate()` so the
+initial call at enable time cannot be mistaken for a user toggle; `_activate()`
+is re-entrant-safe via the `_featureSignals` guard. Backup capture and the
+seeding of extension storage from the system both moved inside `_activate()`,
+so the component is fully inert while `wallpaper-enabled` is off.
+
+### Upgrade behaviour
+
+Existing installations are disarmed without manual intervention. On first
+activation after the update the image keys are still empty, so they are seeded
+from the current system values — the wallpaper on screen — and the subsequent
+push is a no-op. The stale backup file is retained but is now only consulted if
+the master switch is turned off.
+
 ## 26.08.23.71 (version 120) — Panel -> Appearance settings not reaching the shell
 
 Four reported symptoms, two root causes. Both are reproduced and verified.

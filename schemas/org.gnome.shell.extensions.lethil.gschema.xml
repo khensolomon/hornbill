@@ -95,6 +95,16 @@
         <default>1.0</default>
         <summary>Brightness multiplier (0.0 to 1.0)</summary>
     </key>
+    <!-- Custom Images (Decoupled from System) -->
+    <key name="wallpaper-image-light" type="s">
+        <default>''</default>
+        <summary>Image URI used in Light Mode (empty = auto-import)</summary>
+    </key>
+    <key name="wallpaper-image-dark" type="s">
+        <default>''</default>
+        <summary>Image URI used in Dark Mode (empty = auto-import)</summary>
+    </key>
+
     <!-- Custom Colors (Decoupled from System) -->
     <key name="wallpaper-primary-color-light" type="s">
         <default>''</default>

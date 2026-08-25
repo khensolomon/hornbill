@@ -227,11 +227,11 @@ export function createWallpaperUI() {
         extSettings.bind('wallpaper-show-image', showImageRow, 'active', Gio.SettingsBindFlags.DEFAULT);
         imgGroup.add(showImageRow);
 
-        const lightRow = _createImageRow(bgSettings, 'picture-uri', 'Light Mode Image');
+        const lightRow = _createImageRow(extSettings, 'wallpaper-image-light', 'Light Mode Image');
         extSettings.bind('wallpaper-show-image', lightRow, 'sensitive', Gio.SettingsBindFlags.GET);
         imgGroup.add(lightRow);
 
-        const darkRow = _createImageRow(bgSettings, 'picture-uri-dark', 'Dark Mode Image');
+        const darkRow = _createImageRow(extSettings, 'wallpaper-image-dark', 'Dark Mode Image');
         extSettings.bind('wallpaper-show-image', darkRow, 'sensitive', Gio.SettingsBindFlags.GET);
         imgGroup.add(darkRow);
 
@@ -326,8 +326,8 @@ function _applyPreset(preset, bgSettings, extSettings, rootPath) {
             darkPath = preset.wallpaper.dark;
         }
 
-        if (lightPath) _setPresetImage(bgSettings, 'picture-uri', rootPath, lightPath);
-        if (darkPath) _setPresetImage(bgSettings, 'picture-uri-dark', rootPath, darkPath);
+        if (lightPath) _setPresetImage(extSettings, 'wallpaper-image-light', rootPath, lightPath);
+        if (darkPath) _setPresetImage(extSettings, 'wallpaper-image-dark', rootPath, darkPath);
 
         if (preset.extension?.['wallpaper-show-image'] !== false) {
             extSettings.set_boolean('wallpaper-show-image', true);
