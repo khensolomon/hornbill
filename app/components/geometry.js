@@ -1,6 +1,7 @@
 import Meta from 'gi://Meta';
 import Shell from 'gi://Shell';
 import GLib from 'gi://GLib';
+import Gio from 'gi://Gio';
 import Clutter from 'gi://Clutter';
 import { log, logError } from '../util/logger.js';
 import { ExtensionComponent } from './base.js';
@@ -47,7 +48,6 @@ const VERIFY_MAX_TRIES = 4;       // Reapply attempts against app self-placement
 const SAVE_DEBOUNCE_SEC = 2;      // Disk write debounce
 const PRUNE_MAX_AGE_DAYS = 180;   // Drop entries not seen for this long
 const PRUNE_MAX_ENTRIES = 300;    // Hard cap on stored apps
-const MAX_TITLES_PER_APP = 10;    // Per-title sub-slots kept per app
 const ANIMATE_AFTER_MS = 250;     // Window visible longer than this -> fade-move, don't snap
 const FADE_OUT_MS = 90;           // Fade-out before an already-visible window is moved
 const FADE_IN_MS = 140;           // Fade-in at the destination
@@ -58,6 +58,14 @@ const X11_COORD_LIMIT = 32000;    // X11 geometry is 16-bit signed
 const X11_APPLY_DELAY_MS = 250;   // Stay clear of the X11 map sequence
 const CLOAK_MAX_MS = 550;         // Reveal deadline if identity never resolves
 const REVEAL_FADE_MS = 120;       // Soften late reveals (after map anim ended)
+const REVEAL_POLL_MS = 16;        // ~1 frame: how often to re-check the client took the geometry
+const REVEAL_MAX_TRIES = 6;       // ~96ms cap before revealing regardless
+// File-manager location suffixes. Lesion's panel already treats Files, Trash
+// and a mounted drive as three separate buttons; geometry mirrors exactly that
+// split and nothing finer. Every other folder window is just "a Files window".
+const LOC_TRASH = '::trash';
+const LOC_DRIVE = '::drive';
+const LOC_SETTLE_MS = 120;        // Grace for a file manager to announce its location (must beat 'first-frame')
 
 export class GeometryManager extends ExtensionComponent {
 
@@ -70,6 +78,26 @@ export class GeometryManager extends ExtensionComponent {
         log("[Geometry] enabling manager");
 
         this._lastWrittenJson = null;
+
+        // Location names for the file-manager split. Kept here rather than
+        // reached for through AppsManager: the two components stay
+        // independent, and this is a handful of strings refreshed on mount
+        // changes.
+        this._trashName = null;
+        this._volumeNames = new Set();
+        try {
+            const info = Gio.File.new_for_uri('trash:///')
+                .query_info('standard::display-name', Gio.FileQueryInfoFlags.NONE, null);
+            this._trashName = info.get_display_name()?.trim().toLowerCase() || null;
+        } catch (e) { log('[Geometry] trash display name lookup failed', e); }
+
+        this._volumeMonitor = Gio.VolumeMonitor.get();
+        this._refreshLocationNames();
+        this._mountSignals = ['mount-added', 'mount-removed'].map(sig => ({
+            obj: this._volumeMonitor,
+            id: this._volumeMonitor.connect(sig, () => this._refreshLocationNames()),
+        }));
+
         try {
             log(`[Geometry] Session type: ${Meta.is_wayland_compositor() ? 'Wayland' : 'X11'}`);
         } catch (e) { log('[Geometry] session type probe failed', e); }
@@ -138,6 +166,14 @@ export class GeometryManager extends ExtensionComponent {
             // Flush the pending debounce write so the last moves aren't lost
             this._saveToDisk();
         }
+        if (this._mountSignals) {
+            this._mountSignals.forEach(({ obj, id }) => {
+                try { obj.disconnect(id); } catch (e) { log('onDisable: disconnect() failed', e); }
+            });
+            this._mountSignals = null;
+        }
+        this._volumeMonitor = null;
+        this._volumeNames = null;
         this._cleanupWindows();
     }
 
@@ -227,6 +263,11 @@ export class GeometryManager extends ExtensionComponent {
             settled: !isNew,
             restored: false,
             wmClassSignalId: 0,
+            titleSignalId: 0,
+            locTimerId: 0,
+            locExpired: false,
+            revealTimerId: 0,
+            prePlaced: false,
             timerId: 0,
             firstId: null,
             cloaked: false,
@@ -283,7 +324,10 @@ export class GeometryManager extends ExtensionComponent {
             // already resolved (it must be re-applied post-placement) or the
             // identity is still unknown (a restore may yet resolve). Known
             // identity with nothing saved maps naturally, uncloaked.
-            if (resolved || !idNow)
+            // Holding counts as "something will happen off-view": without
+            // this a folder window that already had a title at creation was
+            // left uncloaked through the grace and then moved in plain sight.
+            if (resolved || !idNow || this._isLocationPending(idNow, data))
                 this._cloak(win, data);
 
             if (!resolved)
@@ -311,7 +355,7 @@ export class GeometryManager extends ExtensionComponent {
             }
         } catch (e) { log('_untrackWindow: get_compositor_private() failed', e); }
 
-        for (const slot of ['timerId', 'verifyTimerId', 'settleTimerId', 'x11TimerId']) {
+        for (const slot of ['timerId', 'verifyTimerId', 'settleTimerId', 'x11TimerId', 'locTimerId', 'revealTimerId']) {
             if (data[slot]) {
                 GLib.source_remove(data[slot]);
                 data[slot] = 0;
@@ -362,18 +406,81 @@ export class GeometryManager extends ExtensionComponent {
         return !id || /^window:\d+$/.test(id);
     }
 
+    _isFileManagerId(id) {
+        return !!id && (id.includes('nautilus') || id.includes('Nautilus'));
+    }
+
+    /**
+     * Base identity without a location suffix, used wherever two ids must be
+     * compared as "the same application" — alias learning in particular, which
+     * would otherwise record 'Nautilus -> Nautilus::trash' the first time a
+     * Trash window resolved its location and then send every Files window to
+     * the Trash slot.
+     */
+    _baseId(id) {
+        return id ? id.split('::')[0] : id;
+    }
+
+    /**
+     * THE FILE MANAGER IS THE ONE EXCEPTION.
+     *
+     * Every other application gets a single slot: one window's worth of
+     * geometry, and when several are open the last one moved is the one worth
+     * remembering. A file manager is different because Lesion's panel already
+     * treats Files, Trash and a mounted drive as three separate buttons, and a
+     * user reasonably expects those three to remember three positions.
+     *
+     * The split is exactly those three and nothing finer. An ordinary folder
+     * window — Home, Documents, anything else — is just a Files window and
+     * shares the base slot. Only the trash display name and mounted volume
+     * names are compared, never the title in general, so no document, path or
+     * site name is read or stored.
+     */
+    _locationSuffix(win) {
+        const title = (this._safeTitle(win) || '').trim().toLowerCase();
+        if (!title) return '';
+
+        if (this._trashName && title === this._trashName) return LOC_TRASH;
+        // All drives share one slot, for the same reason all Chrome windows
+        // do: several open at once means the last one moved wins.
+        if (this._volumeNames.has(title)) return LOC_DRIVE;
+        return '';
+    }
+
     _identityFor(win) {
         if (!win) return null;
+        let id = null;
         try {
             const app = Shell.WindowTracker.get_default().get_window_app(win);
-            const id = app?.get_id()?.replace(/\.desktop$/, '');
-            if (id && !this._isSyntheticId(id)) return id;
+            const appId = app?.get_id()?.replace(/\.desktop$/, '');
+            if (appId && !this._isSyntheticId(appId)) id = appId;
         } catch (e) { log('_identityFor: get_default() failed', e); }
-        try {
-            return win.get_wm_class() || null;
-        } catch (e) {
-            return null;
+
+        if (!id) {
+            try { id = win.get_wm_class() || null; } catch (e) { return null; }
         }
+        if (!id) return null;
+        if (!this._isFileManagerId(id)) return id;
+
+        // A file manager window whose title has not arrived cannot be placed
+        // yet: it might be Files, Trash or a drive. Reporting "unresolved"
+        // routes it through the existing cloak-and-poll path rather than
+        // adding a second waiting mechanism, and the poll is already bounded
+        // by WM_CLASS_MAX_TRIES with a reveal fallback.
+        if (!this._safeTitle(win)) return null;
+
+        return id + this._locationSuffix(win);
+    }
+
+    /** Trash display name and mounted volume names, lowercased for matching. */
+    _refreshLocationNames() {
+        this._volumeNames = new Set();
+        try {
+            this._volumeMonitor.get_mounts().forEach(m => {
+                const n = m.get_name();
+                if (n) this._volumeNames.add(n.trim().toLowerCase());
+            });
+        } catch (e) { log('_refreshLocationNames: get_mounts() failed', e); }
     }
 
     /**
@@ -396,6 +503,24 @@ export class GeometryManager extends ExtensionComponent {
         let appId = null;
         appId = this._identityFor(win);
         if (!appId || this._isSyntheticId(appId)) return false;
+
+        // LOCATION GRACE. Saving runs on a settled window, so it always sees
+        // the final title and files Trash and Drive correctly. Restore runs as
+        // early as possible, and a file manager announces a provisional title
+        // before the real one — so the base identity matched first, restore
+        // committed to it, and 'restored' short-circuited every later attempt.
+        // Trash and Drive were written correctly and then never read.
+        //
+        // A suffix is definitive and resolves at once. A bare file-manager id
+        // is held briefly in case a suffix is still coming. This is safe here
+        // in a way a general wait was not: it applies only to file managers,
+        // which are GTK4 and therefore always cloaked, and the grace is well
+        // inside the cloak deadline.
+        if (this._isLocationPending(appId, data)) {
+            this._preplace(win, data, appId);
+            this._scheduleLocationCommit(win, data);
+            return false;
+        }
 
         if (!data.firstId) {
             data.firstId = appId;
@@ -448,9 +573,96 @@ export class GeometryManager extends ExtensionComponent {
         return false;
     }
 
+    /**
+     * True while a bare file-manager identity might still gain a location
+     * suffix. Everything that would otherwise commit or reveal early has to
+     * consult this, or the grace has no effect.
+     */
+    /** Does this app actually have a location slot worth waiting for? */
+    _hasLocationSlots(appId) {
+        const base = this._baseId(appId);
+        return !!(this._geometryCache[base + LOC_TRASH] ||
+                  this._geometryCache[base + LOC_DRIVE]);
+    }
+
+    _isLocationPending(appId, data) {
+        if (!appId || data.restored || data.locExpired) return false;
+        if (!this._isFileManagerId(appId) || appId.includes('::')) return false;
+
+        // NOTHING TO WAIT FOR, NOTHING TO HIDE. Holding cloaks the window,
+        // and a cloak held past the map animation has to fade the window in
+        // afterwards — which reads as a flash whether or not any geometry was
+        // applied. With no Trash or Drive slot stored, a suffix could not
+        // select anything the base id does not already select, so every
+        // file-manager window was being hidden and late-revealed for no gain.
+        // That is why a first-ever Files, Trash or Drive window flashed
+        // equally, before any geometry existed to restore.
+        if (!this._hasLocationSlots(appId)) return false;
+
+        // createdAt is GLib.get_monotonic_time(): microseconds.
+        return (GLib.get_monotonic_time() - data.createdAt) < LOC_SETTLE_MS * 1000;
+    }
+
+    /**
+     * Provisional placement while the location is still being decided.
+     *
+     * A Trash or Drive window renames itself, so notify::title resolves it
+     * BEFORE 'first-frame' and the client's very first painted frame is
+     * already at the target — nothing to move afterwards. A Files window's
+     * title is set before 'window-created' and never changes, so it can only
+     * resolve at the end of the grace, by which time the client has painted
+     * at Mutter's own placement. On Wayland move_resize_frame is a request:
+     * the client repaints on its own schedule, so revealing straight after it
+     * showed the window still at that placement, with the real geometry
+     * arriving a frame or two later.
+     *
+     * Applying the base rectangle up front puts the window where an
+     * early-resolving one already is. If a suffix lands during the grace the
+     * correction happens while still cloaked, so it costs nothing.
+     *
+     * Deliberately NOT via _applyGeometry: that would also apply the stored
+     * workspace, and a provisional workspace switch is visible even when the
+     * window is not.
+     */
+    _preplace(win, data, appId) {
+        if (data.prePlaced || !data.cloaked) return;
+        // Same hard rule as _beginRestore: NO GEOMETRY OPERATIONS DURING
+        // WINDOW CONSTRUCTION. _tryResolveRestore is called again from the
+        // 'first-frame' and 'shown' handlers, so this lands at exactly the
+        // moment an early-resolving window gets its apply.
+        if (!data.mapped && !data.shownSeen) return;
+        const geo = this._lookupGeometry(win, appId);
+        if (!geo || geo.max) return;
+        data.prePlaced = true;
+        try {
+            const t = this._clampToWorkArea(win, geo);
+            this._trace(win, 'preplace', `${t.x},${t.y} ${t.w}x${t.h}`);
+            win.move_resize_frame(true, t.x, t.y, t.w, t.h);
+        } catch (e) { log('_preplace failed', e); }
+    }
+
+    /**
+     * Forces a decision when the grace expires, so a plain folder window does
+     * not sit waiting for the next 250ms identity poll.
+     */
+    _scheduleLocationCommit(win, data) {
+        if (data.locTimerId || data.restored) return;
+        const elapsedMs = (GLib.get_monotonic_time() - data.createdAt) / 1000;
+        const remaining = Math.max(0, Math.round(LOC_SETTLE_MS - elapsedMs)) + 20;
+        data.locTimerId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, remaining, () => {
+            data.locTimerId = 0;
+            if (!this._isAlive(win) || data.restored) return GLib.SOURCE_REMOVE;
+            data.locExpired = true;
+            this._tryResolveRestore(win, data);
+            return GLib.SOURCE_REMOVE;
+        });
+    }
+
     _learnAlias(earlyId, finalId) {
         if (!earlyId || !finalId || earlyId.startsWith('__')) return;
         if (this._isSyntheticId(earlyId) || this._isSyntheticId(finalId)) return;
+        // Same app, different location: not an identity change to learn.
+        if (this._baseId(earlyId) === this._baseId(finalId)) return;
         const aliases = this._geometryCache['__aliases__'] ??
             (this._geometryCache['__aliases__'] = {});
         if (aliases[earlyId] !== finalId) {
@@ -471,6 +683,18 @@ export class GeometryManager extends ExtensionComponent {
             } catch (e) { log('_scheduleRestore: connect() failed', e); }
         }
 
+        // The location arrives as a title change, so react to it directly
+        // rather than waiting out the poll: a Trash window resolves the
+        // instant it names itself, still behind the cloak.
+        if (attempt === 0 && !data.titleSignalId) {
+            try {
+                data.titleSignalId = win.connect('notify::title', () => {
+                    this._tryResolveRestore(win, data);
+                });
+                data.signals.push(data.titleSignalId);
+            } catch (e) { log('_scheduleRestore: title connect() failed', e); }
+        }
+
         data.timerId = GLib.timeout_add(GLib.PRIORITY_DEFAULT,
             attempt === 0 ? 0 : WM_CLASS_POLL_MS, () => {
                 data.timerId = 0;
@@ -483,7 +707,8 @@ export class GeometryManager extends ExtensionComponent {
                 if (data.cloaked) {
                     let idNow = null;
                     idNow = this._identityFor(win);
-                    if (idNow && !this._geometryCache['__aliases__']?.[idNow])
+                    if (idNow && !this._isLocationPending(idNow, data) &&
+                        !this._geometryCache['__aliases__']?.[idNow])
                         this._reveal(win, data);
                 }
 
@@ -530,8 +755,6 @@ export class GeometryManager extends ExtensionComponent {
             this._queueSave();
         }
 
-        const geo = this._lookupGeometry(win, appId);
-
         // NO GEOMETRY OPERATIONS DURING WINDOW CONSTRUCTION.
         //
         // Journal evidence (Jul 21): the session ended immediately after
@@ -553,7 +776,7 @@ export class GeometryManager extends ExtensionComponent {
         }
 
         data.finalApplyDone = true;
-        this._deferApply(win, data, appId, geo, 0);
+        this._deferApply(win, data, appId, this._lookupGeometry(win, appId), 0);
         this._verifyRestore(win, data, appId, 0);
     }
 
@@ -700,46 +923,27 @@ export class GeometryManager extends ExtensionComponent {
     }
 
     /**
-     * Per-title lookup with app-level fallback.
+     * ONE SLOT PER IDENTITY.
      *
-     * Multiple windows of one app share a wm_class, so a single slot per
-     * app meant the slot held whatever window was touched LAST — a Files
-     * window would inherit the Trash window's geometry. Distinctly titled
-     * windows (Nautilus folders, Trash, mounted drives) now get their own
-     * sub-slot. Apps with volatile titles (browsers: title = page) simply
-     * fall back to the app-level slot.
+     * Earlier versions kept per-window sub-slots keyed by title. That was the
+     * wrong generalisation: outside a file manager an application is one
+     * window's worth of geometry, and when several are open the last one to
+     * move is the one worth remembering. Keying on title instead produced a
+     * slot per document, per tab and per working directory — dead entries that
+     * were never matched again, a store full of file and site names, and a
+     * list showing 'Window 1' and 'Window 2' holding identical rectangles.
+     *
+     * The one real exception is the file manager, and it is handled where it
+     * belongs: in the IDENTITY (see _identityFor), so Trash and Drive windows
+     * are ordinary top-level entries rather than a parallel mechanism.
      */
     _lookupGeometry(win, appId) {
-        const entry = this._geometryCache[appId];
-        if (!entry) return null;
-        try {
-            const title = win.get_title();
-            if (title && entry.titles) {
-                const t = entry.titles[title.substring(0, 80)];
-                if (t) return t;
-            }
-        } catch (e) { log('_lookupGeometry: get_title() failed', e); }
-        return entry;
+        return this._geometryCache[appId] || null;
     }
 
-    _writeTitleGeo(entry, win, geo) {
-        let title = null;
-        try { title = win.get_title(); } catch (e) { log('_writeTitleGeo: get_title() failed', e); }
-        if (!title) return;
-        title = title.substring(0, 80);
-
-        entry.titles = entry.titles || {};
-        const t = entry.titles[title] || {};
-        Object.assign(t, geo, { last_seen: Date.now() });
-        entry.titles[title] = t;
-
-        // Cap sub-slots per app (browsers would otherwise store one per page)
-        const keys = Object.keys(entry.titles);
-        if (keys.length > MAX_TITLES_PER_APP) {
-            keys.sort((a, b) => (entry.titles[a].last_seen || 0) - (entry.titles[b].last_seen || 0));
-            while (keys.length > MAX_TITLES_PER_APP)
-                delete entry.titles[keys.shift()];
-        }
+    _safeTitle(win) {
+        try { return win.get_title(); }
+        catch (e) { log('_safeTitle: get_title() failed', e); return null; }
     }
 
     /**
@@ -772,8 +976,7 @@ export class GeometryManager extends ExtensionComponent {
             // Deliberately NOT re-resolving the identity here: an identity
             // that changes mid-launch (Xorg) would otherwise select a
             // different entry than the restore used, applying two positions
-            // in sequence — the two-stage flight. The per-title slot is
-            // still refreshed inside _lookupGeometry.
+            // in sequence — the two-stage flight.
             const effective = data.restoredAs;
             const geo = this._lookupGeometry(win, effective);
             log(`[Geometry] Authoritative apply (${reason}) for ${effective} (cloaked=${data.cloaked})`);
@@ -804,12 +1007,54 @@ export class GeometryManager extends ExtensionComponent {
             data.cloakTimerId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, CLOAK_MAX_MS, () => {
                 data.cloakTimerId = 0;
                 if (!this._isAlive(win)) return GLib.SOURCE_REMOVE;
-                // Identity never resolved in time — show the window where
-                // it spawned; if a restore lands later it uses the fade.
+
+                // FORCE A DECISION BEFORE GIVING UP. This used to reveal
+                // unconditionally, which raced anything still resolving: a
+                // Files window resolves only via the location grace or the
+                // 250ms poll (its title is set before 'window-created', so
+                // notify::title never fires), landing 370-500ms in against a
+                // 550ms deadline. Losing that race revealed the window at
+                // Mutter's own placement and moved it afterwards — the flight,
+                // and only for Files, since Trash and Drive rename themselves
+                // and resolve early.
+                data.locExpired = true;
+                if (this._tryResolveRestore(win, data)) return GLib.SOURCE_REMOVE;
+
+                // Genuinely nothing to apply — show it where it spawned.
                 this._reveal(win, data);
                 return GLib.SOURCE_REMOVE;
             });
         } catch (e) { log('_cloak failed', e); }
+    }
+
+    /**
+     * Holds the cloak until the window's frame actually matches what was
+     * applied. move_resize_frame only REQUESTS a size on Wayland, so
+     * revealing immediately after it uncovers a window still showing its
+     * previous geometry — the flash. Bounded by REVEAL_MAX_TRIES so a client
+     * that refuses the size still appears promptly; _verifyRestore handles
+     * that case afterwards.
+     */
+    _revealWhenPlaced(win, data, geo, tries) {
+        if (!data.cloaked || !this._isAlive(win)) return;
+
+        // This retry loop is the deadline now; the cloak timer would
+        // otherwise fire mid-wait and reveal the window unplaced.
+        if (data.cloakTimerId) {
+            GLib.source_remove(data.cloakTimerId);
+            data.cloakTimerId = 0;
+        }
+
+        if (!geo || this._matchesGeometry(win, geo) || tries >= REVEAL_MAX_TRIES) {
+            this._reveal(win, data);
+            return;
+        }
+
+        data.revealTimerId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, REVEAL_POLL_MS, () => {
+            data.revealTimerId = 0;
+            this._revealWhenPlaced(win, data, geo, tries + 1);
+            return GLib.SOURCE_REMOVE;
+        });
     }
 
     _reveal(win, data) {
@@ -967,7 +1212,7 @@ export class GeometryManager extends ExtensionComponent {
                 return GLib.SOURCE_REMOVE;
             }
             this._applyGeometry(win, appId, geo, null);
-            this._reveal(win, data);
+            this._revealWhenPlaced(win, data, geo, 0);
             this._verifyRestore(win, data, appId, 0);
             return GLib.SOURCE_REMOVE;
         });
@@ -1049,7 +1294,6 @@ export class GeometryManager extends ExtensionComponent {
             const entry = this._geometryCache[appId] || {};
             entry.max = true;
             entry.last_seen = Date.now();
-            this._writeTitleGeo(entry, win, { max: true });
             this._geometryCache[appId] = entry;
             this._queueSave();
             return;
@@ -1073,7 +1317,6 @@ export class GeometryManager extends ExtensionComponent {
 
         const entry = this._geometryCache[appId] || {};
         Object.assign(entry, snapshot, { last_seen: Date.now() });
-        this._writeTitleGeo(entry, win, snapshot);
         this._geometryCache[appId] = entry;
 
         log(`[Geometry] Saved ${appId} ('${win.get_title?.() ?? ''}'): ${rect.x},${rect.y} [${rect.width}x${rect.height}]`);
@@ -1121,6 +1364,36 @@ export class GeometryManager extends ExtensionComponent {
             logError("[Geometry] Failed to parse cache", e);
         }
         this._purgeSyntheticIds();
+        this._dropLegacyTitleSlots();
+    }
+
+    /**
+     * Strips per-window sub-slots written by versions 121-126, along with the
+     * hash salt they used. The application's own rectangle is untouched, so
+     * nothing the user positioned is lost; only the parallel per-title slots
+     * and the titles they carried go away.
+     */
+    _dropLegacyTitleSlots() {
+        let changed = false;
+        if (this._geometryCache['__salt__'] !== undefined) {
+            delete this._geometryCache['__salt__'];
+            changed = true;
+        }
+        Object.keys(this._geometryCache).forEach(appId => {
+            if (appId.startsWith('__')) return;
+            const entry = this._geometryCache[appId];
+            if (!entry || typeof entry !== 'object') return;
+            ['titles', 'titleEvictions', 'volatileTitles'].forEach(f => {
+                if (entry[f] !== undefined) {
+                    delete entry[f];
+                    changed = true;
+                }
+            });
+        });
+        if (changed) {
+            log('[Geometry] Removed legacy per-window sub-slots');
+            this._queueSave();
+        }
     }
 
     /**

@@ -3,6 +3,651 @@
 Notable changes to the Lesion extension. Version names follow `yy.mm.dd`
 (EGO `version-name` allows letters, numbers, spaces, and periods only).
 
+## 26.08.27.82 (version 131) — the location grace was cloaking windows with nothing to restore
+
+The decisive observation was the first-run case: with NO Nautilus entry stored
+at all, Files, Trash and Drive flashed EQUALLY. Nothing is applied in that
+situation, so the flash cannot be about applying the wrong geometry. It is the
+cloak.
+
+### What the flash actually is
+
+`_isLocationPending()` asked only three things: is this a file manager, does
+the id lack a suffix, is the grace still running. It never asked whether
+holding could achieve anything. So every file-manager window was cloaked —
+including the very first one, with an empty store.
+
+A cloaked window is hidden through its map animation. When the grace ends,
+`_reveal()` finds no live opacity transition (the animation is over) and fades
+the window in itself. That fade, arriving after the window should already have
+opened, is the flash. It happens whether or not a single pixel of geometry was
+restored, which is exactly why all three window kinds flashed identically
+before any geometry existed.
+
+Observation two confirms it from the other side: with only a base entry stored,
+opening Trash resolved immediately through the wm_class fallback, was applied
+before 'first-frame', and did not flash — landing on the Files rectangle, as
+expected, because no `::trash` slot existed yet.
+
+### Fixed — hold only when a location slot exists
+
+`_hasLocationSlots()` checks the store for `::trash` or `::drive` under this
+app. With neither present, a suffix could not select anything the base id does
+not already select, so there is nothing to wait for and nothing to hide.
+
+- First run, empty store: never cloaked. The shell maps the window normally,
+  with its own animation and no reveal of ours.
+- Only a base entry: unchanged, and it already behaved correctly.
+- All three stored: still held, but only then.
+
+### Changed — the grace must beat 'first-frame', not merely the cloak deadline
+
+v129 sized the grace against `CLOAK_MAX_MS` (550). The deadline that actually
+matters is 'first-frame': resolving before it means the apply lands before the
+client paints, which is the whole reason Trash and Drive looked smooth. 200ms
+was routinely losing that race.
+
+`LOC_SETTLE_MS` is now 120 and `REVEAL_MAX_TRIES` 6 (~96ms), so even the
+worst-case path completes around 216ms — inside GNOME's 250ms window-open
+animation, where `_reveal()` rides the existing transition instead of adding a
+fade of its own.
+
+## 26.08.27.81 (version 130) — Files placed and revealed the way Trash and Drive already were
+
+Trash and Drive landed cleanly while a plain Files window appeared at Mutter's
+placement and flashed to its saved position — and kept flashing even when the
+saved position WAS that placement, which rules out the distance moved and
+points at the reveal itself.
+
+### What Trash and Drive do differently
+
+They rename themselves after mapping, so `notify::title` resolves them BEFORE
+'first-frame'. The apply therefore lands before the client has painted
+anything, and the very first frame it commits is already at the target.
+
+A Files window's title is set before 'window-created' and never changes, so no
+title signal ever fires and it can only resolve at the end of the location
+grace — after 'first-frame', when the client has already painted at Mutter's
+placement.
+
+That timing difference matters because on Wayland `move_resize_frame()` is a
+REQUEST. The client repaints on its own schedule, so revealing immediately
+afterwards uncovered a window still showing its previous geometry, with the
+real one arriving a frame or two later. Trash and Drive never showed it because
+there was never a previous frame to uncover.
+
+### Fixed — provisional placement during the grace
+
+`_preplace()` applies the base rectangle as soon as the window is mapped,
+putting a Files window exactly where an early-resolving one already is. If a
+location suffix lands later in the grace the correction happens while still
+cloaked and costs nothing.
+
+It observes the same hard rule as `_beginRestore()` — no geometry operations
+during window construction — and runs from the 'first-frame' and 'shown'
+handlers' calls to `_tryResolveRestore()`, which is precisely when an
+early-resolving window gets its own apply.
+
+Deliberately not routed through `_applyGeometry()`: that would also apply the
+stored workspace, and a provisional workspace switch is visible even when the
+window is not.
+
+### Fixed — the reveal no longer races the client's repaint
+
+`_revealWhenPlaced()` holds the cloak until the window's frame actually matches
+what was applied, re-checking about once a frame and bounded by
+`REVEAL_MAX_TRIES` (12, ~190ms) so a client that refuses the size still appears
+promptly — `_verifyRestore()` already handles that case afterwards.
+
+The retry loop takes over as the deadline and cancels the cloak timer, which
+would otherwise fire mid-wait and reveal the window unplaced.
+
+For Trash and Drive nothing changes: their frame already matches on the first
+check, so the reveal is immediate exactly as before.
+
+## 26.08.26.80 (version 129) — the cloak deadline raced the location grace
+
+Trash and Drive restored correctly; a plain Files window appeared at Mutter's
+own placement and then moved.
+
+### The asymmetry
+
+Trash and Drive RENAME themselves after mapping, so `notify::title` fires and
+they resolve within roughly 0-210ms. A Files window's title is set before
+`window-created` and never changes, so `notify::title` never fires at all: its
+only routes to resolution are the v128 location grace (350ms + 20) and the
+250ms identity poll, landing at 370ms or 500ms.
+
+`CLOAK_MAX_MS` is 550. That left 180ms of margin on the grace path and 50ms on
+the poll path, and the deadline callback revealed unconditionally. Any jitter —
+a slow first frame, a busy main loop — and the window was uncloaked at its
+spawn position, with the restore arriving afterwards as a visible move. Trash
+and Drive never approached the deadline, which is exactly why they looked
+perfect.
+
+### Fixed — the deadline forces a decision instead of surrendering
+
+The cloak timeout now marks the location grace expired, attempts resolution
+once, and reveals only if that genuinely finds nothing to apply. When it does
+resolve, `_deferApply()` reveals after placement as usual, so losing the race
+no longer means losing the placement.
+
+`data.locExpired` also short-circuits `_isLocationPending()`, so a forced
+decision cannot be re-held by a later call.
+
+### Changed — the grace is 200ms, not 350ms
+
+The provisional-to-final title change is a property set during window
+construction, not I/O, so 350ms was generous well past the point of usefulness
+and consumed most of the cloak budget. At 200ms the Files path commits at
+~220ms with 330ms of margin, and the poll fallback at 250ms keeps 300ms.
+
+### Why this was not visible earlier
+
+Both the grace and the deadline are correct in isolation, and each was tested
+against the case it was written for. The interaction only appears for a window
+that resolves late AND is cloaked AND has no title signal to shortcut it —
+which is precisely and only a plain Files window.
+
+## 26.08.26.79 (version 128) — Trash and Drive entries are read, not just written
+
+v127 split the file manager into `Nautilus`, `Nautilus::trash` and
+`Nautilus::drive`. The entries appeared and updated correctly, but every
+Nautilus window still opened at the base geometry: the split slots were written
+and never read.
+
+### Fixed — save and restore resolved the identity at different moments
+
+`_onWindowChanged()` runs on a settled window, so it always sees the final
+title and files Trash and Drive correctly — which is why the list looked right.
+`_tryResolveRestore()` runs as early as possible, and a file manager announces
+a provisional title before the real one. The bare `org.gnome.Nautilus` matched
+first, `_beginRestore()` committed to it, `data.restored` became true, and the
+`if (data.restored) return false` guard short-circuited every later attempt.
+The location was decided before it was known.
+
+A location suffix is definitive and still resolves at once. A bare
+file-manager identity is now held for `LOC_SETTLE_MS` (350) in case a suffix is
+still coming, and `notify::title` is connected alongside the existing
+`notify::wm-class` so a Trash window resolves the instant it names itself
+rather than waiting out the 250ms poll. `_scheduleLocationCommit()` forces the
+decision at the deadline so an ordinary folder window does not hang on for the
+next poll tick.
+
+This is the wait that was wrong in v124-v126 and is right here, for reasons
+that did not hold then: it applies only to file managers, which are GTK4 and
+therefore always cloaked, and 350ms sits well inside the 550ms cloak deadline.
+
+### Fixed — the grace was ineffective on two paths
+
+Holding only helps if nothing else commits or reveals in the meantime.
+
+- `_trackWindow()` cloaks when `resolved || !idNow`. A folder window that
+  already had a title at creation satisfied neither, so it was left uncloaked
+  through the grace and then moved in plain sight.
+- `_scheduleRestore()` reveals when the identity is known and nothing is
+  saved. A held window has a known identity, so it was revealed immediately
+  and the grace bought nothing.
+
+Both now consult `_isLocationPending()`.
+
+### Fixed — the grace compared two different clocks
+
+`data.createdAt` was declared twice in the window-data literal. The later
+`GLib.get_monotonic_time()` wins under last-key-wins, so the field holds
+MICROSECONDS since boot, and the new `Date.now() - data.createdAt` comparison
+comparing wall-clock milliseconds against it yielded roughly 1.7e12 — never
+below 350, so the grace would have been dead code that parsed and linted
+cleanly. The duplicate key is removed and both call sites use monotonic
+microseconds.
+
+## 26.08.26.78 (version 127) — one slot per application; the file manager is the single exception
+
+Versions 121-126 generalised from one real requirement — Files, Trash and a
+mounted drive should remember three positions — to a per-window slot keyed by
+title, for every application. That was the wrong generalisation, and each
+version spent itself patching a consequence of it: slots per document and per
+tab, a store full of file and site names, restore hesitating on titles that
+would never resolve, a list showing 'Window 1' and 'Window 2' holding identical
+rectangles, and an Xwayland flight.
+
+The mechanism is removed rather than patched again.
+
+### The model
+
+An application has ONE slot. It records one window's worth of geometry, and
+when several windows are open the last one moved is the one remembered.
+
+The file manager is the only exception, because Lesion's panel already treats
+Files, Trash and a mounted drive as three separate buttons and a user
+reasonably expects three remembered positions. Geometry now mirrors exactly
+that split and nothing finer: an ordinary folder window — Home, Documents,
+anything else — is a Files window and shares the base slot.
+
+### Changed — the exception lives in the identity, not in a parallel mechanism
+
+`_identityFor()` appends `::trash` or `::drive` for a file-manager window whose
+title matches the trash display name or a mounted volume name. Those are
+ordinary top-level entries, so restore, save, pruning, aliasing and the
+preferences list all handle them with no special cases anywhere.
+
+Only the trash name and mount names are ever compared — never the title in
+general — so no document, path or site name is read or stored. All drives share
+one `::drive` slot, for the same reason all Chrome windows share one: several
+open at once means the last one moved wins.
+
+A file-manager window whose title has not arrived yet reports as unresolved,
+which routes it through the existing cloak-and-poll path instead of adding a
+second waiting mechanism. That path is already bounded by `WM_CLASS_MAX_TRIES`
+with a reveal fallback, and it is the same path used for any late identity.
+
+`_learnAlias()` now ignores pairs whose base ids match, so a Trash window
+resolving its location cannot teach the store that `Nautilus` means
+`Nautilus::trash` and send every Files window to the Trash slot.
+
+### Removed
+
+`_writeTitleGeo`, `_slotFor`, `_titleSlotPending`, `_titleKey`, `_titleSalt`,
+`_migrateTitleKeys`, `_extendCloak`, the `titles` / `titleEvictions` /
+`volatileTitles` fields, the `__salt__` key, `MAX_TITLES_PER_APP` and every
+`TITLE_*` constant. `_lookupGeometry()` is a single cache read.
+`data.titleWaitId` leaves the timer-cleanup list with nothing left to clean.
+
+With no wait left in the authoritative apply, the v126 Xwayland flight cannot
+recur: there is nothing to wait for.
+
+### Upgrade behaviour
+
+`_dropLegacyTitleSlots()` runs at load and strips the sub-slots and salt
+written by 121-126. Application rectangles are untouched, so nothing
+positioned is lost. Trash and Drive start empty and fill the first time each is
+moved.
+
+### Preferences
+
+One row per entry again. Trash and Drive read as `Nautilus — Trash` and
+`Nautilus — Drive`, taking the application icon from the base id. Delete
+removes the entry.
+
+## 26.08.26.77 (version 126) — window titles out of the store; X11 apps stop flying
+
+### Fixed — the title wait ran on windows the user could already see
+
+`_cloak()` returns early for X11 clients: extreme actor translation is
+implicated in the Xwayland termination that ends a session, so those windows
+are deliberately never hidden. The title wait added in v124 did not check that.
+For an Xwayland app — VS Code, Chrome, Electron generally — the window mapped
+visibly, sat still for up to 400ms while the extension waited for a sub-slot to
+resolve, and was then moved. The wait produced exactly the flight it was added
+to prevent, and `_extendCloak()` could not help because there was no cloak to
+extend.
+
+`_titleSlotPending()` now returns false whenever the window is not cloaked. The
+wait only ever happens behind the cloak, which is the only situation it was
+ever correct in.
+
+This is why deleting the Visual Studio Code sub-slot stopped the flight:
+without a sub-slot for the app there was nothing to wait for.
+
+### Fixed — apps whose title is the document filled the store with dead slots
+
+Sub-slots exist to separate windows that are distinct *places* — Files, Trash,
+a mounted drive. Editors, browsers and terminals put the open document, the
+page or the working directory in the title instead, so every file, tab and
+`cd` minted a sub-slot that would never be matched again. They filled the cap,
+evicted each other, and left restore hesitating on a title that could not
+resolve.
+
+Sustained eviction is the signal, and it does not occur for an app whose
+windows are a handful of recurring locations. After `TITLE_CHURN_LIMIT` (10)
+evictions an entry is marked `volatileTitles`, its sub-slots are dropped, and
+the app falls back to a single slot. No app is named anywhere; the behaviour is
+inferred from the data.
+
+### Changed — sub-slots are keyed by a salted hash, and titles are never stored
+
+The key only ever needed to be stable and comparable, never readable. It was
+the raw window title, which meant `geometry-data` accumulated open document
+names, workspace paths, browser tab titles and shell prompts, and the
+preferences list displayed them.
+
+Keys are now the first 16 hex digits of a SHA-256 over a per-install random
+salt plus the title. The salt lives in `__salt__`, so identical titles do not
+hash alike across users and the values cannot be matched against a precomputed
+list of common titles. `_slotFor()` logs the hash rather than the title, since
+log output is journald-visible.
+
+`_migrateTitleKeys()` runs at load and rewrites any sub-slot still keyed by a
+readable title, so existing stores stop carrying titles from the next save
+without losing the geometry they hold.
+
+### Changed — the geometry list labels windows positionally
+
+Sub-rows now read `Window 1`, `Window 2` with their size and position. The
+title is neither stored nor available to display. Per-row delete still works;
+the row key is the hash.
+
+### Note on the trade
+
+Telling Trash from Home in the list is no longer possible. That is the cost of
+not keeping the titles, and it is worth paying: the list is a management tool,
+while the store was a readable record of which files, sites and directories had
+been open.
+
+## 26.08.26.76 (version 125) — v124 follow-up: Files button, cloak race, geometry list
+
+Three defects, two of them introduced by v124.
+
+### Fixed — the Files button could never find its own windows
+
+v124 separated Files from Trash and Drives by filtering on `_handledWindows`.
+That set has an older, different meaning: "already represented by some button",
+used to stop `_syncRunning()` creating a duplicate Running entry for an app
+that already has a Favourite button. It therefore includes **every window of
+every favourited app** — and Files is normally a favourite, so every Nautilus
+window was in it.
+
+Consequences, both reported:
+
+- `unclaimedWindows()` always returned empty, so the Files button's `running`
+  and `focused` were permanently false. It never highlighted, in any state.
+- `_handleAppClick()` computed `own`, found it empty, and fell back to the full
+  window list via `if (own.length > 0)`. Clicking Files then minimized or
+  restored the **Trash** window.
+
+A second set, `_claimedWindows`, now holds only the windows a Trash or Drive
+button has taken. `_handledWindows` remains the union and keeps its original
+job. The visuals, the focus check and the click filter all read
+`_claimedWindows`; `_syncRunning()` still reads `_handledWindows`.
+
+The click filter is also unconditional now. The `own.length > 0` guard was
+meant to be defensive and was the bug: when every window belongs to another
+button, the answer is not "operate on them anyway".
+
+### Fixed — clicking Files with only Trash open did nothing useful
+
+With the filter corrected, that case reaches `windows.length === 0` while the
+app is still running. `activate_full()` there would raise the Trash window
+again, so the branch now checks `get_n_windows()` and calls
+`open_new_window()` instead: the user asked for Files, so they get a Files
+window. The `activate_full()` path is kept for a genuinely stopped app, where
+it registers the launch with the shell's startup notification and the busy
+cursor clears correctly.
+
+The raise/minimize branch also activates the specific window rather than the
+app, for the same reason.
+
+### Fixed — the title wait could outlive the cloak, producing the flash
+
+v124 held the authoritative apply while a window's title might still resolve.
+The cloak deadline, however, is measured from window creation
+(`CLOAK_MAX_MS` = 550), and a wait starting late could outlast it: the window
+was revealed unplaced and then moved — a visible flash, and precisely the
+artefact the cloak exists to prevent. That is the "very fast fly or flash" seen
+when reopening a window whose position had just been changed.
+
+`_extendCloak()` rearms the deadline whenever a wait is deliberate. Bounded at
+its only call site by `TITLE_MAX_WAITS`, so a title that never resolves still
+reveals promptly. With the deadline following the wait, the budget is raised
+from 2 to 4 attempts (~400ms), giving Nautilus more room to name its window
+before the slot is pinned.
+
+### Changed — the geometry list shows one row per window, not per app
+
+Stored per-title sub-slots were invisible in Window -> Geometry: the list
+showed a single `Nautilus` row that appeared to change whenever any of Files,
+Trash or a mounted drive moved, with no way to forget just one of them.
+
+Each sub-slot now gets its own indented row titled with the window name, and
+its delete button removes only that slot. The application row still removes the
+whole entry including every sub-slot, and its tooltip says so. Maximized and
+incomplete entries render as text rather than `Size: undefined×undefined`.
+
+### Not changed — the app-level slot still tracks the last window moved
+
+It is the fallback for a window whose title matches no stored sub-slot, so it
+must keep updating. Freezing it once sub-slots exist was considered and
+rejected: for a single-window app with volatile titles (a browser, where the
+title is the page) the app-level slot is the only one that ever matches, and
+freezing it would stop that app remembering a move at all.
+
+## 26.08.25.75 (version 124) — Files, Trash, and Drives treated as separate windows
+
+Reported symptom: a Nautilus window opens at the right place, then flies to a
+different position; and the panel buttons for Files, Trash, and Drives light up
+for each other's windows.
+
+Both halves come from the same root cause — Trash and Drive windows ARE Nautilus
+windows, and the only thing distinguishing them is a title that arrives late and
+is matched too loosely.
+
+### Fixed — the geometry slot was re-resolved on every apply
+
+`_lookupGeometry()` re-reads `win.get_title()` on every call, and it was called
+from `_beginRestore()`, `_authoritativeApply()`, and each of up to four
+`_verifyRestore()` passes. Nautilus sets its title asynchronously once the
+location loads, so those calls could resolve DIFFERENT slots for one window:
+an early pass fell through to the app-level entry — holding whichever
+Files/Trash/Drive window moved last — and a later pass found the real per-title
+sub-slot. Two geometries applied in sequence is the flight.
+
+This is the same failure `_authoritativeApply` already documented and guarded
+against for the app id, which pins `data.restoredAs` precisely so a mid-launch
+identity change cannot select a second entry. Nothing pinned the title, so the
+flight re-entered through it. The comment there even stated the per-title slot
+was "still refreshed inside `_lookupGeometry`" — describing the bug as if it
+were the design.
+
+New `_slotFor()` resolves the slot once and stores it on `data.slotGeo`,
+symmetric with `restoredAs`. `_beginRestore`, `_authoritativeApply` and every
+verify pass now share that pin, so verification checks the geometry that was
+actually applied instead of whatever the title resolves to at that instant.
+
+### Fixed — pinning too early froze the wrong sibling's geometry
+
+Pinning alone would have made the wrong position permanent rather than brief,
+whenever the title had not yet resolved. `_titleSlotPending()` holds the
+authoritative apply — window still cloaked — while the app has stored sub-slots
+and the current title matches none of them. Bounded to `TITLE_MAX_WAITS` (2) at
+`TITLE_SETTLE_MS` (100), so at most ~200ms and comfortably inside
+`CLOAK_MAX_MS` (550); past the budget it falls back to the app-level slot as
+before. A genuinely new folder costs 200ms of extra cloak and nothing else.
+
+`titleWaitId` joins the timer slots cleared in `_untrackWindow()`.
+
+### Fixed — Trash and Drive buttons claimed windows belonging to other apps
+
+`_refreshHandledWindowsMap()` walked every running app and claimed any window
+whose title merely CONTAINED the name, case-insensitively. A note named
+`trash-notes.md`, a browser tab titled "Trash", or a terminal sitting in
+`~/Trash` were all claimed by the Trash button; a drive named "Data" claimed
+every window with "data" anywhere in its title.
+
+Candidates are now file-manager windows only, which is what these buttons
+represent. Matching prefers an exact title — Nautilus titles a window with the
+folder name, so exact is the correct test — and falls back to substring only
+among those windows, so a shell that appends a suffix degrades to the previous
+behaviour instead of matching nothing.
+
+### Fixed — one window could belong to two buttons
+
+Trash and each drive matched independently and both added to
+`_handledWindows`, so a window could appear in two `_windows` lists.
+`checkBtnFocus()` then handed `activeCustomBtn` to whichever ran last and the
+running dot appeared on both. Claiming is now exclusive: each match takes only
+from the windows not yet spoken for. Trash claims first, being a fixed system
+location, whereas a volume name is user-supplied and could collide with it.
+
+### Fixed — the Files button reported Trash and Drive windows as its own
+
+The file-manager favorite took `running` straight from `app.state`, so a
+session whose only Nautilus window was the Trash window still lit the Files
+dot. Focus was cleared through the `activeCustomBtn` proxy — "some custom
+button holds the focused window" — rather than by asking whether this window
+was claimed.
+
+Both now derive from the app's unclaimed windows. The same guard is applied to
+running-app buttons, which had none at all.
+
+`_handleAppClick()` follows: clicking Files raises and minimizes only unclaimed
+windows, and activates the specific window rather than the app, since
+`activate_full()` could raise a Trash window that belongs to another button.
+
+## 26.08.25.74 (version 123) — Panel -> Tooltips styling page
+
+The hover labels added in v122 had a fixed appearance. They are now styled from
+their own preferences page, using the same vocabulary as Panel Background,
+Border, and Popup Menus.
+
+### Added — app/page/tooltips.js
+
+New page filed under Panel, between Layout and Clock, with five groups:
+
+- **Behaviour** — enable, delay, offset (gap between button edge and label),
+  and a reset button
+- **Text** — colour, font size, font weight
+- **Background** — fill colour, corner radius, horizontal and vertical padding
+- **Border** — size, colour, style
+- **Shadow** — enable, colour, x, y, blur, spread
+
+Everything below Behaviour is bound to `apps-tooltips-enabled` for
+sensitivity. Reset lives in the Behaviour group so it stays reachable when the
+rest of the page is insensitive, and it deliberately leaves enable and delay
+alone — those are behaviour, not appearance.
+
+Reset refreshes the page through `goToPage('panel-tooltips')` rather than
+manually removing children, matching `AppearancePage._resetStyleSettings`.
+Colour buttons and combo rows read their value at construction, so a rebuild is
+the only way to show the reset state. The batch runs on a throwaway
+`AppConfig.createSettings()`: `delay()` is permanent for the lifetime of the
+object it is called on, so batching on the shared instance would strand every
+later write in the process.
+
+### Added — 16 keys and a FontWeight enum
+
+`apps-tooltip-offset`, `-text-color`, `-font-size`, `-font-weight`,
+`-bg-color`, `-radius`, `-pad-x`, `-pad-y`, `-border-size`, `-border-color`,
+`-border-style`, `-shadow-enabled`, `-shadow-color`, `-shadow-x`, `-shadow-y`,
+`-shadow-blur`, `-shadow-spread`.
+
+Defaults reproduce the v122 hardcoded appearance exactly, so the update is a
+no-op until something is changed.
+
+New `FontWeight` enum (light / normal / medium / bold, mapping to `300`,
+`normal`, `500`, `bold`) alongside the existing `BorderStyle`.
+
+The `apps-tooltip-` prefix is kept rather than renamed to `tooltip-`:
+`components/apps.js` owns the buttons these label, the prefix matches its
+sibling keys, and renaming would silently reset the two keys that shipped in
+v122. The page lives under Panel because that is where users look for styling.
+
+### Changed — components/tooltip.js builds its style from settings
+
+`_buildStyle()` replaces the hardcoded inline string and is called on every
+`_show()` rather than cached and invalidated by `changed::` handlers. It is one
+string concat on one actor, once per hover, so the cost is irrelevant next to
+the wiring it removes — and every key is live with no signal to forget.
+
+The style is applied before the text, because padding and font size feed the
+preferred-size query that `_position()` measures against; setting them after
+would place the label using stale dimensions.
+
+Border is omitted entirely when size is zero or style is `none`, since a width
+with `border-style: none` still reserves layout space. Shadow is omitted unless
+enabled. `EDGE_GAP` is gone, replaced by `apps-tooltip-offset`.
+
+### Changed — the two v122 rows moved
+
+`Hover Tooltips` and `Tooltip Delay` are removed from Panel -> Appearance ->
+App Buttons and now live on the new page. Their keys are unchanged, so
+existing values carry over.
+
+## 26.08.25.73 (version 122) — hover tooltips for Lesion's panel buttons
+
+A row of unlabelled icons gives a new user nothing to go on. Every button
+Lesion adds to the panel now names itself on hover.
+
+### Added — components/tooltip.js
+
+One `St.Label` on `Main.layoutManager.uiGroup` and one GLib source serve every
+button. A label per button would put N actors on `uiGroup` and N pending timers
+under teardown discipline, and only one tooltip can ever be visible.
+
+The dependency is inverted: `TooltipManager.attach(button, text)` connects the
+manager's own handlers from outside, so `AppPanelButton` is unchanged and its
+`_onHoverChanged()` stays purely about icon opacity. Hover is read as
+`button.hover || button._clickButton?.hover` — the inner `St.Button` owns the
+pointer, so watching only the outer `PanelMenu.Button` misses most changes.
+
+GNOME Shell ships no tooltip widget; the nearest in-tree pattern is
+`DashItemContainer.showLabel()`, and this follows it.
+
+- 500 ms open delay so sweeping the panel does not strobe a label per button.
+  Once one tooltip is up, moving to a neighbour swaps instantly — re-waiting
+  reads as lag.
+- Placement is derived from the button's own geometry, not the
+  `panel-position` key: a button in the top half of its monitor gets a label
+  below it, one in the bottom half gets it above. Correct for a bottom panel
+  without reading any setting, and self-correcting if the key and the real
+  panel position ever diverge. Clamped to the monitor found via
+  `findMonitorForActor()`.
+- Suppressed while dragging, while the button's menu is open, during the
+  overview, under a modal, and on click.
+- Styled inline. The extension ships no shell stylesheet, and `panels.js` only
+  rewrites styles on actors inside the panel — this one lives on `uiGroup`.
+
+New keys `apps-tooltips-enabled` (default true) and `apps-tooltip-delay`
+(default 500) in Panel -> Appearance -> App Buttons. Both are read at
+show time, so toggling takes effect without rebuilding the buttons.
+
+### Fixed — accessible_name was doing double duty as an identity key
+
+Two places compared the display name rather than an identifier:
+
+- `_activate()` tested `this.accessible_name === 'Trash'` for the middle-click
+  branch
+- `_syncWindows()` lowercased `get_accessible_name()` and matched it against
+  window titles to attach drive windows to their button
+
+Which is why `'Trash'`, `'Applications'` and `'Overview'` were passed as raw
+literals and never went through `_()` — they were compared, not displayed.
+Making them visible required translating them, and translating them would have
+broken both comparisons.
+
+The identity uses now read `_role` (`'lesion-trash'`) and a new `_matchName`
+holding the raw mount name. `accessible_name` becomes display text, so screen
+readers get the translated string too.
+
+### Changed — names come from the system, never from a table
+
+Nothing formats or maps an application name:
+
+- favorites and running apps: `app.get_name()`, which is the `.desktop`
+  `Name=` field. Verified against the Properties dialog — snap Firefox reports
+  `Name: Firefox` with `ID: firefox_firefox.desktop`, so the awkward string is
+  the ID and never the name. The identity dialog already reads this same field,
+  so Properties and the tooltip print identically.
+- drives: `mount.get_name()`
+- trash: `this._trashName`, already fetched from
+  `query_info('standard::display-name')` and localized. It was previously used
+  only for window-title matching; it is now the label as well.
+- Show Apps and Overview: `_('Applications')` and `_('Overview')`. These are
+  Lesion's own features, so naming them is ordinary UI labelling.
+
+An earlier plan added a resolution chain over `lookup_desktop_wmclass`,
+`lookup_startup_wmclass` and a desktop-file probe, with cosmetic rules for
+reverse-DNS and snap `<snap>_<app>` forms. It was dropped: that machinery only
+fires for window-backed apps with no `AppInfo`, which the Properties output
+showed do not occur here, and it would have added an unverifiable dependency on
+two APIs whose presence on GNOME 49/50 was not confirmed.
+
+### Not covered
+
+GNOME's own panel items — clock, quick settings, keyboard — get no tooltip.
+Lesion does not create them, they are destroyed and recreated on the shell's
+own schedule, and the `statusArea` keys are internal role strings rather than
+user-facing names. The clock already displays its own text.
+
 ## 26.08.24.72 (version 121) — wallpaper silently reverting to the system default
 
 Reported symptom: the wallpaper set in Desktop -> Wallpaper reverts to the

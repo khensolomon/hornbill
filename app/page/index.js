@@ -3,6 +3,7 @@ import { createAboutUI } from "./about.js";
 import { createWallpaperUI } from "./wallpaper.js";
 import { createClockUI } from './clock.js';
 import { createLayoutUI } from './layout.js';
+import { createTooltipsUI } from './tooltips.js';
 import { createAppearanceUI } from "./appearance.js";
 import { createEffectsUI } from './effects.js';
 import { createGeometryUI } from './geometry.js';
@@ -56,6 +57,14 @@ export function getPages() {
           description: _("Arrange panel items and adjust their size, spacing, and colors"),
           keywords: ["layout", "apps", "applets", "arrange", "order", "position", "size", "margin", "padding", "grid", "launcher", "overview"],
           ui: createLayoutUI,
+        },
+        {
+          id: "panel-tooltips",
+          title: _("Tooltips"),
+          icon: "dialog-information-symbolic",
+          description: _("Style the hover labels on Lesion's panel buttons"),
+          keywords: ["tooltip", "tooltips", "hover", "label", "name", "hint", "caption"],
+          ui: createTooltipsUI,
         },
         {
           id: "clock",

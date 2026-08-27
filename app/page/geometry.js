@@ -99,9 +99,34 @@ export function createGeometryUI() {
 
         // Reserved internal keys (e.g. '__aliases__', the learned identity
         // table) are not applications and must never appear as rows.
-        const currentKeys = Object.keys(data)
+        const appKeys = Object.keys(data)
             .filter(k => !k.startsWith('__'))
             .sort();
+
+        const describe = (info) => {
+            if (!info) return '';
+            if (info.max) return _('Maximized');
+            if (info.w === undefined || info.x === undefined) return _('No geometry recorded');
+            return `Size: ${info.w}\u00d7${info.h} \u2022 Pos: ${info.x},${info.y}`;
+        };
+
+        // One row per stored entry. The file manager's Trash and Drive
+        // windows are separate ENTRIES (the identity carries the location),
+        // not sub-rows of a parent, so nothing here needs a hierarchy.
+        const LOC_LABELS = { trash: _('Trash'), drive: _('Drive') };
+        const rowDefs = appKeys.map(key => {
+            const [base, loc] = key.split('::');
+            const name = base.split('.').pop() || base;
+            return {
+                id: key,
+                appKey: key,
+                iconKey: base,
+                title: loc ? `${name} \u2014 ${LOC_LABELS[loc] || loc}` : name,
+                subtitle: describe(data[key] || {}),
+            };
+        });
+
+        const currentKeys = rowDefs.map(d => d.id);
         const currentKeySet = new Set(currentKeys);
 
         // 1. REMOVE STALE ROWS
@@ -138,61 +163,48 @@ export function createGeometryUI() {
         }
 
         // 3. UPDATE OR CREATE ROWS
-        currentKeys.forEach(key => {
-            const info = data[key];
-            const subtitleText = `Size: ${info.w}×${info.h} • Pos: ${info.x},${info.y}`;
-
-            if (activeRows.has(key)) {
+        rowDefs.forEach(def => {
+            if (activeRows.has(def.id)) {
                 // --- UPDATE EXISTING ---
-                const row = activeRows.get(key);
-                if (row.get_subtitle() !== subtitleText) {
-                    row.set_subtitle(subtitleText);
+                const row = activeRows.get(def.id);
+                if (row.get_subtitle() !== def.subtitle) {
+                    row.set_subtitle(def.subtitle);
                 }
-            } else {
-                // --- CREATE NEW ---
-                const cleanName = key.split('.').pop() || key; 
-                const row = new Adw.ActionRow({
-                    title: cleanName,
-                    subtitle: subtitleText
-                });
-
-                row.add_prefix(getAppIcon(key));
-
-                const delBtn = new Gtk.Button({
-                    icon_name: 'user-trash-symbolic',
-                    valign: Gtk.Align.CENTER,
-                    has_frame: false,
-                    tooltip_text: _('Forget this window')
-                });
-                delBtn.add_css_class('error');
-
-                delBtn.connect('clicked', () => {
-                    // 1. Remove from UI immediately
-                    dataGroup.remove(row);
-                    activeRows.delete(key);
-                    
-                    // 2. Remove from Settings
-                    const currentData = JSON.parse(settings.get_string('geometry-data'));
-                    if (currentData[key]) {
-                        delete currentData[key];
-                        settings.set_string('geometry-data', JSON.stringify(currentData));
-                    }
-                    
-                    // 3. Trigger check (handles showing empty state if last item gone)
-                    // updateList runs again via the signal, or manually if needed
-                    if (activeRows.size === 0) {
-                        // Manually show the empty state when the last row is deleted
-                        // to ensure instant feedback without waiting for settings signal
-                        // (Though the signal will fire shortly after)
-                    }
-                });
-
-                row.add_suffix(delBtn);
-                dataGroup.add(row);
-                
-                // CRITICAL: Save to map
-                activeRows.set(key, row);
+                return;
             }
+
+            // --- CREATE NEW ---
+            const row = new Adw.ActionRow({
+                title: def.title,
+                subtitle: def.subtitle
+            });
+
+            row.add_prefix(getAppIcon(def.iconKey));
+
+            const delBtn = new Gtk.Button({
+                icon_name: 'user-trash-symbolic',
+                valign: Gtk.Align.CENTER,
+                has_frame: false,
+                tooltip_text: _('Forget this window')
+            });
+            delBtn.add_css_class('error');
+
+            delBtn.connect('clicked', () => {
+                dataGroup.remove(row);
+                activeRows.delete(def.id);
+
+                try {
+                    const currentData = JSON.parse(settings.get_string('geometry-data'));
+                    if (currentData[def.appKey]) delete currentData[def.appKey];
+                    settings.set_string('geometry-data', JSON.stringify(currentData));
+                } catch (e) {
+                    logError('[Geometry prefs] could not remove entry', e);
+                }
+            });
+
+            row.add_suffix(delBtn);
+            dataGroup.add(row);
+            activeRows.set(def.id, row);
         });
     };
 

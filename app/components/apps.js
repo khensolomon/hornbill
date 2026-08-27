@@ -11,6 +11,7 @@ import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
 import * as ModalDialog from 'resource:///org/gnome/shell/ui/modalDialog.js'; 
 import * as DND from 'resource:///org/gnome/shell/ui/dnd.js';
 import { ExtensionComponent } from './base.js';
+import { TooltipManager } from './tooltip.js';
 import { setVertical } from '../util/compat.js';
 import { log, logError } from '../util/logger.js'; 
 import { gettext as _ } from '../util/gettext.js';
@@ -202,7 +203,9 @@ const AppPanelButton = GObject.registerClass(
 
                 if (button === 2) {
                     if (this._app) { this._app.open_new_window(-1); return true; }
-                    if (this.accessible_name === 'Trash') {
+                    // Identity check, not a label: accessible_name is now the
+                    // translated display string and cannot be compared against.
+                    if (this._role === 'lesion-trash') {
                         Gio.AppInfo.launch_default_for_uri('trash:///', null);
                         return true;
                     }
@@ -573,8 +576,23 @@ export class AppsManager extends ExtensionComponent {
         }
 
         this._items = { favorites: [], running: [], disks: [], trash: null, showgrid: null, overview: null };
+        // TWO DISTINCT SETS. _handledWindows means "already represented by
+        // some button" and gates duplicate Running entries, so it includes
+        // every window of every FAVOURITED app. _claimedWindows means
+        // "belongs to a Trash or Drive button" and is the only correct basis
+        // for separating Files from its siblings — v124 used _handledWindows
+        // for that, and since Files is normally a favourite, every Nautilus
+        // window was in it: the Files button could never find an unclaimed
+        // window, so it never lit up and its click fell through to the Trash
+        // window.
         this._handledWindows = new Set();
-        this._trashName = 'Trash'; 
+        this._claimedWindows = new Set();
+
+        // One label and one timer for every button; see components/tooltip.js.
+        // Created before the first _rebuildAll() so buttons can attach as they
+        // are built.
+        this._tooltips = new TooltipManager(this.getSettings());
+        this._trashName = _('Trash'); // replaced below by the GIO display name
         
         this._appSystem = Shell.AppSystem.get_default();
         this._winTracker = Shell.WindowTracker.get_default();
@@ -757,6 +775,11 @@ export class AppsManager extends ExtensionComponent {
             this._trashMonitor = null;
         }
         
+        if (this._tooltips) {
+            this._tooltips.destroy();
+            this._tooltips = null;
+        }
+
         // Cleanup Identity Dialog if open
         if (this._identityDialog) {
             this._identityDialog.destroy();
@@ -836,42 +859,68 @@ export class AppsManager extends ExtensionComponent {
         this._updateVisuals();
     }
 
+    /**
+     * Assigns windows to the Trash and Drive buttons.
+     *
+     * Two rules, both learned from misassignment:
+     *
+     * 1. ONLY file-manager windows are candidates. Trash and drives open as
+     *    Nautilus windows, but the old scan walked every running app and
+     *    claimed any window whose title merely CONTAINED the name — a note
+     *    named 'trash-notes.md', a browser tab titled 'Trash', a terminal
+     *    sitting in ~/Trash, or, for a drive named 'Data', every window with
+     *    'data' anywhere in its title.
+     *
+     * 2. A window belongs to exactly ONE button. Trash and each drive matched
+     *    independently and both added to _handledWindows, so a window could
+     *    land in two _windows lists; _updateVisuals then lit whichever ran
+     *    last, and the running dot appeared on both.
+     */
     _refreshHandledWindowsMap() {
         this._handledWindows.clear();
+        this._claimedWindows.clear();
 
-        const running = this._appSystem.get_running();
-        
-        if (this._items.trash && this.getSettings().get_boolean('apps-trash-enabled')) {
-            let trashWindows = [];
-            const trashNameLower = (this._trashName || 'Trash').toLowerCase();
-            
-            running.forEach(app => {
-                const wins = app.get_windows().filter(w => {
-                    const title = w.get_title();
-                    return title && title.toLowerCase().includes(trashNameLower);
-                });
-                trashWindows = trashWindows.concat(wins);
+        const fmWindows = [];
+        this._appSystem.get_running().forEach(app => {
+            if (this._isFileManager(app)) fmWindows.push(...app.get_windows());
+        });
+
+        const titleOf = (w) => {
+            try { return (w.get_title() || '').trim().toLowerCase(); }
+            catch (e) { log('_refreshHandledWindowsMap: get_title() failed', e); return ''; }
+        };
+
+        // Exact title first. Nautilus titles a window with the folder name, so
+        // an exact match is the correct test; substring is kept as a fallback
+        // so a shell that appends a suffix degrades to the old behaviour
+        // instead of matching nothing at all.
+        const claim = (name) => {
+            const want = (name || '').trim().toLowerCase();
+            if (!want) return [];
+            const free = fmWindows.filter(w => !this._claimedWindows.has(w));
+            let hits = free.filter(w => titleOf(w) === want);
+            if (hits.length === 0) hits = free.filter(w => titleOf(w).includes(want));
+            hits.forEach(w => {
+                this._claimedWindows.add(w);
+                this._handledWindows.add(w);
             });
+            return hits;
+        };
 
-            this._items.trash._windows = trashWindows;
-            trashWindows.forEach(w => this._handledWindows.add(w));
+        // Trash claims before drives: it is a fixed system location, whereas a
+        // volume name is user-supplied and could collide with it.
+        if (this._items.trash) {
+            this._items.trash._windows =
+                this.getSettings().get_boolean('apps-trash-enabled')
+                    ? claim(this._trashName)
+                    : [];
         }
 
         if (this.getSettings().get_boolean('apps-disks-enabled')) {
             this._items.disks.forEach(btn => {
-                const name = btn.get_accessible_name().toLowerCase();
-                let diskWindows = [];
-                
-                running.forEach(app => {
-                    const wins = app.get_windows().filter(w => {
-                        const title = w.get_title();
-                        return title && title.toLowerCase().includes(name);
-                    });
-                    diskWindows = diskWindows.concat(wins);
-                });
-
-                btn._windows = diskWindows;
-                diskWindows.forEach(w => this._handledWindows.add(w));
+                // _matchName is the raw, untranslated mount name kept for
+                // title matching; accessible_name is display text.
+                btn._windows = claim(btn._matchName);
             });
         }
 
@@ -986,18 +1035,36 @@ export class AppsManager extends ExtensionComponent {
         });
         
         const focusApp = this._winTracker.focus_app;
+
+        // Files is Files and Trash is Trash: the file manager's own button
+        // must report only the windows no custom button claimed. Previously
+        // 'running' came from the app state, so a session whose only Nautilus
+        // window was the Trash window still lit the Files dot, and 'focused'
+        // was cleared via the activeCustomBtn proxy rather than by asking
+        // whether THIS window was claimed.
+        const unclaimedWindows = (app) => {
+            try { return app.get_windows().filter(w => !this._claimedWindows.has(w)); }
+            catch (e) { log('_updateVisuals: get_windows() failed', e); return []; }
+        };
+
         this._items.favorites.forEach(btn => {
             if (btn._app) {
-                const running = btn._app.state === Shell.AppState.RUNNING;
+                let running = btn._app.state === Shell.AppState.RUNNING;
                 let focused = focusApp === btn._app;
-                if (focused && activeCustomBtn && this._isFileManager(btn._app)) focused = false;
+                if (this._isFileManager(btn._app)) {
+                    const own = unclaimedWindows(btn._app);
+                    running = own.length > 0;
+                    focused = focused && !!focusWindow && own.includes(focusWindow);
+                }
                 apply(btn, running, focused);
             }
         });
 
         this._items.running.forEach(btn => {
             if (btn._app) {
-                const focused = focusApp === btn._app;
+                let focused = focusApp === btn._app;
+                if (focused && this._isFileManager(btn._app) && focusWindow)
+                    focused = !this._claimedWindows.has(focusWindow);
                 apply(btn, true, focused);
             }
         });
@@ -1514,7 +1581,7 @@ export class AppsManager extends ExtensionComponent {
         this._applyEffects(icon);
         
         const btn = new AppPanelButton(
-            icon, 'Trash',
+            icon, this._trashName,
             () => {
                 const wins = btn._windows || [];
                 if (wins.length > 0) {
@@ -1561,6 +1628,7 @@ export class AppsManager extends ExtensionComponent {
 
         const role = 'lesion-trash';
         btn._role = role;
+        this._tooltips?.attach(btn, this._trashName);
         Main.panel.addToStatusArea(role, btn, idx, pos);
         this._items.trash = btn;
     }
@@ -1623,6 +1691,8 @@ export class AppsManager extends ExtensionComponent {
 
             const role = `lesion-disk-${i}`;
             btn._role = role;
+            btn._matchName = name;
+            this._tooltips?.attach(btn, name);
             Main.panel.addToStatusArea(role, btn, idx + i, pos);
             this._items.disks.push(btn);
         });
@@ -1684,7 +1754,7 @@ export class AppsManager extends ExtensionComponent {
         }
 
         const btn = new AppPanelButton(
-            actor, 'Applications',
+            actor, _('Applications'),
             () => {
                 if (Main.overview.visible && Main.overview.dash.showAppsButton.checked) {
                     Main.overview.hide();
@@ -1706,6 +1776,7 @@ export class AppsManager extends ExtensionComponent {
 
         const role = 'lesion-showgrid';
         btn._role = role;
+        this._tooltips?.attach(btn, _('Applications'));
         Main.panel.addToStatusArea(role, btn, idx, pos);
         this._items.showgrid = btn;
     }
@@ -1757,7 +1828,7 @@ export class AppsManager extends ExtensionComponent {
         this._applyEffects(icon);
 
         const btn = new AppPanelButton(
-            icon, 'Overview',
+            icon, _('Overview'),
             () => {
                  // Toggle overview, but ensure it isn't in grid mode when showing
                  if (Main.overview.visible && !Main.overview.dash.showAppsButton.checked) {
@@ -1786,6 +1857,7 @@ export class AppsManager extends ExtensionComponent {
 
         const role = 'lesion-overview';
         btn._role = role;
+        this._tooltips?.attach(btn, _('Overview'));
         Main.panel.addToStatusArea(role, btn, idx, pos);
         this._items.overview = btn;
     }
@@ -1820,6 +1892,7 @@ export class AppsManager extends ExtensionComponent {
             btn._app = app;
             const role = `lesion-fav-${i}`;
             btn._role = role;
+            this._tooltips?.attach(btn, app.get_name());
             Main.panel.addToStatusArea(role, btn, idx + i, pos);
             this._items.favorites.push(btn);
         });
@@ -1879,6 +1952,7 @@ export class AppsManager extends ExtensionComponent {
             btn._app = app;
             const role = `lesion-run-${i}`;
             btn._role = role;
+            this._tooltips?.attach(btn, app.get_name());
             Main.panel.addToStatusArea(role, btn, idx + i, pos);
             this._items.running.push(btn);
         });
@@ -1887,19 +1961,37 @@ export class AppsManager extends ExtensionComponent {
     _handleAppClick(app) {
         // Overview/search is closed centrally in _activate() before any
         // click callback runs, so no need to repeat that here.
-        const windows = app.get_windows();
+        // Same separation as the visuals: clicking Files must not raise or
+        // minimize the Trash and Drive windows that have their own buttons.
+        // The filter is unconditional — falling back to the full list when
+        // nothing is unclaimed is what made Files toggle the Trash window.
+        let windows = app.get_windows();
+        if (this._isFileManager(app))
+            windows = windows.filter(w => !this._claimedWindows.has(w));
+
         const ts = global.get_current_time();
-        if (app.get_n_windows() === 0) {
-            // activate_full registers the launch with the shell's startup
-            // notification, so the busy cursor is tracked and cleared when
-            // the window maps — like the dock does. open_new_window bypasses
-            // that, leaving the cursor spinning until it times out.
-            app.activate_full(-1, ts);
+        if (windows.length === 0) {
+            if (app.get_n_windows() > 0) {
+                // Running, but every window belongs to another button (only
+                // Trash is open). activate_full() would raise that window;
+                // the user asked for Files, so give them a Files window.
+                app.open_new_window(-1);
+            } else {
+                // activate_full registers the launch with the shell's startup
+                // notification, so the busy cursor is tracked and cleared when
+                // the window maps — like the dock does. open_new_window bypasses
+                // that, leaving the cursor spinning until it times out.
+                app.activate_full(-1, ts);
+            }
         } else {
-            if (this._winTracker.focus_app === app) {
+            const focusWin = global.display.focus_window;
+            if (windows.some(w => w === focusWin)) {
                 windows.forEach(w => w.minimize());
             } else {
-                app.activate_full(-1, ts);
+                // activate() the specific window rather than the app: for a
+                // file manager, activate_full() could raise a Trash window
+                // that belongs to another button.
+                windows[0].activate(ts);
             }
         }
     }

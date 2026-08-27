@@ -2,10 +2,10 @@
   "uuid": "lesion@lethil.me",
   "name": "Lesion",
   "description": "Personalize the GNOME desktop from one place.\n\nPanel: colors, gradients, blur, borders, shadows, per-button styling, and one-click presets that recreate the macOS menu bar or the Windows 11 taskbar. Clock: reposition and reformat the panel clock. Apps: Show Apps, favorites, running apps, removable drives, and trash as panel buttons.\n\nWindows: remember and restore each application's size and position, round all window corners uniformly (with square corners at screen edges, replacement drop shadows, and automatic squaring when maximized), and optionally dim unfocused windows.\n\nExtras: custom CSS injection and a dual-mode wallpaper engine.",
-  "version": 121,
+  "version": 131,
   "settings-schema": "org.gnome.shell.extensions.lethil",
   "gettext-domain": "lesion",
-  "version-name": "26.08.24.72",
+  "version-name": "26.08.27.82",
   "shell-version": [
     "46",
     "47",

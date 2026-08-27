@@ -36,6 +36,14 @@
     <value nick="left" value="3"/>
   </enum>
   
+  <!-- CSS Font Weights -->
+  <enum id="org.gnome.shell.extensions.lethil.FontWeight">
+    <value nick="light" value="0"/>
+    <value nick="normal" value="1"/>
+    <value nick="medium" value="2"/>
+    <value nick="bold" value="3"/>
+  </enum>
+
   <!-- CSS Border Styles -->
   <enum id="org.gnome.shell.extensions.lethil.BorderStyle">
     <value nick="solid" value="0"/>
@@ -195,6 +203,47 @@
     <key name="apps-icon-desaturate" type="b"><default>true</default></key>
     <key name="apps-opacity-running" type="i"><default>255</default></key>
     <key name="apps-opacity-stopped" type="i"><default>160</default></key>
+
+    <!-- Hover Tooltips -->
+    <!-- Prefix stays 'apps-' because components/apps.js owns these buttons and
+         the tooltips only ever label them; the preferences page is filed under
+         Panel because that is where users look. -->
+    <key name="apps-tooltips-enabled" type="b">
+        <default>true</default>
+        <summary>Show a hover label naming each Lesion panel button</summary>
+    </key>
+    <key name="apps-tooltip-delay" type="i">
+        <default>500</default>
+        <summary>Milliseconds of hover before the label appears</summary>
+    </key>
+    <key name="apps-tooltip-offset" type="i">
+        <default>6</default>
+        <summary>Gap in pixels between the button edge and the label</summary>
+    </key>
+
+    <!-- Tooltip Text -->
+    <key name="apps-tooltip-text-color" type="s"><default>'#ffffff'</default></key>
+    <key name="apps-tooltip-font-size" type="i"><default>11</default></key>
+    <key name="apps-tooltip-font-weight" enum="org.gnome.shell.extensions.lethil.FontWeight"><default>'medium'</default></key>
+
+    <!-- Tooltip Background &amp; Geometry -->
+    <key name="apps-tooltip-bg-color" type="s"><default>'rgba(0,0,0,0.85)'</default></key>
+    <key name="apps-tooltip-radius" type="i"><default>8</default></key>
+    <key name="apps-tooltip-pad-x" type="i"><default>10</default></key>
+    <key name="apps-tooltip-pad-y" type="i"><default>5</default></key>
+
+    <!-- Tooltip Border -->
+    <key name="apps-tooltip-border-size" type="i"><default>0</default></key>
+    <key name="apps-tooltip-border-color" type="s"><default>'rgba(255,255,255,0.15)'</default></key>
+    <key name="apps-tooltip-border-style" enum="org.gnome.shell.extensions.lethil.BorderStyle"><default>'solid'</default></key>
+
+    <!-- Tooltip Shadow -->
+    <key name="apps-tooltip-shadow-enabled" type="b"><default>false</default></key>
+    <key name="apps-tooltip-shadow-color" type="s"><default>'rgba(0,0,0,0.45)'</default></key>
+    <key name="apps-tooltip-shadow-x" type="i"><default>0</default></key>
+    <key name="apps-tooltip-shadow-y" type="i"><default>2</default></key>
+    <key name="apps-tooltip-shadow-blur" type="i"><default>8</default></key>
+    <key name="apps-tooltip-shadow-spread" type="i"><default>0</default></key>
 
     <!-- Indicator Configuration -->
     <key name="apps-indicator-pos" enum="org.gnome.shell.extensions.lethil.BoxPosition"><default>'top'</default></key> 
