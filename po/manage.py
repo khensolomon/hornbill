@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Lesion Translation Management Tool
+Hornbill Translation Management Tool
 
 This is the single implementation of the translation pipeline. It works two
 ways:
@@ -19,10 +19,10 @@ Commands:
                 Creates po/<lang>.po from the current template, then you can
                 edit its msgstr entries and run the 'compile' command.
 
-  compile     : Compile every po/*.po into locale/<lang>/LC_MESSAGES/lesion.mo.
+  compile     : Compile every po/*.po into locale/<lang>/LC_MESSAGES/hornbill.mo.
                 Run this after adding or modifying translations.
 
-  update      : Regenerate po/lesion.pot from source files listed in
+  update      : Regenerate po/hornbill.pot from source files listed in
                 po/POTFILES.in, then merge the changes into every existing
                 po/*.po file.
 
@@ -38,7 +38,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-DOMAIN = "lesion"
+DOMAIN = "hornbill"
 
 # Tools each command needs, so a missing dependency is reported by name rather
 # than surfacing as a bare FileNotFoundError from subprocess.
@@ -141,9 +141,9 @@ def update_template(root_dir=None, domain=DOMAIN, verbose=True):
             "--keyword=pgettext:1c,2",
             "--add-comments=Translators",
             "--sort-by-file",
-            "--package-name=Lesion",
+            "--package-name=Hornbill",
             "--copyright-holder=Khen Solomon Lethil",
-            "--msgid-bugs-address=https://github.com/khensolomon/lesion/issues",
+            "--msgid-bugs-address=https://github.com/khensolomon/hornbill/issues",
             "-o",
             str(pot_file),
         ]

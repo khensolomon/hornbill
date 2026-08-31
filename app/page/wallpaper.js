@@ -370,6 +370,25 @@ function _applyPreset(preset, bgSettings, extSettings, rootPath) {
             } catch(e) { logError(`Preset error ext key ${key}`, e); }
         });
     }
+
+    // 4. Dark-mode fallback.
+    // Step 2 maps a preset's colours onto the LIGHT keys only. The bundled
+    // presets also declare explicit dark colours, but one that does not would
+    // leave the dark slots empty and simply not appear for a user in dark
+    // mode. Mirroring the light colours across keeps a preset looking like
+    // itself in either theme, without overriding a dark colour the preset
+    // actually specified.
+    if (preset.system) {
+        const mirror = (sysKey, darkKey) => {
+            const val = preset.system[sysKey];
+            if (!val) return;
+            if (preset.extension && preset.extension[darkKey] !== undefined) return;
+            try { extSettings.set_string(darkKey, val); }
+            catch (e) { logError(`Preset error mirroring ${darkKey}`, e); }
+        };
+        mirror('primary-color', 'wallpaper-primary-color-dark');
+        mirror('secondary-color', 'wallpaper-secondary-color-dark');
+    }
 }
 
 function _resolveFile(root, pathString) {

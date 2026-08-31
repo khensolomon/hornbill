@@ -42,22 +42,36 @@ export class ClockManager extends ExtensionComponent {
         // ignored the roundness/background that panels.js applies to
         // '.panel-button'. The outer dateMenu now owns hover, active state,
         // click handling, and themed styling — like every other button.
+        // y_expand/y_align were unset, so the box defaulted to FILL and
+        // stretched to whatever height the dateMenu button was given. The
+        // two-line block then sat against the top of that space instead of in
+        // the middle of it, which is what made the clock read as a taller
+        // button than its neighbours.
         this._customBox = new St.BoxLayout({
-            style_class: 'lesion-clock',
-            style: 'min-width: 24px; min-height: 10px; spacing:0px;',
+            style_class: 'hornbill-clock',
+            style: 'min-width: 24px; spacing: 0px;',
             reactive: false,
             track_hover: false,
-            can_focus: false
+            can_focus: false,
+            x_expand: false,
+            y_expand: false,
+            x_align: Clutter.ActorAlign.CENTER,
+            y_align: Clutter.ActorAlign.CENTER
         });
         setVertical(this._customBox, true);
 
         // Time Label
+        // NOTE: 'line-height' is NOT implemented by St's CSS subset, so the
+        // 0.7em/0.5em declarations that used to be here did nothing at all.
+        // Nor did 'min-height: 7px', which is far below the natural height of
+        // any readable font. Line height is now controlled where it actually
+        // lives — see _applyLineMetrics().
         this._timeLabel = new St.Label({
             style_class: 'clock-label',
             y_align: Clutter.ActorAlign.CENTER,
             x_align: Clutter.ActorAlign.CENTER,
-            text: " ",
-            style: 'min-width: 20px; min-height: 7px; font-size: 90%; line-height:0.7em; spacing:0px;'
+            y_expand: false,
+            text: " "
         });
 
         // Date Label (used for multiline or specific formats)
@@ -65,8 +79,8 @@ export class ClockManager extends ExtensionComponent {
             style_class: 'clock-label',
             y_align: Clutter.ActorAlign.CENTER,
             x_align: Clutter.ActorAlign.CENTER,
-            text: " ",
-            style: 'min-width: 20px; min-height: 3px; font-size: 65%; line-height:0.5em; opacity:0.8; spacing:0px;'
+            y_expand: false,
+            text: " "
         });
 
         this._customBox.add_child(this._timeLabel);
@@ -82,6 +96,7 @@ export class ClockManager extends ExtensionComponent {
         // the enclosing dateMenu PanelMenu.Button natively now that the
         // custom box is non-reactive — no manual pseudo-class juggling.
         this._menuSignal = null;
+        this._tickId = 0;
 
         // Watch for text changes in the original clock to update the custom label
         this._clockSignal = this._originalClockDisplay.connect('notify::text', () => {
@@ -105,6 +120,66 @@ export class ClockManager extends ExtensionComponent {
         this.observe('changed::clock-custom-format', () => this._updateClockText());
         this.observe('changed::clock-multiline', () => this._updateClockText());
         this.observe('changed::clock-dim-separator', () => this._updateClockText());
+        this.observe('changed::clock-multiline-time-size', () => this._updateClockText());
+        this.observe('changed::clock-multiline-date-size', () => this._updateClockText());
+        this.observe('changed::clock-multiline-tightness', () => this._updateClockText());
+
+        // Seconds only tick if we drive them ourselves; see _syncTicker().
+        this.observe('changed::clock-format-mode', () => this._syncTicker());
+        this.observe('changed::clock-custom-format', () => this._syncTicker());
+        this._syncTicker();
+    }
+
+    /**
+     * SECONDS.
+     *
+     * The custom label was refreshed from one source only: 'notify::text' on
+     * the shell's own clock. That fires when the SHELL's displayed string
+     * changes, and the shell shows %H:%M by default — once a minute. A custom
+     * format containing %S therefore sat on a stale second for up to 60s.
+     * Several shipped presets use %S, so this was reachable straight from the
+     * preset list.
+     *
+     * A second timer is only started when the format actually needs one.
+     */
+    _needsSeconds() {
+        const settings = this.getSettings();
+        if (settings.get_enum('clock-format-mode') !== 1) return false;
+        const format = settings.get_string('clock-custom-format') || '';
+        // Strip escaped percents first so '%%S' is not read as seconds.
+        // %S seconds, %T = %H:%M:%S, %r 12-hour with seconds, %X locale time,
+        // %c locale date+time, %s seconds since epoch.
+        return /%[-_0^#]*[0-9]*[SsTrXc]/.test(format.replace(/%%/g, ''));
+    }
+
+    _syncTicker() {
+        this._stopTicker();
+        if (this._needsSeconds()) this._armTick();
+    }
+
+    /**
+     * Re-armed to the next whole second rather than a flat 1000ms interval,
+     * so the displayed second changes when the clock actually rolls over
+     * instead of drifting further from it on every tick.
+     */
+    _armTick() {
+        const us = GLib.DateTime.new_now_local().get_microsecond();
+        const delay = Math.max(50, 1000 - Math.round(us / 1000));
+        this._tickId = this.timeoutOnce(delay, () => {
+            this._tickId = 0;
+            this._updateClockText();
+            this._armTick();
+        });
+    }
+
+    _stopTicker() {
+        if (!this._tickId) return;
+        // timeoutOnce() registered this in the base class source set; remove
+        // it there too or cleanup would call source_remove on a dead id.
+        this._sources.delete(this._tickId);
+        try { GLib.source_remove(this._tickId); }
+        catch (e) { log('_stopTicker: source_remove failed', e); }
+        this._tickId = 0;
     }
 
     /**
@@ -112,6 +187,7 @@ export class ClockManager extends ExtensionComponent {
      * Restores the original clock and cleans up.
      */
     onDisable() {
+        this._stopTicker();
         this._restore();
     }
 
@@ -224,7 +300,7 @@ export class ClockManager extends ExtensionComponent {
 
         if (multiline) {
             setVertical(this._customBox, true);
-            this._dateLabel.opacity = 255;
+            this._dateLabel.opacity = 204; // ~0.8, the CSS 'opacity' never applied
 
             // Regex to find time pattern like HH:MM or H:MM, optionally with seconds or AM/PM
             const timeRegex = /([0-9]{1,2}[:∶][0-9]{2}(?:[:∶][0-9]{2})?(?:\s?[AP]M)?)/;
@@ -269,6 +345,61 @@ export class ClockManager extends ExtensionComponent {
                 this._timeLabel.text = text;
             }
         }
+
+        this._applyLineMetrics(multiline);
+    }
+
+    /**
+     * THE TWO-LINE GAP.
+     *
+     * The box spacing was already 0, so the space between the lines was never
+     * spacing — it is font leading, the padding a font reserves above and
+     * below its glyphs. Two stacked St.Labels contribute two full line boxes,
+     * which made the dateMenu taller than every other panel button and gave it
+     * a visibly bigger hover background.
+     *
+     * Leading cannot be styled away in St ('line-height' is not implemented),
+     * so each label is given an explicit height that keeps only 'tightness'
+     * percent of its natural one. That trims the leading while leaving the
+     * glyphs, and both line sizes are adjustable because how much leading a
+     * font reserves varies with the font.
+     *
+     * Floored at MIN_LINE_PX so no combination of settings can collapse the
+     * clock to nothing.
+     */
+    _applyLineMetrics(multiline) {
+        const MIN_LINE_PX = 6;
+        const settings = this.getSettings();
+
+        if (!multiline) {
+            // Single line: let the label size itself as before.
+            this._timeLabel.set_style('min-width: 20px;');
+            this._timeLabel.set_height(-1);
+            this._dateLabel.set_height(-1);
+            return;
+        }
+
+        const clampPct = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
+        const timePct = clampPct(settings.get_int('clock-multiline-time-size'), 40, 200);
+        const datePct = clampPct(settings.get_int('clock-multiline-date-size'), 30, 200);
+        const tight = clampPct(settings.get_int('clock-multiline-tightness'), 50, 100) / 100;
+
+        this._timeLabel.set_style(`min-width: 20px; font-size: ${timePct}%;`);
+        this._dateLabel.set_style(`min-width: 20px; font-size: ${datePct}%;`);
+
+        // Height must be measured AFTER the font size is applied, or the
+        // natural height still reflects the previous size.
+        [this._timeLabel, this._dateLabel].forEach(label => {
+            try {
+                label.set_height(-1);
+                const [, natural] = label.get_preferred_height(-1);
+                if (natural > 0)
+                    label.set_height(Math.max(MIN_LINE_PX, Math.round(natural * tight)));
+            } catch (e) {
+                log('_applyLineMetrics: get_preferred_height() failed', e);
+                label.set_height(-1);
+            }
+        });
     }
 
     /**

@@ -41,6 +41,7 @@ export class PanelsManager extends ExtensionComponent {
             'panel-btn-color',
             'panel-btn-radius', 'panel-btn-pad-min', 'panel-btn-pad-nat', 
             'panel-btn-bg-hover', 'panel-btn-bg-active', 'panel-btn-hover-enabled',
+            'clock-button-inset',
             'popup-radius', 
             'popup-shadow-enabled', 'popup-shadow-color', 
             'popup-shadow-x', 'popup-shadow-y', 'popup-shadow-blur', 'popup-shadow-spread',
@@ -250,7 +251,7 @@ export class PanelsManager extends ExtensionComponent {
             // and inserted BELOW the panel's contents so nothing it does can
             // affect the buttons above it.
             this._blurActor = new St.Widget({
-                name: 'lesion-panel-blur',
+                name: 'hornbill-panel-blur',
                 reactive: false,
                 can_focus: false,
                 track_hover: false,
@@ -411,6 +412,11 @@ export class PanelsManager extends ExtensionComponent {
         const radius = this._settings.get_int('panel-btn-radius');
         const natPad = this._settings.get_int('panel-btn-pad-nat');
         const hoverEnabled = this._settings.get_boolean('panel-btn-hover-enabled');
+        // Margin, not padding: padding would grow the background box, whereas
+        // the clock needs its background pulled IN to match the shorter pill
+        // the icon buttons draw. Clamped so it can never eat the panel.
+        const inset = Math.min(8, Math.max(0, this._settings.get_int('clock-button-inset')));
+        const insetCss = inset > 0 ? `margin-top: ${inset}px; margin-bottom: ${inset}px;` : '';
 
         // Since the theme's own pill (which lived on the inner '.clock') is
         // neutralized below, the clock would have NO hover/active feedback
@@ -432,6 +438,7 @@ export class PanelsManager extends ExtensionComponent {
 #panel .panel-button.clock-display:checked {
     border-radius: ${radius}px;
     padding: 0 ${natPad}px;
+    ${insetCss}
 }
 #panel .panel-button.clock-display:hover {
     background-color: ${hoverBg};
@@ -455,7 +462,7 @@ export class PanelsManager extends ExtensionComponent {
 `;
 
         try {
-            const dir = GLib.build_filenamev([GLib.get_user_cache_dir(), 'lesion']);
+            const dir = GLib.build_filenamev([GLib.get_user_cache_dir(), 'hornbill']);
             GLib.mkdir_with_parents(dir, 0o755);
             const path = GLib.build_filenamev([dir, 'clock.css']);
             GLib.file_set_contents(path, css);

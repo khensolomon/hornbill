@@ -5,13 +5,13 @@ import Gio from 'gi://Gio';
 import GObject from 'gi://GObject';
 import { AppConfig } from '../config.js';
 import { log, logError } from '../util/logger.js';
-import { gettext as _ } from '../util/gettext.js';
+import { gettext as _, N_ } from '../util/gettext.js';
 
 const BORDER_STYLES = ['Solid', 'Dotted', 'Dashed', 'Double', 'Groove', 'Ridge', 'Inset', 'Outset', 'None'];
 const FONT_WEIGHTS = ['Light', 'Normal', 'Medium', 'Bold'];
 
 /**
- * Styling for the hover labels on Lesion's own panel buttons.
+ * Styling for the hover labels on Hornbill's own panel buttons.
  *
  * The keys keep the 'apps-tooltip-' prefix because components/apps.js owns the
  * buttons these label; the page sits under Panel because that is where the
@@ -33,7 +33,7 @@ export class TooltipsPage extends Adw.PreferencesPage {
         // --- 1. Behaviour ---
         const behaviourGroup = new Adw.PreferencesGroup({
             title: _('Behaviour'),
-            description: _('Hover labels naming each button Lesion adds to the panel.')
+            description: _('Hover labels naming each button Hornbill adds to the panel.')
         });
         this.add(behaviourGroup);
 
@@ -77,9 +77,9 @@ export class TooltipsPage extends Adw.PreferencesPage {
         this.add(textGroup);
         styleGroups.push(textGroup);
 
-        textGroup.add(this._createColorRow('Text Color', 'apps-tooltip-text-color'));
-        textGroup.add(this._createSpinRow('Font Size', 'apps-tooltip-font-size', 6, 32, 1));
-        textGroup.add(this._createComboRow('Font Weight', 'apps-tooltip-font-weight', FONT_WEIGHTS));
+        textGroup.add(this._createColorRow(N_('Text Color'), 'apps-tooltip-text-color'));
+        textGroup.add(this._createSpinRow(N_('Font Size'), 'apps-tooltip-font-size', 6, 32, 1));
+        textGroup.add(this._createComboRow(N_('Font Weight'), 'apps-tooltip-font-weight', FONT_WEIGHTS));
 
         // --- 3. Background ---
         const bgGroup = new Adw.PreferencesGroup({
@@ -89,8 +89,8 @@ export class TooltipsPage extends Adw.PreferencesPage {
         this.add(bgGroup);
         styleGroups.push(bgGroup);
 
-        bgGroup.add(this._createColorRow('Background Color', 'apps-tooltip-bg-color'));
-        bgGroup.add(this._createSpinRow('Corner Radius', 'apps-tooltip-radius', 0, 40, 1));
+        bgGroup.add(this._createColorRow(N_('Background Color'), 'apps-tooltip-bg-color'));
+        bgGroup.add(this._createSpinRow(N_('Corner Radius'), 'apps-tooltip-radius', 0, 40, 1));
         bgGroup.add(this._createSpinRow(
             'Horizontal Padding', 'apps-tooltip-pad-x', 0, 40, 1,
             _('Space between the text and the left and right edges')));
@@ -106,9 +106,9 @@ export class TooltipsPage extends Adw.PreferencesPage {
         this.add(borderGroup);
         styleGroups.push(borderGroup);
 
-        borderGroup.add(this._createSpinRow('Border Size', 'apps-tooltip-border-size', 0, 10, 1));
-        borderGroup.add(this._createColorRow('Border Color', 'apps-tooltip-border-color'));
-        borderGroup.add(this._createComboRow('Border Style', 'apps-tooltip-border-style', BORDER_STYLES));
+        borderGroup.add(this._createSpinRow(N_('Border Size'), 'apps-tooltip-border-size', 0, 10, 1));
+        borderGroup.add(this._createColorRow(N_('Border Color'), 'apps-tooltip-border-color'));
+        borderGroup.add(this._createComboRow(N_('Border Style'), 'apps-tooltip-border-style', BORDER_STYLES));
 
         // --- 5. Shadow ---
         const shadowGroup = new Adw.PreferencesGroup({
@@ -127,11 +127,11 @@ export class TooltipsPage extends Adw.PreferencesPage {
             shadowGroup.add(widget);
         };
 
-        bindShadow(this._createColorRow('Shadow Color', 'apps-tooltip-shadow-color'));
-        bindShadow(this._createSpinRow('Shadow X', 'apps-tooltip-shadow-x', -50, 50, 1));
-        bindShadow(this._createSpinRow('Shadow Y', 'apps-tooltip-shadow-y', -50, 50, 1));
-        bindShadow(this._createSpinRow('Shadow Blur', 'apps-tooltip-shadow-blur', 0, 100, 1));
-        bindShadow(this._createSpinRow('Shadow Spread', 'apps-tooltip-shadow-spread', -50, 50, 1));
+        bindShadow(this._createColorRow(N_('Shadow Color'), 'apps-tooltip-shadow-color'));
+        bindShadow(this._createSpinRow(N_('Shadow X'), 'apps-tooltip-shadow-x', -50, 50, 1));
+        bindShadow(this._createSpinRow(N_('Shadow Y'), 'apps-tooltip-shadow-y', -50, 50, 1));
+        bindShadow(this._createSpinRow(N_('Shadow Blur'), 'apps-tooltip-shadow-blur', 0, 100, 1));
+        bindShadow(this._createSpinRow(N_('Shadow Spread'), 'apps-tooltip-shadow-spread', -50, 50, 1));
 
         // Everything below Behaviour is dead while tooltips are off.
         styleGroups.forEach(g => {

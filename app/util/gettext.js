@@ -8,7 +8,7 @@ import GLib from 'gi://GLib';
  * extension's locale/ directory when the extension loads, so the GLib
  * dgettext family below resolves against:
  *
- *     locale/<lang>/LC_MESSAGES/lesion.mo
+ *     locale/<lang>/LC_MESSAGES/hornbill.mo
  *
  * GLib.dgettext works in every GJS context — the shell process, the prefs
  * process, and the standalone `gjs -m app.js` harness — so a single import
@@ -16,7 +16,7 @@ import GLib from 'gi://GLib';
  * bound (e.g. the standalone harness), dgettext returns the original English
  * string unchanged.
  */
-export const DOMAIN = 'lesion';
+export const DOMAIN = 'hornbill';
 
 /** Translate a single string. */
 export function gettext(str) {

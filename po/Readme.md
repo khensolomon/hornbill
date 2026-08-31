@@ -1,23 +1,23 @@
 # Translations
 
-Lesion uses standard gettext. User-facing strings in the code are wrapped in
+Hornbill uses standard gettext. User-facing strings in the code are wrapped in
 `_()` (and data-table strings in `N_()`), extracted into a template, translated
 per language, and compiled into `locale/` where the shell loads them at runtime.
 
-- Text domain: **`lesion`** (set as `gettext-domain` in `metadata.json`).
+- Text domain: **`hornbill`** (set as `gettext-domain` in `metadata.json`).
 - Helpers live in `app/util/gettext.js` and work in the shell process, the prefs
   process, and the standalone `gjs -m app.js` harness.
-- Compiled catalogs load from `locale/<lang>/LC_MESSAGES/lesion.mo`.
+- Compiled catalogs load from `locale/<lang>/LC_MESSAGES/hornbill.mo`.
 
 ## Layout
 
     po/
       POTFILES.in        list of source files scanned for strings
-      lesion.pot         extracted template (the canonical English source)
+      hornbill.pot         extracted template (the canonical English source)
       en.po              English catalog
       manage.py          unified python tool to update, compile, and add languages
     locale/
-      <lang>/LC_MESSAGES/lesion.mo
+      <lang>/LC_MESSAGES/hornbill.mo
 
 ## Marking strings in code
 

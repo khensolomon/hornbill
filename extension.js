@@ -5,7 +5,7 @@ import { log, logError } from "./app/util/logger.js";
 import { AppConfig } from "./app/config.js";
 import { getComponents } from "./app/components/index.js";
 
-export default class LesionExtension extends Extension {
+export default class HornbillExtension extends Extension {
   _instances = [];
 
   enable() {

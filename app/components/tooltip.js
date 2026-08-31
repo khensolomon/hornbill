@@ -9,7 +9,7 @@ const SCREEN_MARGIN = 8;
 const FADE_MS = 120;
 
 /**
- * Hover labels for Lesion's own panel buttons.
+ * Hover labels for Hornbill's own panel buttons.
  *
  * ONE label actor and ONE timer serve every button. A label per button would
  * put N actors on uiGroup and, worse, N pending GLib sources to track; only one
@@ -168,7 +168,7 @@ export class TooltipManager {
         if (this._label) return this._label;
 
         this._label = new St.Label({
-            style_class: 'lesion-tooltip',
+            style_class: 'hornbill-tooltip',
             opacity: 0,
         });
         this._label.clutter_text.set_line_wrap(false);

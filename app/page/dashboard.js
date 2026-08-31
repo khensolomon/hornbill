@@ -6,7 +6,8 @@ import GObject from 'gi://GObject';
 
 import { AppConfig } from '../config.js';
 import { SettingsManager } from '../util/io.js';
-import { gettext as _ } from '../util/gettext.js';
+import { listCategories, labelFor, coverage } from '../util/categories.js';
+import { gettext as _, N_ } from '../util/gettext.js';
 
 export class DashboardPage extends Adw.PreferencesPage {
     static {
@@ -55,12 +56,12 @@ export class DashboardPage extends Adw.PreferencesPage {
         });
         this.add(navGroup);
 
-        navGroup.add(this._createNavRow('Wallpaper Engine', 'Manage dual-mode backgrounds', 'preferences-desktop-wallpaper-symbolic', 'wallpaper'));
-        navGroup.add(this._createNavRow('Stylesheet', 'Hand-edit custom CSS', 'text-x-generic-symbolic', 'stylesheet'));
-        navGroup.add(this._createNavRow('Panel Layout', 'Arrange panel items and their styling', 'view-grid-symbolic', 'panel-layout'));
-        navGroup.add(this._createNavRow('Panel Appearance', 'Panel colors, borders, and presets', 'preferences-desktop-appearance-symbolic', 'panel-appearance'));
-        navGroup.add(this._createNavRow('Window Effects', 'Rounding, shadows, and transparency', 'focus-windows-symbolic', 'window-effects'));
-        navGroup.add(this._createNavRow('Window Geometry', 'Remember and restore window size and position', 'video-single-display-symbolic', 'window-geometry'));
+        navGroup.add(this._createNavRow(N_('Wallpaper Engine'), 'Manage dual-mode backgrounds', 'preferences-desktop-wallpaper-symbolic', 'wallpaper'));
+        navGroup.add(this._createNavRow(N_('Stylesheet'), 'Hand-edit custom CSS', 'text-x-generic-symbolic', 'stylesheet'));
+        navGroup.add(this._createNavRow(N_('Panel Layout'), 'Arrange panel items and their styling', 'view-grid-symbolic', 'panel-layout'));
+        navGroup.add(this._createNavRow(N_('Panel Appearance'), 'Panel colors, borders, and presets', 'preferences-desktop-appearance-symbolic', 'panel-appearance'));
+        navGroup.add(this._createNavRow(N_('Window Effects'), 'Rounding, shadows, and transparency', 'focus-windows-symbolic', 'window-effects'));
+        navGroup.add(this._createNavRow(N_('Window Geometry'), 'Remember and restore window size and position', 'video-single-display-symbolic', 'window-geometry'));
 
         // --- 4. DATA MANAGEMENT ---
         const dataGroup = new Adw.PreferencesGroup({
@@ -97,29 +98,100 @@ export class DashboardPage extends Adw.PreferencesPage {
         importRow.add_suffix(importBtn);
         dataGroup.add(importRow);
 
-        // Full Reset Row — resets EVERY key in the schema (the Style page's
-        // "Reset Style" only covers styling)
+        // Reset Row — scoped like the other two (the Appearance and Tooltips
+        // pages keep their own narrower reset buttons)
         const resetRow = new Adw.ActionRow({
-            title: _('Reset All Settings'),
-            subtitle: _('Restore every Lesion setting to its default value')
+            title: _('Reset Settings'),
+            subtitle: _('Restore the selected groups to their default values')
         });
         const resetBtn = new Gtk.Button({
             icon_name: 'view-refresh-symbolic', // built-in Adwaita icon
             valign: Gtk.Align.CENTER,
-            tooltip_text: _('Reset All Settings'),
+            tooltip_text: _('Reset Settings'),
             css_classes: ['flat', 'destructive-action']
         });
-        resetBtn.connect('clicked', () => this._confirmFullReset());
+        resetBtn.connect('clicked', () => this._confirmReset());
         resetRow.add_suffix(resetBtn);
         dataGroup.add(resetRow);
+
+        dataGroup.add(this._createScopeRow());
+    }
+
+    // --- SCOPE ---
+
+    /**
+     * ONE scope for all three actions rather than three separate ones. Three
+     * would be more precise and much easier to get wrong: the value you last
+     * set for an export is not the value you want a reset to use, and nothing
+     * on screen would tell you which was in play. With one visible list, every
+     * confirmation can name exactly what it is about to touch.
+     */
+    _createScopeRow() {
+        const expander = new Adw.ExpanderRow({
+            title: _('Included Data'),
+            subtitle: _('Applies to Export, Import and Reset')
+        });
+        this._scopeExpander = expander;
+
+        const allKeys = this._settings.settings_schema.list_keys();
+        listCategories(allKeys).forEach(cat => {
+            const row = new Adw.SwitchRow({
+                title: _(cat.label),
+                // The count is shown so coverage is verifiable rather than
+                // taken on trust: the per-group numbers add up to the schema
+                // total, and anything unaccounted for surfaces as 'Other'.
+                subtitle: `${_(cat.blurb)} \u00b7 ${cat.keyCount} ${_('settings')}`,
+                active: !this._excludedIds().includes(cat.id),
+            });
+            row.connect('notify::active', () => this._setIncluded(cat.id, row.active));
+            expander.add_row(row);
+        });
+
+        this._updateScopeSubtitle();
+        return expander;
+    }
+
+    _excludedIds() {
+        try { return this._settings.get_strv('data-scope-excluded'); }
+        catch (e) { return []; }
+    }
+
+    _setIncluded(id, included) {
+        const set = new Set(this._excludedIds());
+        if (included) set.delete(id); else set.add(id);
+        this._settings.set_strv('data-scope-excluded', [...set]);
+        this._updateScopeSubtitle();
+    }
+
+    _updateScopeSubtitle() {
+        if (!this._scopeExpander) return;
+        const allKeys = this._settings.settings_schema.list_keys();
+        const excluded = new Set(this._excludedIds());
+        const cats = listCategories(allKeys);
+        const selected = cats.filter(c => !excluded.has(c.id));
+        const inScope = selected.reduce((n, c) => n + c.keyCount, 0);
+        const { grouped } = coverage(allKeys);
+
+        this._scopeExpander.set_subtitle(
+            `${inScope}/${grouped} ${_('settings in')} ${selected.length}/${cats.length} ${_('groups')}`
+        );
+    }
+
+    /** Human-readable list of what is in scope, for confirmation dialogs. */
+    _scopeSummary() {
+        const excluded = new Set(this._excludedIds());
+        const names = listCategories(this._settings.settings_schema.list_keys())
+            .filter(c => !excluded.has(c.id))
+            .map(c => _(c.label));
+        return names.length === 0 ? _('nothing') : names.join(', ');
     }
 
     // --- HELPER COMPONENTS ---
 
     _createNavRow(title, desc, icon, targetId) {
         const row = new Adw.ActionRow({
-            title: title,
-            subtitle: desc,
+            title: _(title),
+            subtitle: _(desc),
             activatable: true
         });
         const img = new Gtk.Image({ icon_name: icon });
@@ -253,7 +325,7 @@ export class DashboardPage extends Adw.PreferencesPage {
         });
 
         const dateStr = new Date().toISOString().slice(0,10);
-        dialog.set_current_name(`lesion-config-${dateStr}.json`);
+        dialog.set_current_name(`hornbill-config-${dateStr}.json`);
 
         const filter = new Gtk.FileFilter();
         filter.set_name("JSON Config");
@@ -266,7 +338,7 @@ export class DashboardPage extends Adw.PreferencesPage {
             try {
                 if (response === Gtk.ResponseType.ACCEPT) {
                     const file = d.get_file();
-                    const jsonString = SettingsManager.exportSettings();
+                    const jsonString = SettingsManager.exportSettings(this._excludedIds());
                     
                     if (jsonString) {
                         // Use GLib.Bytes + replace_contents (Sync) for reliability with small config files.
@@ -285,7 +357,7 @@ export class DashboardPage extends Adw.PreferencesPage {
                     body: error.message,
                     transient_for: button.get_root()
                 });
-                errDialog.add_response("ok", "OK");
+                errDialog.add_response("ok", _("OK"));
                 errDialog.present();
             } finally {
                 d.destroy();
@@ -328,11 +400,15 @@ export class DashboardPage extends Adw.PreferencesPage {
                         const decoder = new TextDecoder('utf-8');
                         // contents is typically a Uint8Array (GBytes)
                         const jsonStr = decoder.decode(contents);
-                        const result = SettingsManager.importSettings(jsonStr);
 
-                        if (!result.success) {
-                            throw new Error(result.message);
-                        }
+                        // Inspect before applying: import overwrites live
+                        // settings and used to do it with no prompt at all,
+                        // which made it the most destructive action here and
+                        // the only one without a confirmation.
+                        const info = SettingsManager.inspectSettings(jsonStr);
+                        if (!info.success) throw new Error(info.message);
+
+                        this._confirmImport(button, jsonStr, info);
                     }
                 }
             } catch (error) {
@@ -342,7 +418,7 @@ export class DashboardPage extends Adw.PreferencesPage {
                     body: error.message,
                     transient_for: button.get_root()
                 });
-                errDialog.add_response("ok", "OK");
+                errDialog.add_response("ok", _("OK"));
                 errDialog.present();
             } finally {
                 d.destroy();
@@ -353,31 +429,70 @@ export class DashboardPage extends Adw.PreferencesPage {
         dialog.show();
     }
 
-    _confirmFullReset() {
+    /**
+     * Names the groups the file actually contains, intersected with the
+     * current scope, so "nothing happened" is never a mystery: a file with no
+     * clock keys cannot restore the clock however the scope is set.
+     */
+    _confirmImport(button, jsonStr, info) {
+        const excluded = new Set(this._excludedIds());
+        const willApply = info.categories.filter(id => !excluded.has(id)).map(id => _(labelFor(id)));
+        const skipped = info.categories.filter(id => excluded.has(id)).map(id => _(labelFor(id)));
+
+        let body = willApply.length
+            ? `${_('These groups will be overwritten with the values in the file:')}\n\n${willApply.join(', ')}`
+            : _('Nothing in this file falls inside the current scope, so nothing would change.');
+
+        if (skipped.length)
+            body += `\n\n${_('Present in the file but excluded by your scope:')} ${skipped.join(', ')}`;
+
         const dialog = new Adw.AlertDialog({
-            heading: _('Reset All Settings?'),
-            body: 'Every Lesion setting — style, clock, apps, geometry data, corners, transparency, wallpaper — will return to its default value. Exported backups are not affected.',
+            heading: _('Import Configuration?'),
+            body,
         });
-        dialog.add_response('cancel', 'Cancel');
-        dialog.add_response('reset', 'Reset Everything');
+        dialog.add_response('cancel', _('Cancel'));
+        if (willApply.length) {
+            dialog.add_response('import', _('Import'));
+            dialog.set_response_appearance('import', Adw.ResponseAppearance.DESTRUCTIVE);
+        }
+        dialog.set_default_response('cancel');
+        dialog.set_close_response('cancel');
+
+        dialog.connect('response', (d, response) => {
+            if (response !== 'import') return;
+            const result = SettingsManager.importSettings(jsonStr, this._excludedIds());
+            if (!result.success) {
+                const errDialog = new Adw.AlertDialog({
+                    heading: _('Import Failed'),
+                    body: result.message,
+                });
+                errDialog.add_response('ok', _('OK'));
+                errDialog.present(this.get_root());
+            }
+        });
+
+        dialog.present(this.get_root());
+    }
+
+    _confirmReset() {
+        const summary = this._scopeSummary();
+        const excluded = this._excludedIds();
+
+        const dialog = new Adw.AlertDialog({
+            heading: _('Reset Settings?'),
+            body: excluded.length === 0
+                ? `${_('Every Hornbill setting will return to its default value. Exported backups are not affected.')}`
+                : `${_('These groups will return to their default values:')}\n\n${summary}\n\n${_('Everything else is left untouched.')}`,
+        });
+        dialog.add_response('cancel', _('Cancel'));
+        dialog.add_response('reset', excluded.length === 0 ? _('Reset Everything') : _('Reset Selected'));
         dialog.set_response_appearance('reset', Adw.ResponseAppearance.DESTRUCTIVE);
         dialog.set_default_response('cancel');
         dialog.set_close_response('cancel');
 
         dialog.connect('response', (d, response) => {
             if (response !== 'reset') return;
-            try {
-                // Throwaway object: delay() is permanent for the object it is
-                // called on, and the shared one must stay in immediate mode.
-                const batch = AppConfig.createSettings();
-                batch.delay();
-                // Every key in the schema — future keys included automatically
-                for (const key of batch.settings_schema.list_keys())
-                    batch.reset(key);
-                batch.apply();
-            } catch (e) {
-                console.error('Full reset failed', e);
-            }
+            SettingsManager.resetSettings(this._excludedIds());
         });
 
         dialog.present(this.get_root());

@@ -12,6 +12,7 @@ import * as ModalDialog from 'resource:///org/gnome/shell/ui/modalDialog.js';
 import * as DND from 'resource:///org/gnome/shell/ui/dnd.js';
 import { ExtensionComponent } from './base.js';
 import { TooltipManager } from './tooltip.js';
+import { setIconGeometry } from '../util/compat.js';
 import { setVertical } from '../util/compat.js';
 import { log, logError } from '../util/logger.js'; 
 import { gettext as _ } from '../util/gettext.js';
@@ -24,7 +25,7 @@ import { gettext as _ } from '../util/gettext.js';
 const ACTIVATE_DEBOUNCE_MS = 400;
 
 const AppPanelButton = GObject.registerClass(
-    { GTypeName: 'LesionAppPanelButton' },
+    { GTypeName: 'HornbillAppPanelButton' },
     class AppPanelButton extends PanelMenu.Button {
         _init(iconOrActor, name, clickCallback, menuCallback) {
             super._init(0.0, name);
@@ -205,7 +206,7 @@ const AppPanelButton = GObject.registerClass(
                     if (this._app) { this._app.open_new_window(-1); return true; }
                     // Identity check, not a label: accessible_name is now the
                     // translated display string and cannot be compared against.
-                    if (this._role === 'lesion-trash') {
+                    if (this._role === 'hornbill-trash') {
                         Gio.AppInfo.launch_default_for_uri('trash:///', null);
                         return true;
                     }
@@ -706,7 +707,7 @@ export class AppsManager extends ExtensionComponent {
                 })
             });
         } catch (e) {
-            console.warn('Lesion: Failed to monitor trash', e);
+            console.warn('Hornbill: Failed to monitor trash', e);
         }
 
         // Overview & Workspace Signals
@@ -1069,6 +1070,8 @@ export class AppsManager extends ExtensionComponent {
             }
         });
 
+        this._syncIconGeometry();
+
         // --- NEW BUTTONS VISUALS ---
 
         const overviewVisible = Main.overview.visible;
@@ -1192,7 +1195,7 @@ export class AppsManager extends ExtensionComponent {
             try {
                 Gio.AppInfo.launch_default_for_uri(uri, null);
             } catch(e) {
-                Main.notify('Lesion', `Unable to find ${app.get_name()} in Software Center.`);
+                Main.notify('Hornbill', `Unable to find ${app.get_name()} in Software Center.`);
             }
         });
 
@@ -1377,7 +1380,7 @@ export class AppsManager extends ExtensionComponent {
         // Snap duplicate cleanup
         // Snap strict mode quirks (e.g. firefox_firefox -> firefox)
         if (snapIdPattern) {
-            log(`Lesion: checking ${id} for snap duplicate pattern`);
+            log(`Hornbill: checking ${id} for snap duplicate pattern`);
             id = id.split('_')[0];
         }
 
@@ -1390,7 +1393,7 @@ export class AppsManager extends ExtensionComponent {
         const map = this._appStreamMap;
         const mappedId = map[id] || map[id.toLowerCase()];
 
-        log(`Lesion: AppStream canonical match → ${id} → ${mappedId} → ${appId}`);
+        log(`Hornbill: AppStream canonical match → ${id} → ${mappedId} → ${appId}`);
         if (mappedId) {
             return `appstream://${mappedId}`;
         } else if (snapIdPattern) {
@@ -1626,7 +1629,7 @@ export class AppsManager extends ExtensionComponent {
         btn.add_style_class_name('panel-button');
         btn.add_style_class_name('trash');
 
-        const role = 'lesion-trash';
+        const role = 'hornbill-trash';
         btn._role = role;
         this._tooltips?.attach(btn, this._trashName);
         Main.panel.addToStatusArea(role, btn, idx, pos);
@@ -1689,7 +1692,7 @@ export class AppsManager extends ExtensionComponent {
             btn.add_style_class_name('panel-button');
             btn.add_style_class_name('disk');
 
-            const role = `lesion-disk-${i}`;
+            const role = `hornbill-disk-${i}`;
             btn._role = role;
             btn._matchName = name;
             this._tooltips?.attach(btn, name);
@@ -1735,7 +1738,7 @@ export class AppsManager extends ExtensionComponent {
                     try {
                          gicon = Gio.FileIcon.new(Gio.File.new_for_path(path));
                     } catch(e) {
-                         console.warn('Lesion: Failed to load icon file', e);
+                         console.warn('Hornbill: Failed to load icon file', e);
                     }
                 }
             } else {
@@ -1774,7 +1777,7 @@ export class AppsManager extends ExtensionComponent {
         btn.add_style_class_name('panel-button');
         btn.add_style_class_name('show-apps');
 
-        const role = 'lesion-showgrid';
+        const role = 'hornbill-showgrid';
         btn._role = role;
         this._tooltips?.attach(btn, _('Applications'));
         Main.panel.addToStatusArea(role, btn, idx, pos);
@@ -1855,7 +1858,7 @@ export class AppsManager extends ExtensionComponent {
         btn.add_style_class_name('panel-button');
         btn.add_style_class_name('workspace');
 
-        const role = 'lesion-overview';
+        const role = 'hornbill-overview';
         btn._role = role;
         this._tooltips?.attach(btn, _('Overview'));
         Main.panel.addToStatusArea(role, btn, idx, pos);
@@ -1890,7 +1893,7 @@ export class AppsManager extends ExtensionComponent {
             btn.add_style_class_name('app'); // Generic app class
 
             btn._app = app;
-            const role = `lesion-fav-${i}`;
+            const role = `hornbill-fav-${i}`;
             btn._role = role;
             this._tooltips?.attach(btn, app.get_name());
             Main.panel.addToStatusArea(role, btn, idx + i, pos);
@@ -1950,7 +1953,7 @@ export class AppsManager extends ExtensionComponent {
             btn.add_style_class_name('app');
 
             btn._app = app;
-            const role = `lesion-run-${i}`;
+            const role = `hornbill-run-${i}`;
             btn._role = role;
             this._tooltips?.attach(btn, app.get_name());
             Main.panel.addToStatusArea(role, btn, idx + i, pos);
@@ -1994,6 +1997,50 @@ export class AppsManager extends ExtensionComponent {
                 windows[0].activate(ts);
             }
         }
+    }
+
+    /**
+     * MINIMIZE AND RESTORE DIRECTION.
+     *
+     * Mutter animates those toward the window's "icon geometry" — the
+     * on-screen rect standing in for the window. Unset, it falls back to a
+     * fixed spot, which is why a Trash window on a RIGHT-hand button still
+     * flew off to the left. Pointing each window at the button that
+     * represents it makes the animation aim at what the user actually
+     * clicked, whichever side the button sits on.
+     *
+     * Cheap enough to redo on every visual update: it is a couple of
+     * property reads and a setter per window, and the alternative is tracking
+     * every way a button can move (panel position, layout order, monitor
+     * changes, buttons added or removed).
+     */
+    _syncIconGeometry() {
+        const assign = (btn, windows) => {
+            if (!btn || !windows || windows.length === 0) return;
+            try {
+                if (!btn.get_parent()) return;
+                const [x, y] = btn.get_transformed_position();
+                const [w, h] = btn.get_transformed_size();
+                if (!(w > 0 && h > 0)) return;
+                windows.forEach(win => setIconGeometry(win, x, y, w, h));
+            } catch (e) { log('_syncIconGeometry failed', e); }
+        };
+
+        const ownWindows = (app) => {
+            try {
+                const wins = app.get_windows();
+                return this._isFileManager(app)
+                    ? wins.filter(win => !this._claimedWindows.has(win))
+                    : wins;
+            } catch (e) { return []; }
+        };
+
+        this._items.favorites.forEach(btn => btn._app && assign(btn, ownWindows(btn._app)));
+        this._items.running.forEach(btn => btn._app && assign(btn, ownWindows(btn._app)));
+
+        // Trash and Drive own specific windows rather than a whole app.
+        if (this._items.trash) assign(this._items.trash, this._items.trash._windows);
+        this._items.disks.forEach(btn => assign(btn, btn._windows));
     }
 
     _getPos(keySuffix) {

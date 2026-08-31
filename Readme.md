@@ -1,4 +1,4 @@
-# Lesion
+# Hornbill
 
 A GNOME Shell extension that personalizes the desktop from one place — panel, clock, apps, and window behavior — aiming to replace the need for several separate extensions.
 
@@ -19,17 +19,17 @@ Supports GNOME Shell 46–51.
 ## Install
 
 **From extensions.gnome.org**
-Search for "Lesion" and install from there.
+Search for "Hornbill" and install from there.
 
 **Manual install**
 1. Download the latest release zip.
-2. `gnome-extensions install --force lesion@lethil.me.shell-extension.zip`
+2. `gnome-extensions install --force hornbill@lethil.me.shell-extension.zip`
 3. Log out and back in.
-4. Enable it in the Extensions app, or run `gnome-extensions enable lesion@lethil.me`.
+4. Enable it in the Extensions app, or run `gnome-extensions enable hornbill@lethil.me`.
 
 ## Usage
 
-Click the Lesion icon in the panel to open preferences, or right-click it for a quick menu. Everything is organized under Dashboard, Desktop, Panel, Window, Advanced, and About.
+Click the Hornbill icon in the panel to open preferences, or right-click it for a quick menu. Everything is organized under Dashboard, Desktop, Panel, Window, Advanced, and About.
 
 ## Contributing
 

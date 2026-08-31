@@ -66,7 +66,7 @@ export default class GnomeSplitViewPrefs extends ExtensionPreferences {
       // the title alone is not a stable identifier). A hidden marker in
       // the window name survives page changes.
       window?.set_title?.(finalMetadata.name);
-      window?.add_css_class?.("lesion-prefs-window");
+      window?.add_css_class?.("hornbill-prefs-window");
 
       // 3. Load CSS
       this._loadCustomStyles();

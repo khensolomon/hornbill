@@ -37,7 +37,7 @@ export class WallpaperManager extends ExtensionComponent {
         // wallpaper switches, silently dropping the effects. Reapply then.
         this._monitorsChangedId = Main.layoutManager.connect('monitors-changed', () => {
             if (this.getSettings().get_boolean('wallpaper-enabled'))
-                this._updateEffects();
+                this._scheduleEffects();
         });
 
         this.observe('changed::wallpaper-enabled', () => this._onMasterToggled());
@@ -68,13 +68,25 @@ export class WallpaperManager extends ExtensionComponent {
      * The old in-extension path is still read once for migration.
      */
     _getBackupPath() {
-        const dir = GLib.build_filenamev([GLib.get_user_state_dir(), 'lesion']);
+        const dir = GLib.build_filenamev([GLib.get_user_state_dir(), 'hornbill']);
         GLib.mkdir_with_parents(dir, 0o755);
         return GLib.build_filenamev([dir, this.backupFile]);
     }
 
-    _getLegacyBackupPath() {
-        return GLib.build_filenamev([this._extension.path, this.backupFile]);
+    /**
+     * Backups written under earlier names, newest first.
+     *
+     * The state directory is derived from the project name, so the rename to
+     * Hornbill would have orphaned the pre-extension wallpaper: turning the
+     * master switch off would restore nothing, silently. The extension-relative
+     * path is the older location still, from before backups moved out of the
+     * extension directory.
+     */
+    _getLegacyBackupPaths() {
+        return [
+            GLib.build_filenamev([GLib.get_user_state_dir(), 'hornbill', this.backupFile]),
+            GLib.build_filenamev([this._extension.path, this.backupFile]),
+        ];
     }
 
     /**
@@ -94,6 +106,12 @@ export class WallpaperManager extends ExtensionComponent {
         seed('wallpaper-image-dark', 'picture-uri-dark');
         seed('wallpaper-primary-color-light', 'primary-color');
         seed('wallpaper-secondary-color-light', 'secondary-color');
+        // The dark slots were never seeded, and their schema defaults were
+        // real colours rather than empty, so _updateColors() pushed #000000
+        // over the system colours the first time a dark-mode user enabled the
+        // component — without anyone having chosen black.
+        seed('wallpaper-primary-color-dark', 'primary-color');
+        seed('wallpaper-secondary-color-dark', 'secondary-color');
     }
 
     _onMasterToggled() {
@@ -140,6 +158,20 @@ export class WallpaperManager extends ExtensionComponent {
             this._updateColors();
         }));
 
+        // THE OTHER HALF OF THE COMMENT ABOVE. Monitor changes were handled;
+        // wallpaper switches were not, and they are the common case. Changing
+        // picture-uri makes GNOME tear down the background actors and build
+        // new ones, so effects applied to the old actors vanish with them.
+        //
+        // This is what made presets look broken. _applyPreset() writes the
+        // image first and the effect keys last, so 'wallpaper-monochrome' was
+        // set — the switch correctly showed ON — and _updateEffects() ran
+        // against actors that were already on their way out. Toggling the
+        // switch by hand worked only because by then the new actors existed.
+        const bgGroup = Main.layoutManager._backgroundGroup;
+        if (bgGroup)
+            track(bgGroup, bgGroup.connect('child-added', () => this._scheduleEffects()));
+
         // Adopt changes made outside the extension (GNOME Settings, another
         // wallpaper tool) instead of overwriting them on the next enable.
         track(this._bgSettings, this._bgSettings.connect('changed::picture-uri',
@@ -157,6 +189,21 @@ export class WallpaperManager extends ExtensionComponent {
         this._updateEffects();
     }
 
+    /**
+     * A rebuild adds one actor per monitor, and a crossfade adds one before
+     * removing the old, so 'child-added' can fire several times for a single
+     * wallpaper change. Coalesce into one pass.
+     */
+    _scheduleEffects() {
+        if (this._effectsPending) return;
+        this._effectsPending = true;
+        this.idleOnce(() => {
+            this._effectsPending = false;
+            if (this.getSettings().get_boolean('wallpaper-enabled'))
+                this._updateEffects();
+        });
+    }
+
     _deactivate() {
         if (this._featureSignals) {
             log("[Wallpaper] disabling manager");
@@ -165,6 +212,7 @@ export class WallpaperManager extends ExtensionComponent {
             });
             this._featureSignals = null;
         }
+        this._effectsPending = false;
         this._removeEffects();
     }
 
@@ -261,7 +309,7 @@ export class WallpaperManager extends ExtensionComponent {
 
         bgGroup.get_children().forEach(actor => {
             // Monochrome
-            const monoName = 'lesion-mono';
+            const monoName = 'hornbill-mono';
             if (mono) {
                 if (!actor.get_effect(monoName)) {
                     actor.add_effect_with_name(monoName, new Clutter.DesaturateEffect({ factor: 1.0 }));
@@ -274,7 +322,7 @@ export class WallpaperManager extends ExtensionComponent {
             // FIX: use Shell.BlurEffect (same as PanelsManager). The legacy
             // Clutter.BlurEffect has no sigma control and is not reliable on
             // GNOME 46+; Shell.BlurEffect uses 'radius' (= sigma * 2).
-            const blurName = 'lesion-blur';
+            const blurName = 'hornbill-blur';
             if (blurSigma > 0) {
                 let effect = actor.get_effect(blurName);
                 if (!effect) {
@@ -290,7 +338,7 @@ export class WallpaperManager extends ExtensionComponent {
             }
 
             // Brightness
-            const brightName = 'lesion-bright';
+            const brightName = 'hornbill-bright';
             if (Math.abs(brightness - 1.0) > 0.01) {
                 let effect = actor.get_effect(brightName);
                 if (!effect) {
@@ -309,23 +357,27 @@ export class WallpaperManager extends ExtensionComponent {
         const bgGroup = layoutManager._backgroundGroup;
         if (!bgGroup) return;
         bgGroup.get_children().forEach(actor => {
-            actor.remove_effect_by_name('lesion-mono');
-            actor.remove_effect_by_name('lesion-blur');
-            actor.remove_effect_by_name('lesion-bright');
+            actor.remove_effect_by_name('hornbill-mono');
+            actor.remove_effect_by_name('hornbill-blur');
+            actor.remove_effect_by_name('hornbill-bright');
         });
     }
 
     _backupWallpaper() {
         try {
             const backupPath = this._getBackupPath();
-            // Migration: honor a backup left behind by older versions
-            if (!GLib.file_test(backupPath, GLib.FileTest.EXISTS) &&
-                GLib.file_test(this._getLegacyBackupPath(), GLib.FileTest.EXISTS)) {
-                try {
-                    const legacy = Gio.File.new_for_path(this._getLegacyBackupPath());
-                    legacy.copy(Gio.File.new_for_path(backupPath), Gio.FileCopyFlags.NONE, null, null);
-                    legacy.delete(null);
-                } catch (e) { logError('[Wallpaper] backup: could not resolve current wallpaper path', e); }
+            // Migration: honour a backup left behind under an earlier name
+            if (!GLib.file_test(backupPath, GLib.FileTest.EXISTS)) {
+                for (const legacyPath of this._getLegacyBackupPaths()) {
+                    if (!GLib.file_test(legacyPath, GLib.FileTest.EXISTS)) continue;
+                    try {
+                        const legacy = Gio.File.new_for_path(legacyPath);
+                        legacy.copy(Gio.File.new_for_path(backupPath), Gio.FileCopyFlags.NONE, null, null);
+                        legacy.delete(null);
+                        log(`[Wallpaper] migrated backup from ${legacyPath}`);
+                        break;
+                    } catch (e) { logError('[Wallpaper] backup migration failed', e); }
+                }
             }
             if (!GLib.file_test(backupPath, GLib.FileTest.EXISTS)) {
                 const backupData = {
@@ -333,7 +385,10 @@ export class WallpaperManager extends ExtensionComponent {
                     'picture-uri-dark': this._bgSettings.get_string('picture-uri-dark'),
                     'primary-color': this._bgSettings.get_string('primary-color'),
                     'secondary-color': this._bgSettings.get_string('secondary-color'),
-                    'picture-options': this._bgSettings.get_string('picture-options')
+                    'picture-options': this._bgSettings.get_string('picture-options'),
+                    // Presets change this too, so leaving it out meant the
+                    // master-switch opt-out could not fully undo them.
+                    'color-shading-type': this._bgSettings.get_string('color-shading-type')
                 };
                 const jsonString = JSON.stringify(backupData, null, 2);
                 const file = Gio.File.new_for_path(backupPath);
@@ -357,6 +412,9 @@ export class WallpaperManager extends ExtensionComponent {
                     if (backupData['primary-color']) this._bgSettings.set_string('primary-color', backupData['primary-color']);
                     if (backupData['secondary-color']) this._bgSettings.set_string('secondary-color', backupData['secondary-color']);
                     if (backupData['picture-options']) this._bgSettings.set_string('picture-options', backupData['picture-options']);
+                    // Absent in files written before this key was captured;
+                    // the guard makes older backups load unchanged.
+                    if (backupData['color-shading-type']) this._bgSettings.set_string('color-shading-type', backupData['color-shading-type']);
                     // set_string() hands the write to dconf-service over D-Bus;
                     // flush it before the file that would let us retry is gone.
                     Gio.Settings.sync();

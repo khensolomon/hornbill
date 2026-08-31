@@ -1,5 +1,6 @@
 import Clutter from 'gi://Clutter';
 import Meta from 'gi://Meta';
+import Mtk from 'gi://Mtk';
 import * as Config from 'resource:///org/gnome/shell/misc/config.js';
 
 // GNOME 49 dropped the MetaMaximizeFlags argument from maximize()/unmaximize().
@@ -54,4 +55,31 @@ export function maximize(win) {
 export function unmaximize(win) {
     if (MAXIMIZE_IS_FLAGLESS) win.unmaximize();
     else win.unmaximize(Meta.MaximizeFlags.BOTH);
+}
+
+/**
+ * Mutter animates minimize/restore toward the window's "icon geometry" — the
+ * on-screen rect representing that window. Left unset it defaults to a fixed
+ * spot, which is why windows always flew to the left regardless of where their
+ * panel button actually sits. Docks set this to their icon; so do we.
+ *
+ * Meta.Rectangle became Mtk.Rectangle in GNOME 46. The extension supports
+ * 46-51, so Mtk is always present and imported statically; Meta.Rectangle is
+ * kept as a fallback only because some typelibs still expose it.
+ */
+export function setIconGeometry(win, x, y, width, height) {
+    if (!win || !(width > 0 && height > 0)) return false;
+
+    const Rect = Mtk?.Rectangle || Meta.Rectangle;
+    if (!Rect) return false;
+
+    try {
+        win.set_icon_geometry(new Rect({
+            x: Math.round(x), y: Math.round(y),
+            width: Math.round(width), height: Math.round(height),
+        }));
+        return true;
+    } catch (e) {
+        return false;
+    }
 }

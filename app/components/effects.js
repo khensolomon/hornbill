@@ -84,7 +84,7 @@ if (clip_radius > 0.5) {
 `;
 
 const RoundedCornersEffect = GObject.registerClass({
-    GTypeName: 'LesionRoundedCornersEffect',
+    GTypeName: 'HornbillRoundedCornersEffect',
 }, class RoundedCornersEffect extends Shell.GLSLEffect {
     vfunc_build_pipeline() {
         this.add_glsl_snippet(Cogl.SnippetHook.FRAGMENT, DECLARATIONS, CODE, false);
@@ -116,7 +116,7 @@ cogl_color_out *= (1.0 - smoothstep(0.4, 1.0, gray)) * c.a;
 `;
 
 const ClipShadowEffect = GObject.registerClass({
-    GTypeName: 'LesionClipShadowEffect',
+    GTypeName: 'HornbillClipShadowEffect',
 }, class ClipShadowEffect extends Shell.GLSLEffect {
     vfunc_build_pipeline() {
         this.add_glsl_snippet(Cogl.SnippetHook.FRAGMENT, '', CLIP_SHADOW_CODE, false);
@@ -271,7 +271,7 @@ export class EffectsManager extends ExtensionComponent {
         if (this._cornersEnabled()) {
             effect = new RoundedCornersEffect();
             try {
-                target.add_effect_with_name('lesion-corners', effect);
+                target.add_effect_with_name('hornbill-corners', effect);
             } catch (e) {
                 logError('[Corners] failed to attach effect', e);
                 return;
@@ -318,7 +318,7 @@ export class EffectsManager extends ExtensionComponent {
         // (first click eaten, second gets through: the reported
         // "have to click 2-3 times" mouse issue).
         const shadow = new St.Bin({
-            name: 'lesion-shadow',
+            name: 'hornbill-shadow',
             style: `padding: ${SHADOW_PADDING}px;`,
             reactive: false,
             can_focus: false,
@@ -334,7 +334,7 @@ export class EffectsManager extends ExtensionComponent {
         });
 
         try {
-            shadow.add_effect_with_name('lesion-clip-shadow', new ClipShadowEffect());
+            shadow.add_effect_with_name('hornbill-clip-shadow', new ClipShadowEffect());
         } catch (e) { log('_createShadow: add_effect_with_name() failed', e); }
 
         global.window_group.insert_child_below(shadow, actor);
@@ -350,7 +350,7 @@ export class EffectsManager extends ExtensionComponent {
 
         // The shadow is hidden until its first _updateShadow sets concrete
         // constraint offsets. Painting it before then produced "Can't update
-        // stage views actor lesion-shadow needs an allocation" on GNOME 50.
+        // stage views actor hornbill-shadow needs an allocation" on GNOME 50.
         // It is revealed (via the property bindings from the window) only
         // after it has a real size.
 
@@ -563,7 +563,7 @@ export class EffectsManager extends ExtensionComponent {
         } catch (e) { log('_detachWindow: remove_constraint() failed', e); }
         try {
             const target = rec.target ?? rec.actor ?? win.get_compositor_private();
-            if (target) target.remove_effect_by_name('lesion-corners');
+            if (target) target.remove_effect_by_name('hornbill-corners');
         } catch (e) { log('_detachWindow: get_compositor_private() failed', e); }
         try {
             // Restore full opacity if transparency was managing this window

@@ -182,7 +182,7 @@ export function createUI() {
         let widget;
         if (pageData.ui) widget = pageData.ui(contentNav, goToPage, ...args);
         else if (pageData.pages || pageData.groups) widget = createAutoMenuUI(pageData, contentNav, ...args);
-        else widget = new Adw.StatusPage({ title: 'Under Construction' });
+        else widget = new Adw.StatusPage({ title: _('Under Construction') });
 
         let navPage = (widget instanceof Adw.NavigationPage) ? widget : null;
         if (!navPage) {

@@ -69,7 +69,7 @@ def load_po_manager(root_dir):
     manage_py = os.path.join(root_dir, "po", "manage.py")
     if not os.path.isfile(manage_py):
         return None
-    spec = importlib.util.spec_from_file_location("lesion_po_manage", manage_py)
+    spec = importlib.util.spec_from_file_location("hornbill_po_manage", manage_py)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module

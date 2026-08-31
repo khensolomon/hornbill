@@ -62,7 +62,7 @@ export function getPages() {
           id: "panel-tooltips",
           title: _("Tooltips"),
           icon: "dialog-information-symbolic",
-          description: _("Style the hover labels on Lesion's panel buttons"),
+          description: _("Style the hover labels on Hornbill's panel buttons"),
           keywords: ["tooltip", "tooltips", "hover", "label", "name", "hint", "caption"],
           ui: createTooltipsUI,
         },

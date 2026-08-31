@@ -7,7 +7,7 @@ import GObject from 'gi://GObject';
 import { AppConfig } from '../config.js';
 import { PanelsPresets } from '../data/panels.js';
 import { log, logError } from '../util/logger.js';
-import { gettext as _, format } from '../util/gettext.js';
+import { gettext as _, format, N_ } from '../util/gettext.js';
 
 export class AppearancePage extends Adw.PreferencesPage {
     static {
@@ -58,17 +58,17 @@ export class AppearancePage extends Adw.PreferencesPage {
         });
         this.add(bgGroup);
         
-        bgGroup.add(this._createColorRow('Background Color', 'panel-bg-color'));
+        bgGroup.add(this._createColorRow(N_('Background Color'), 'panel-bg-color'));
         
         const gradSwitch = new Adw.SwitchRow({ title: _('Enable Gradient') });
         this._settings.bind('panel-bg-gradient-enabled', gradSwitch, 'active', Gio.SettingsBindFlags.DEFAULT);
         bgGroup.add(gradSwitch);
         
-        const gradColorRow = this._createColorRow('Gradient End Color', 'panel-bg-gradient-color');
+        const gradColorRow = this._createColorRow(N_('Gradient End Color'), 'panel-bg-gradient-color');
         this._settings.bind('panel-bg-gradient-enabled', gradColorRow, 'sensitive', Gio.SettingsBindFlags.GET);
         bgGroup.add(gradColorRow);
 
-        const gradDirRow = this._createComboRow('Gradient Direction', 'panel-bg-gradient-dir', ['Vertical', 'Horizontal'], false);
+        const gradDirRow = this._createComboRow(N_('Gradient Direction'), 'panel-bg-gradient-dir', ['Vertical', 'Horizontal'], false);
         this._settings.bind('panel-bg-gradient-enabled', gradDirRow, 'sensitive', Gio.SettingsBindFlags.GET);
         bgGroup.add(gradDirRow);
 
@@ -83,7 +83,7 @@ export class AppearancePage extends Adw.PreferencesPage {
         this._settings.bind('panel-blur-enabled', blurEnable, 'active', Gio.SettingsBindFlags.DEFAULT);
         blurGroup.add(blurEnable);
 
-        const sigmaRow = this._createSpinRow('Blur Radius', 'panel-blur-sigma', 0, 100);
+        const sigmaRow = this._createSpinRow(N_('Blur Radius'), 'panel-blur-sigma', 0, 100);
         this._settings.bind('panel-blur-enabled', sigmaRow, 'sensitive', Gio.SettingsBindFlags.GET);
         blurGroup.add(sigmaRow);
 
@@ -94,8 +94,8 @@ export class AppearancePage extends Adw.PreferencesPage {
         });
         this.add(geomGroup);
 
-        geomGroup.add(this._createSpinRow('Outer Margin', 'panel-margin', 0, 100));
-        geomGroup.add(this._createSpinRow('Panel Corner Radius', 'panel-corner-radius', 0, 50));
+        geomGroup.add(this._createSpinRow(N_('Outer Margin'), 'panel-margin', 0, 100));
+        geomGroup.add(this._createSpinRow(N_('Panel Corner Radius'), 'panel-corner-radius', 0, 50));
 
         // --- 4. Panel Border ---
         const borderGroup = new Adw.PreferencesGroup({ 
@@ -104,11 +104,11 @@ export class AppearancePage extends Adw.PreferencesPage {
         });
         this.add(borderGroup);
 
-        borderGroup.add(this._createSpinRow('Size', 'panel-border-size', 0, 10));
-        borderGroup.add(this._createColorRow('Color', 'panel-border-color'));
+        borderGroup.add(this._createSpinRow(N_('Size'), 'panel-border-size', 0, 10));
+        borderGroup.add(this._createColorRow(N_('Color'), 'panel-border-color'));
         
         const borderStyles = ['Solid','Dotted','Dashed','Double','Groove','Ridge','Inset','Outset','None'];
-        borderGroup.add(this._createComboRow('Style', 'panel-border-style', borderStyles, true));
+        borderGroup.add(this._createComboRow(N_('Style'), 'panel-border-style', borderStyles, true));
         
         const bottomOnly = new Adw.SwitchRow({ 
             title: _('Content-Side Border Only'), 
@@ -133,11 +133,11 @@ export class AppearancePage extends Adw.PreferencesPage {
             shadowGroup.add(widget);
         };
 
-        bindShadow(this._createColorRow('Color', 'panel-shadow-color'));
-        bindShadow(this._createSpinRow('Offset X', 'panel-shadow-x', -50, 50));
-        bindShadow(this._createSpinRow('Offset Y', 'panel-shadow-y', -50, 50));
-        bindShadow(this._createSpinRow('Blur', 'panel-shadow-blur', 0, 50));
-        bindShadow(this._createSpinRow('Spread', 'panel-shadow-spread', -20, 50));
+        bindShadow(this._createColorRow(N_('Color'), 'panel-shadow-color'));
+        bindShadow(this._createSpinRow(N_('Offset X'), 'panel-shadow-x', -50, 50));
+        bindShadow(this._createSpinRow(N_('Offset Y'), 'panel-shadow-y', -50, 50));
+        bindShadow(this._createSpinRow(N_('Blur'), 'panel-shadow-blur', 0, 50));
+        bindShadow(this._createSpinRow(N_('Spread'), 'panel-shadow-spread', -20, 50));
         
         const insetSw = new Adw.SwitchRow({ title: _('Inset Shadow') });
         this._settings.bind('panel-shadow-inset', insetSw, 'active', Gio.SettingsBindFlags.DEFAULT);
@@ -150,25 +150,25 @@ export class AppearancePage extends Adw.PreferencesPage {
         });
         this.add(btnGroup);
         
-        btnGroup.add(this._createColorRow('Text &amp; Icon Color', 'panel-btn-color'));
-        btnGroup.add(this._createSpinRow('Corner Radius', 'panel-btn-radius', 0, 50));
-        btnGroup.add(this._createSpinRow('Min Padding', 'panel-btn-pad-min', 0, 50));
-        btnGroup.add(this._createSpinRow('Natural Padding', 'panel-btn-pad-nat', 0, 50));
+        btnGroup.add(this._createColorRow(N_('Text &amp; Icon Color'), 'panel-btn-color'));
+        btnGroup.add(this._createSpinRow(N_('Corner Radius'), 'panel-btn-radius', 0, 50));
+        btnGroup.add(this._createSpinRow(N_('Min Padding'), 'panel-btn-pad-min', 0, 50));
+        btnGroup.add(this._createSpinRow(N_('Natural Padding'), 'panel-btn-pad-nat', 0, 50));
 
         const hEnable = new Adw.SwitchRow({ title: _('Enable Hover Effect') });
         this._settings.bind('panel-btn-hover-enabled', hEnable, 'active', Gio.SettingsBindFlags.DEFAULT);
         btnGroup.add(hEnable);
 
-        const hColorRow = this._createColorRow('Hover Background', 'panel-btn-bg-hover');
+        const hColorRow = this._createColorRow(N_('Hover Background'), 'panel-btn-bg-hover');
         this._settings.bind('panel-btn-hover-enabled', hColorRow, 'sensitive', Gio.SettingsBindFlags.GET);
         btnGroup.add(hColorRow);
 
-        const aColorRow = this._createColorRow('Active Background', 'panel-btn-bg-active');
+        const aColorRow = this._createColorRow(N_('Active Background'), 'panel-btn-bg-active');
         this._settings.bind('panel-btn-hover-enabled', aColorRow, 'sensitive', Gio.SettingsBindFlags.GET);
         btnGroup.add(aColorRow);
 
         // --- 6b. App Buttons ---
-        // These keys drive the buttons Lesion adds to the panel (Show Apps,
+        // These keys drive the buttons Hornbill adds to the panel (Show Apps,
         // favorites, running apps, drives, trash) and are read by
         // components/apps.js. They live next to Panel Buttons because that is
         // where users look for them, but they are NOT bound to 'panel-enabled':
@@ -176,11 +176,11 @@ export class AppearancePage extends Adw.PreferencesPage {
         // rendering with panel styling switched off.
         const appBtnGroup = new Adw.PreferencesGroup({
             title: _('App Buttons'),
-            description: _('Icon size, padding, and opacity for Lesion\u2019s own panel buttons.')
+            description: _('Icon size, padding, and opacity for Hornbill\u2019s own panel buttons.')
         });
         this.add(appBtnGroup);
 
-        appBtnGroup.add(this._createSpinRow('Icon Size', 'apps-icon-size', 12, 64, 2));
+        appBtnGroup.add(this._createSpinRow(N_('Icon Size'), 'apps-icon-size', 12, 64, 2));
         appBtnGroup.add(this._createSpinRow(
             'Item Padding', 'apps-btn-padding', 0, 24, 1,
             _('Horizontal space inside each item, independent of panel button padding')));
@@ -203,12 +203,12 @@ export class AppearancePage extends Adw.PreferencesPage {
         });
         this.add(popupGroup);
         
-        popupGroup.add(this._createSpinRow('Corner Radius', 'popup-radius', 0, 50));
+        popupGroup.add(this._createSpinRow(N_('Corner Radius'), 'popup-radius', 0, 50));
         
         // Popup Border
-        popupGroup.add(this._createSpinRow('Border Size', 'popup-border-size', 0, 10));
-        popupGroup.add(this._createColorRow('Border Color', 'popup-border-color'));
-        popupGroup.add(this._createComboRow('Border Style', 'popup-border-style', borderStyles, true));
+        popupGroup.add(this._createSpinRow(N_('Border Size'), 'popup-border-size', 0, 10));
+        popupGroup.add(this._createColorRow(N_('Border Color'), 'popup-border-color'));
+        popupGroup.add(this._createComboRow(N_('Border Style'), 'popup-border-style', borderStyles, true));
 
         // Popup Shadow
         const psEnable = new Adw.SwitchRow({ title: _('Enable Shadow') });
@@ -220,11 +220,11 @@ export class AppearancePage extends Adw.PreferencesPage {
             popupGroup.add(widget);
         };
 
-        bindPopupShadow(this._createColorRow('Shadow Color', 'popup-shadow-color'));
-        bindPopupShadow(this._createSpinRow('Shadow X', 'popup-shadow-x', -50, 50));
-        bindPopupShadow(this._createSpinRow('Shadow Y', 'popup-shadow-y', -50, 50));
-        bindPopupShadow(this._createSpinRow('Shadow Blur', 'popup-shadow-blur', 0, 100));
-        bindPopupShadow(this._createSpinRow('Shadow Spread', 'popup-shadow-spread', -50, 50));
+        bindPopupShadow(this._createColorRow(N_('Shadow Color'), 'popup-shadow-color'));
+        bindPopupShadow(this._createSpinRow(N_('Shadow X'), 'popup-shadow-x', -50, 50));
+        bindPopupShadow(this._createSpinRow(N_('Shadow Y'), 'popup-shadow-y', -50, 50));
+        bindPopupShadow(this._createSpinRow(N_('Shadow Blur'), 'popup-shadow-blur', 0, 100));
+        bindPopupShadow(this._createSpinRow(N_('Shadow Spread'), 'popup-shadow-spread', -50, 50));
 
         // Lock all groups if main enable is off
         // Every group whose keys the backend ignores while panel-enabled is
@@ -416,8 +416,8 @@ export class AppearancePage extends Adw.PreferencesPage {
         });
 
         const exportObj = {
-            name: "New Preset Name",
-            description: "Description...",
+            name: _('New Preset Name'),
+            description: _('Description...'),
             data: data
         };
 
@@ -506,7 +506,10 @@ export class AppearancePage extends Adw.PreferencesPage {
     // --- Helpers ---
 
     _createColorRow(title, key) {
-        const row = new Adw.ActionRow({ title: title });
+        // N_() at the call site marks it for extraction; _() here does the
+        // actual lookup. Without both, the string is either untranslatable or
+        // never reaches the catalogue.
+        const row = new Adw.ActionRow({ title: _(title) });
         const dialog = new Gtk.ColorDialog();
         const btn = new Gtk.ColorDialogButton({ dialog, valign: Gtk.Align.CENTER });
         const rgba = new Gdk.RGBA();
@@ -524,7 +527,7 @@ export class AppearancePage extends Adw.PreferencesPage {
 
     _createSpinRow(title, key, min, max, step = 1, subtitle = null) {
         const row = new Adw.SpinRow({
-            title: title,
+            title: _(title),
             adjustment: new Gtk.Adjustment({ lower: min, upper: max, step_increment: step }),
             value: this._settings.get_int(key)
         });

@@ -163,6 +163,49 @@ export function createClockUI() {
   );
   formatGroup.add(multiRow);
 
+  const spin = (title, key, lo, hi, subtitle) => {
+    const row = new Adw.SpinRow({
+      title: _(title),
+      adjustment: new Gtk.Adjustment({
+        lower: lo,
+        upper: hi,
+        step_increment: 1,
+      }),
+      value: settings.get_int(key),
+    });
+    if (subtitle) row.set_subtitle(subtitle);
+    settings.bind(key, row, "value", Gio.SettingsBindFlags.DEFAULT);
+    settings.bind(
+      "clock-multiline",
+      row,
+      "sensitive",
+      Gio.SettingsBindFlags.GET
+    );
+    formatGroup.add(row);
+  };
+
+  spin(N_("Top Line Size"), "clock-multiline-time-size", 40, 200,
+    _("Font size of the time line, percent of the panel font"));
+  spin(N_("Bottom Line Size"), "clock-multiline-date-size", 30, 200,
+    _("Font size of the date line, percent of the panel font"));
+  spin(N_("Line Tightness"), "clock-multiline-tightness", 50, 100,
+    _("Percent of each line's natural height to keep. Lower closes the gap"));
+
+  // Not bound to Two-Line: the button background is inset either way.
+  const insetRow = new Adw.SpinRow({
+    title: _("Button Inset"),
+    subtitle: _("Pull the clock's background in vertically to match the other panel buttons"),
+    adjustment: new Gtk.Adjustment({ lower: 0, upper: 8, step_increment: 1 }),
+    value: settings.get_int("clock-button-inset"),
+  });
+  settings.bind(
+    "clock-button-inset",
+    insetRow,
+    "value",
+    Gio.SettingsBindFlags.DEFAULT
+  );
+  formatGroup.add(insetRow);
+
   const dimRow = new Adw.SwitchRow({ title: _("Dim Separators") });
   settings.bind(
     "clock-dim-separator",

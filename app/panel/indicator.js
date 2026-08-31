@@ -8,9 +8,15 @@ import * as ModalDialog from "resource:///org/gnome/shell/ui/modalDialog.js";
 import * as Dialog from "resource:///org/gnome/shell/ui/dialog.js";
 import * as Main from "resource:///org/gnome/shell/ui/main.js";
 
+import Shell from "gi://Shell";
 import { AppConfig } from "../config.js";
-import { logError } from "../util/logger.js";
+import { logError, log } from "../util/logger.js";
 import { gettext as _ } from '../util/gettext.js';
+import { ShakeAnimator } from '../util/shake.js';
+import { setIconGeometry } from '../util/compat.js';
+
+/** The shell's extension-preferences tool; every prefs window belongs to it. */
+const PREFS_APP_ID = 'org.gnome.Shell.Extensions.desktop';
 
 export class Indicator {
   constructor(ext) {
@@ -68,7 +74,7 @@ export class Indicator {
   }
 
   _createButton() {
-    const nameId = AppConfig.name || "Lesion Extension";
+    const nameId = AppConfig.name || "Hornbill Extension";
 
     this.button = new PanelMenu.Button(0.5, nameId, false);
     this.button.clear_actions();
@@ -92,7 +98,7 @@ export class Indicator {
         this.button.menu.toggle();
       } else {
         if (this.button.menu.isOpen) this.button.menu.close();
-        this.extension.openPreferences();
+        this._activatePrefs();
       }
     });
 
@@ -103,25 +109,126 @@ export class Indicator {
     );
     this._updateMenu();
 
-    const role = AppConfig.uuid || "lesion-indicator";
+    const role = AppConfig.uuid || "hornbill-indicator";
     Main.panel.addToStatusArea(role, this.button, 2, "right");
 
-    // Highlight while prefs are open. No try/catch: these accesses are cheap
-    // and non-throwing under normal conditions; the source keeps running either way.
-    this._prefsWatchId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 800, () => {
-      const open = this.extension.isPreferencesOpen === true;
-      if (this._clickButton) {
-        if (open) this._clickButton.add_style_pseudo_class("active");
-        else this._clickButton.remove_style_pseudo_class("active");
-      }
-      return GLib.SOURCE_CONTINUE;
-    });
+    // State is driven by signals rather than the previous 800ms poll, which
+    // could only ever report open/closed and lagged up to 800ms behind.
+    this._shaker = new ShakeAnimator();
+
+    this._displaySignals = [
+      global.display.connect('notify::focus-window', () => this._updateState()),
+      global.display.connect('window-created', () => this._updateState()),
+    ];
+
+    const appSystem = Shell.AppSystem.get_default();
+    this._appSystemSignal = appSystem.connect('app-state-changed', () => this._updateState());
+
+    this._updateState();
+  }
+
+  /**
+   * The prefs window for THIS extension, or null.
+   *
+   * All extension preferences share one application, so when several are open
+   * the app id alone is ambiguous. The window title is the extension's own
+   * name, which is ours to match on — unlike a document or page title, it
+   * carries nothing about what the user is doing.
+   */
+  _prefsWindow() {
+    if (this.extension.isPreferencesOpen !== true) return null;
+
+    let windows = [];
+    try {
+      const app = Shell.AppSystem.get_default().lookup_app(PREFS_APP_ID);
+      windows = app ? app.get_windows() : [];
+    } catch (e) {
+      log('[Indicator] prefs app lookup failed', e);
+      return null;
+    }
+
+    if (windows.length === 0) return null;
+    if (windows.length === 1) return windows[0];
+
+    const name = (AppConfig.name || '').trim().toLowerCase();
+    if (name) {
+      const match = windows.find(w => {
+        try { return (w.get_title() || '').trim().toLowerCase() === name; }
+        catch (e) { return false; }
+      });
+      if (match) return match;
+    }
+    return windows[0];
+  }
+
+  /**
+   * Open / focused / unfocused, matching how the app buttons read: a dim
+   * "running" state when the window exists, a full highlight when it is the
+   * focused one.
+   */
+  _updateState() {
+    if (!this._clickButton) return;
+
+    const win = this._prefsWindow();
+    const focused = !!win && global.display.focus_window === win;
+
+    if (focused) this._clickButton.add_style_pseudo_class('active');
+    else this._clickButton.remove_style_pseudo_class('active');
+
+    this._clickButton.opacity = win ? 255 : 160;
+
+    // Minimize and restore animate toward this rect; without it the prefs
+    // window flies to a fixed corner instead of to the button that owns it.
+    if (win) this._syncIconGeometry(win);
+  }
+
+  _syncIconGeometry(win) {
+    if (!this.button) return;
+    try {
+      const [x, y] = this.button.get_transformed_position();
+      const [w, h] = this.button.get_transformed_size();
+      if (w > 0 && h > 0) setIconGeometry(win, x, y, w, h);
+    } catch (e) { log('[Indicator] icon geometry failed', e); }
+  }
+
+  /**
+   * Clicking the button while its window is already focused used to do
+   * nothing at all — openPreferences() on an open, focused window is a no-op.
+   * A short wobble answers "where is it?" on a wide desktop without changing
+   * any existing behaviour, because there was none to change.
+   */
+  _activatePrefs() {
+    const win = this._prefsWindow();
+
+    if (win && global.display.focus_window === win) {
+      this._shaker?.shake(win, 6);
+      return;
+    }
+
+    if (win) {
+      // Open but behind something, or on another workspace.
+      win.activate(global.get_current_time());
+      return;
+    }
+
+    this.extension.openPreferences();
   }
 
   _destroyButton() {
-    if (this._prefsWatchId) {
-      GLib.source_remove(this._prefsWatchId);
-      this._prefsWatchId = 0;
+    if (this._displaySignals) {
+      this._displaySignals.forEach((id) => {
+        try { global.display.disconnect(id); } catch (e) { log('[Indicator] disconnect failed', e); }
+      });
+      this._displaySignals = null;
+    }
+    if (this._appSystemSignal) {
+      try { Shell.AppSystem.get_default().disconnect(this._appSystemSignal); }
+      catch (e) { log('[Indicator] disconnect failed', e); }
+      this._appSystemSignal = 0;
+    }
+    if (this._shaker) {
+      this._shaker.destroy();
+      this._shaker = null;
     }
     if (this.button) {
       this._menuSignals.forEach((id) => this.button.menu.disconnect(id));
@@ -185,7 +292,7 @@ export class Indicator {
     }
 
     const content = new Dialog.MessageDialogContent({
-      title: _("Disable Lesion?"),
+      title: _("Disable Hornbill?"),
       description:
         "The panel customisations and window features provided by this " +
         "extension will stop. You can re-enable it from the Extensions app.",

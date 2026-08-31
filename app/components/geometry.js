@@ -60,7 +60,7 @@ const CLOAK_MAX_MS = 550;         // Reveal deadline if identity never resolves
 const REVEAL_FADE_MS = 120;       // Soften late reveals (after map anim ended)
 const REVEAL_POLL_MS = 16;        // ~1 frame: how often to re-check the client took the geometry
 const REVEAL_MAX_TRIES = 6;       // ~96ms cap before revealing regardless
-// File-manager location suffixes. Lesion's panel already treats Files, Trash
+// File-manager location suffixes. Hornbill's panel already treats Files, Trash
 // and a mounted drive as three separate buttons; geometry mirrors exactly that
 // split and nothing finer. Every other folder window is just "a Files window".
 const LOC_TRASH = '::trash';
@@ -191,7 +191,7 @@ export class GeometryManager extends ExtensionComponent {
      * X11 CLIENTS NEED A CONSERVATIVE PATH. Journal evidence (Jul 21):
      * the session did not die from a shell crash — Xwayland itself exited
      * ("Connection to xwayland lost" / "Xwayland exited unexpectedly"),
-     * and the shell then quit because Xwayland is mandatory. No [Lesion]
+     * and the shell then quit because Xwayland is mandatory. No [Hornbill]
      * error appeared at all. Chrome and its Task Manager are X11 clients,
      * and X11 geometry is 16-bit signed: the cloak's -100000px offset and
      * rapid repeated configure requests from verify retries are exactly
@@ -199,7 +199,7 @@ export class GeometryManager extends ExtensionComponent {
      * therefore get: no cloak, clamped coordinates, and a single apply.
      */
     /**
-     * OPERATION TRACE. The session terminations leave no [Lesion] error
+     * OPERATION TRACE. The session terminations leave no [Hornbill] error
      * because the failure is Xwayland exiting, not a JS exception here. Naming
      * each risky window operation immediately BEFORE it runs makes the
      * final journal line before a crash identify the exact call.
@@ -426,7 +426,7 @@ export class GeometryManager extends ExtensionComponent {
      *
      * Every other application gets a single slot: one window's worth of
      * geometry, and when several are open the last one moved is the one worth
-     * remembering. A file manager is different because Lesion's panel already
+     * remembering. A file manager is different because Hornbill's panel already
      * treats Files, Trash and a mounted drive as three separate buttons, and a
      * user reasonably expects those three to remember three positions.
      *

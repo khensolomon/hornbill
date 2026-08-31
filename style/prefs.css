@@ -3,13 +3,13 @@ headerbar {
 }
 
 
-.lesion-dock-container .show-apps {
+.hornbill-dock-container .show-apps {
     margin: 8px;
     background-color: blue;
 }
 
 
-.lesion-dock-container .show-apps-vertical-margin {
+.hornbill-dock-container .show-apps-vertical-margin {
     margin: 8px 0;
 }
 .dash-separator {

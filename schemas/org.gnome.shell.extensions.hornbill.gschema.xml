@@ -1,35 +1,35 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<schemalist gettext-domain="lethil">
+<schemalist gettext-domain="hornbill">
 
   <!-- Common: Show Apps Button Mode-->
-  <enum id="org.gnome.shell.extensions.lethil.ButtonMode">
+  <enum id="org.gnome.shell.extensions.hornbill.ButtonMode">
     <value nick="icon" value="0"/>
     <value nick="file" value="1"/>
     <value nick="text" value="2"/>
   </enum>
 
   <!-- Clock's Enums -->
-  <enum id="org.gnome.shell.extensions.lethil.ClockTarget">
+  <enum id="org.gnome.shell.extensions.hornbill.ClockTarget">
     <value nick="left" value="0"/>
     <value nick="right" value="1"/>
   </enum>
-  <enum id="org.gnome.shell.extensions.lethil.ClockPosition">
+  <enum id="org.gnome.shell.extensions.hornbill.ClockPosition">
     <value nick="before" value="0"/>
     <value nick="after" value="1"/>
   </enum>
-  <enum id="org.gnome.shell.extensions.lethil.ClockFormatMode">
+  <enum id="org.gnome.shell.extensions.hornbill.ClockFormatMode">
     <value nick="default" value="0"/>
     <value nick="custom" value="1"/>
   </enum>
 
   <!-- Apps's Enums -->
-  <enum id="org.gnome.shell.extensions.lethil.HorizontalPosition">
+  <enum id="org.gnome.shell.extensions.hornbill.HorizontalPosition">
     <value nick="left" value="0"/>
     <value nick="right" value="1"/>
   </enum>
 
   <!-- Common: BoxPosition for Indicator (4 sides) -->
-  <enum id="org.gnome.shell.extensions.lethil.BoxPosition">
+  <enum id="org.gnome.shell.extensions.hornbill.BoxPosition">
     <value nick="top" value="0"/>
     <value nick="right" value="1"/>
     <value nick="bottom" value="2"/>
@@ -37,7 +37,7 @@
   </enum>
   
   <!-- CSS Font Weights -->
-  <enum id="org.gnome.shell.extensions.lethil.FontWeight">
+  <enum id="org.gnome.shell.extensions.hornbill.FontWeight">
     <value nick="light" value="0"/>
     <value nick="normal" value="1"/>
     <value nick="medium" value="2"/>
@@ -45,7 +45,7 @@
   </enum>
 
   <!-- CSS Border Styles -->
-  <enum id="org.gnome.shell.extensions.lethil.BorderStyle">
+  <enum id="org.gnome.shell.extensions.hornbill.BorderStyle">
     <value nick="solid" value="0"/>
     <value nick="dotted" value="1"/>
     <value nick="dashed" value="2"/>
@@ -58,7 +58,7 @@
   </enum>
   
   <!-- Blend Modes -->
-  <enum id="org.gnome.shell.extensions.lethil.BlendMode">
+  <enum id="org.gnome.shell.extensions.hornbill.BlendMode">
     <value nick="normal" value="0"/>
     <value nick="multiply" value="1"/>
     <value nick="screen" value="2"/>
@@ -77,7 +77,7 @@
     <value nick="luminosity" value="15"/>
   </enum>
 
-  <schema id="org.gnome.shell.extensions.lethil" path="/org/gnome/shell/extensions/lethil/">
+  <schema id="org.gnome.shell.extensions.hornbill" path="/org/gnome/shell/extensions/hornbill/">
     <!-- WALLPAPER SECTION -->
     <key name="wallpaper-enabled" type="b">
         <default>true</default>
@@ -124,12 +124,12 @@
     </key>
     <!-- Custom Dark Mode Colors -->
     <key name="wallpaper-primary-color-dark" type="s">
-        <default>'#000000'</default>
-        <summary>Primary color used in Dark Mode</summary>
+        <default>''</default>
+        <summary>Primary color used in Dark Mode (empty = auto-import)</summary>
     </key>
     <key name="wallpaper-secondary-color-dark" type="s">
-        <default>'#000000'</default>
-        <summary>Secondary color used in Dark Mode</summary>
+        <default>''</default>
+        <summary>Secondary color used in Dark Mode (empty = auto-import)</summary>
     </key>
     
     <!-- Store previous state for toggle -->
@@ -152,6 +152,13 @@
     </key>
 
     <!-- Navigation -->
+    <!-- Category ids left OUT of Export / Import / Reset. One 'as' key rather
+         than a boolean per group, so adding a category needs no schema change.
+         Never exported or imported itself: see INTERNAL_KEYS in categories.js. -->
+    <key name="data-scope-excluded" type="as">
+        <default>['geometry-data']</default>
+        <summary>Data groups excluded from export, import and reset</summary>
+    </key>
     <key name="open-page" type="s">
       <default>""</default>
       <summary>Page to open</summary>
@@ -188,14 +195,34 @@
 
     <!-- Clock -->
     <key name="clock-move-enabled" type="b"><default>true</default></key>
-    <key name="clock-target" enum="org.gnome.shell.extensions.lethil.ClockTarget"><default>'right'</default></key>
-    <key name="clock-position" enum="org.gnome.shell.extensions.lethil.ClockPosition"><default>'before'</default></key>
-    <key name="clock-format-mode" enum="org.gnome.shell.extensions.lethil.ClockFormatMode"><default>'custom'</default></key>
+    <key name="clock-target" enum="org.gnome.shell.extensions.hornbill.ClockTarget"><default>'right'</default></key>
+    <key name="clock-position" enum="org.gnome.shell.extensions.hornbill.ClockPosition"><default>'before'</default></key>
+    <key name="clock-format-mode" enum="org.gnome.shell.extensions.hornbill.ClockFormatMode"><default>'custom'</default></key>
     <key name="clock-custom-format" type="s"><default>'%H:%M %d.%m.%y'</default></key>
     <key name="clock-multiline" type="b"><default>true</default></key>
     <key name="clock-dim-separator" type="b"><default>false</default></key>
     <key name="clock-custom-time" type="s"><default>'%H:%M'</default></key>
     <key name="clock-custom-date" type="s"><default>'%A, %d %B'</default></key>
+
+    <!-- Two-Line Clock sizing. The visible gap between the two lines is font
+         leading, not box spacing (which is already 0), so it is controlled by
+         the line sizes and by clipping the leading away. -->
+    <key name="clock-multiline-time-size" type="i">
+        <default>88</default>
+        <summary>Top line font size, percent of panel font</summary>
+    </key>
+    <key name="clock-multiline-date-size" type="i">
+        <default>62</default>
+        <summary>Bottom line font size, percent of panel font</summary>
+    </key>
+    <key name="clock-button-inset" type="i">
+        <default>0</default>
+        <summary>Vertical inset of the clock button's background, in pixels</summary>
+    </key>
+    <key name="clock-multiline-tightness" type="i">
+        <default>80</default>
+        <summary>Percent of each line's natural height to keep (lower = tighter)</summary>
+    </key>
 
     <!-- Apps -->
     <key name="apps-icon-size" type="i"><default>16</default></key>
@@ -210,7 +237,7 @@
          Panel because that is where users look. -->
     <key name="apps-tooltips-enabled" type="b">
         <default>true</default>
-        <summary>Show a hover label naming each Lesion panel button</summary>
+        <summary>Show a hover label naming each Hornbill panel button</summary>
     </key>
     <key name="apps-tooltip-delay" type="i">
         <default>500</default>
@@ -224,7 +251,7 @@
     <!-- Tooltip Text -->
     <key name="apps-tooltip-text-color" type="s"><default>'#ffffff'</default></key>
     <key name="apps-tooltip-font-size" type="i"><default>11</default></key>
-    <key name="apps-tooltip-font-weight" enum="org.gnome.shell.extensions.lethil.FontWeight"><default>'medium'</default></key>
+    <key name="apps-tooltip-font-weight" enum="org.gnome.shell.extensions.hornbill.FontWeight"><default>'medium'</default></key>
 
     <!-- Tooltip Background &amp; Geometry -->
     <key name="apps-tooltip-bg-color" type="s"><default>'rgba(0,0,0,0.85)'</default></key>
@@ -235,7 +262,7 @@
     <!-- Tooltip Border -->
     <key name="apps-tooltip-border-size" type="i"><default>0</default></key>
     <key name="apps-tooltip-border-color" type="s"><default>'rgba(255,255,255,0.15)'</default></key>
-    <key name="apps-tooltip-border-style" enum="org.gnome.shell.extensions.lethil.BorderStyle"><default>'solid'</default></key>
+    <key name="apps-tooltip-border-style" enum="org.gnome.shell.extensions.hornbill.BorderStyle"><default>'solid'</default></key>
 
     <!-- Tooltip Shadow -->
     <key name="apps-tooltip-shadow-enabled" type="b"><default>false</default></key>
@@ -246,7 +273,7 @@
     <key name="apps-tooltip-shadow-spread" type="i"><default>0</default></key>
 
     <!-- Indicator Configuration -->
-    <key name="apps-indicator-pos" enum="org.gnome.shell.extensions.lethil.BoxPosition"><default>'top'</default></key> 
+    <key name="apps-indicator-pos" enum="org.gnome.shell.extensions.hornbill.BoxPosition"><default>'top'</default></key> 
     <key name="apps-indicator-offset" type="i"><default>12</default></key>
     <key name="apps-indicator-width" type="i"><default>4</default></key>
     <key name="apps-indicator-height" type="i"><default>4</default></key>
@@ -255,36 +282,36 @@
 
     <!-- Favorites -->
     <key name="apps-favorites-enabled" type="b"><default>true</default></key>
-    <key name="apps-favorites-pos" enum="org.gnome.shell.extensions.lethil.HorizontalPosition"><default>'left'</default></key>
+    <key name="apps-favorites-pos" enum="org.gnome.shell.extensions.hornbill.HorizontalPosition"><default>'left'</default></key>
     <key name="apps-favorites-index" type="i"><default>2</default></key>
 
     <!-- Running Apps -->
     <key name="apps-running-enabled" type="b"><default>true</default></key>
-    <key name="apps-running-pos" enum="org.gnome.shell.extensions.lethil.HorizontalPosition"><default>'left'</default></key>
+    <key name="apps-running-pos" enum="org.gnome.shell.extensions.hornbill.HorizontalPosition"><default>'left'</default></key>
     <key name="apps-running-index" type="i"><default>3</default></key>
 
     <!-- Disks -->
     <key name="apps-disks-enabled" type="b"><default>true</default></key>
-    <key name="apps-disks-pos" enum="org.gnome.shell.extensions.lethil.HorizontalPosition"><default>'right'</default></key>
+    <key name="apps-disks-pos" enum="org.gnome.shell.extensions.hornbill.HorizontalPosition"><default>'right'</default></key>
     <key name="apps-disks-index" type="i"><default>0</default></key>
 
     <!-- Trash -->
     <key name="apps-trash-enabled" type="b"><default>true</default></key>
-    <key name="apps-trash-pos" enum="org.gnome.shell.extensions.lethil.HorizontalPosition"><default>'right'</default></key>
+    <key name="apps-trash-pos" enum="org.gnome.shell.extensions.hornbill.HorizontalPosition"><default>'right'</default></key>
     <key name="apps-trash-index" type="i"><default>1</default></key>
     
     <!-- Show Grid Button -->
     <key name="apps-showgrid-enabled" type="b"><default>true</default></key>
-    <key name="apps-showgrid-pos" enum="org.gnome.shell.extensions.lethil.HorizontalPosition"><default>'left'</default></key>
+    <key name="apps-showgrid-pos" enum="org.gnome.shell.extensions.hornbill.HorizontalPosition"><default>'left'</default></key>
     <key name="apps-showgrid-index" type="i"><default>0</default></key>
-    <key name="apps-showgrid-mode" enum="org.gnome.shell.extensions.lethil.ButtonMode"><default>'icon'</default></key>
+    <key name="apps-showgrid-mode" enum="org.gnome.shell.extensions.hornbill.ButtonMode"><default>'icon'</default></key>
     <key name="apps-showgrid-icon" type="s"><default>'start-here-symbolic'</default></key>
     <key name="apps-showgrid-path" type="s"><default>''</default></key>
     <key name="apps-showgrid-text" type="s"><default>'Apps'</default></key>
 
     <!-- Overview Button -->
     <key name="apps-overview-enabled" type="b"><default>false</default></key>
-    <key name="apps-overview-pos" enum="org.gnome.shell.extensions.lethil.HorizontalPosition"><default>'left'</default></key>
+    <key name="apps-overview-pos" enum="org.gnome.shell.extensions.hornbill.HorizontalPosition"><default>'left'</default></key>
     <key name="apps-overview-index" type="i"><default>1</default></key>
     <key name="apps-overview-hide-default" type="b"><default>false</default></key>
 
@@ -292,12 +319,12 @@
     <key name="panel-enabled" type="b"><default>true</default></key>
     
     <!-- Panel: Bar -->
-    <key name="panel-position" enum="org.gnome.shell.extensions.lethil.BoxPosition"><default>'top'</default></key>
+    <key name="panel-position" enum="org.gnome.shell.extensions.hornbill.BoxPosition"><default>'top'</default></key>
     <key name="panel-bg-color" type="s"><default>'rgba(0,0,0,0.80)'</default></key>
     <key name="panel-bg-gradient-enabled" type="b"><default>false</default></key>
     <key name="panel-bg-gradient-color" type="s"><default>'rgba(0,0,0,0)'</default></key>
     <key name="panel-bg-gradient-dir" type="i"><default>0</default></key>
-    <key name="panel-bg-blend-mode" enum="org.gnome.shell.extensions.lethil.BlendMode"><default>'normal'</default></key>
+    <key name="panel-bg-blend-mode" enum="org.gnome.shell.extensions.hornbill.BlendMode"><default>'normal'</default></key>
 
     <key name="panel-blur-enabled" type="b"><default>false</default></key>
     <key name="panel-blur-sigma" type="i"><default>30</default></key>
@@ -305,7 +332,7 @@
     <key name="panel-corner-radius" type="i"><default>0</default></key>
 
     <key name="panel-border-size" type="i"><default>0</default></key>
-    <key name="panel-border-style" enum="org.gnome.shell.extensions.lethil.BorderStyle"><default>'solid'</default></key>
+    <key name="panel-border-style" enum="org.gnome.shell.extensions.hornbill.BorderStyle"><default>'solid'</default></key>
     <key name="panel-border-color" type="s"><default>'rgba(255,255,255,0.2)'</default></key>
     <key name="panel-border-bottom-only" type="b"><default>true</default></key>
 
@@ -336,7 +363,7 @@
     <key name="popup-shadow-spread" type="i"><default>4</default></key>
 
     <key name="popup-border-size" type="i"><default>0</default></key>
-    <key name="popup-border-style" enum="org.gnome.shell.extensions.lethil.BorderStyle"><default>'solid'</default></key>
+    <key name="popup-border-style" enum="org.gnome.shell.extensions.hornbill.BorderStyle"><default>'solid'</default></key>
     <key name="popup-border-color" type="s"><default>'rgba(255,255,255,0.1)'</default></key>
 
   </schema>

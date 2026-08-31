@@ -5,7 +5,7 @@ import GLib from 'gi://GLib';
 import Gdk from 'gi://Gdk';
 import { AppConfig } from '../config.js';
 import { logError } from '../util/logger.js';
-import { gettext as _ } from '../util/gettext.js';
+import { gettext as _, format } from '../util/gettext.js';
 
 // The shell's own extensions service — the same one the official GNOME
 // Extensions app drives. A prefs process cannot change live shell state
@@ -125,10 +125,10 @@ export function createExtensionsUI() {
     statusGroup.add(statusRow);
     page.add(statusGroup);
 
-    // The extension's own uuid. Lesion may be disabled from here (behind a
+    // The extension's own uuid. Hornbill may be disabled from here (behind a
     // confirmation) but never removed, since uninstalling the running prefs
     // process's own extension is not recoverable from this page.
-    const selfUuid = AppConfig.metadata?.uuid ?? 'lesion@lethil.me';
+    const selfUuid = AppConfig.metadata?.uuid ?? 'hornbill@lethil.me';
 
     const userGroup = new Adw.PreferencesGroup({
         title: _('User Extensions'),
@@ -171,7 +171,7 @@ export function createExtensionsUI() {
     };
 
     const buildRow = (ext) => {
-        // Lesion is listed like any other extension. Its toggle works and is
+        // Hornbill is listed like any other extension. Its toggle works and is
         // confirmed; only its remove button stays insensitive.
         const isUser = ext.type === TYPE_USER;
         const isSelf = ext.uuid === selfUuid;
@@ -237,14 +237,14 @@ export function createExtensionsUI() {
 
         // Set while the handler puts the switch back after a cancelled
         // self-disable. set_active() re-emits 'state-set', and without this
-        // the revert would be read as the user switching Lesion back on and
+        // the revert would be read as the user switching Hornbill back on and
         // fire EnableExtension against an extension that never went off.
         let reverting = false;
 
         toggle.connect('state-set', (sw, state) => {
             if (reverting) return false;
 
-            // Disabling Lesion from Lesion's own preferences is worth a
+            // Disabling Hornbill from Hornbill's own preferences is worth a
             // confirmation, matching the indicator's Disable Extension item.
             if (isSelf && !state) {
                 _confirmSelfDisable(row.get_root(),
@@ -365,7 +365,7 @@ function _confirmSelfDisable(parent, onConfirm, onCancel) {
     const dialog = new Adw.MessageDialog({
         transient_for: parent,
         modal: true,
-        heading: _('Disable Lesion?'),
+        heading: _('Disable Hornbill?'),
         body: _('The panel customisations and window features provided by this extension will stop. You can re-enable it from this list.'),
     });
     dialog.add_response('cancel', _('Cancel'));
@@ -385,10 +385,10 @@ function _confirmRemove(parent, name, onConfirm) {
         transient_for: parent,
         modal: true,
         heading: _('Remove extension?'),
-        body: `“${name}” will be uninstalled from your account. This cannot be undone from here.`,
+        body: format(_('\u201c%s\u201d will be uninstalled from your account. This cannot be undone from here.'), name),
     });
-    dialog.add_response('cancel', 'Cancel');
-    dialog.add_response('remove', 'Remove');
+    dialog.add_response('cancel', _('Cancel'));
+    dialog.add_response('remove', _('Remove'));
     dialog.set_response_appearance('remove', Adw.ResponseAppearance.DESTRUCTIVE);
     dialog.set_default_response('cancel');
     dialog.set_close_response('cancel');

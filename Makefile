@@ -1,5 +1,5 @@
 # Define the extension UUID as a variable
-EXT ?= lesion@lethil.me
+EXT ?= hornbill@lethil.me
 
 # Mark targets as PHONY so Make doesn't look for files with these names
 .PHONY: check uninstall disable enable refresh reload logs

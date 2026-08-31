@@ -40,7 +40,7 @@ USAGE EXAMPLES
 
   [End-User]
   1. Install latest master branch:
-     curl https://raw.githubusercontent.com/khensolomon/lesion/master/install.py | python3 -
+     curl https://raw.githubusercontent.com/khensolomon/hornbill/master/install.py | python3 -
 """
 
 import os
@@ -59,7 +59,7 @@ import xml.etree.ElementTree as ET
 
 # --- Configuration ---
 # Set to the target repository to allow seamless curl piping
-DEFAULT_REPO = os.environ.get("GNOME_EXT_REPO", "khensolomon/lesion")
+DEFAULT_REPO = os.environ.get("GNOME_EXT_REPO", "khensolomon/hornbill")
 DEFAULT_REF = os.environ.get("GNOME_EXT_REF", "master")
 
 # Standard GNOME paths
@@ -86,7 +86,7 @@ def load_po_manager(root_dir):
     manage_py = os.path.join(root_dir, "po", "manage.py")
     if not os.path.isfile(manage_py):
         return None
-    spec = importlib.util.spec_from_file_location("lesion_po_manage", manage_py)
+    spec = importlib.util.spec_from_file_location("hornbill_po_manage", manage_py)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
@@ -376,6 +376,8 @@ def install_remote(args, target_base):
         if not uuid:
             sys.exit(f"{RED}Error: UUID missing in downloaded metadata.json{RESET}")
 
+        remove_superseded(target_base, uuid)
+
         dest_dir = os.path.join(target_base, uuid)
         
         if os.path.exists(dest_dir):
@@ -415,6 +417,38 @@ def install_remote(args, target_base):
         
         print("\nDone! If the extension fails to appear, execute a logout and login sequence.")
 
+# UUIDs this extension has shipped under previously. The UUID *is* the identity
+# to GNOME, so a rename installs a second, independent extension rather than
+# replacing the first. Left in place both load together: duplicate panel
+# buttons, and two hard failures — addToStatusArea() rejects a duplicate role,
+# and a GTypeName can only be registered once per process. Removing the
+# predecessor is not tidiness, it is what makes the new one able to run.
+SUPERSEDED_UUIDS = ["hornbill@lethil.me"]
+
+
+def remove_superseded(target_base, current_uuid):
+    """Disable and delete any earlier UUID of this extension."""
+    for old_uuid in SUPERSEDED_UUIDS:
+        if old_uuid == current_uuid:
+            continue
+        old_dir = os.path.join(target_base, old_uuid)
+        if not os.path.exists(old_dir) and not os.path.islink(old_dir):
+            continue
+
+        print(f"{YELLOW}Found predecessor '{old_uuid}' — removing it.{RESET}")
+        if run_cmd(["which", "gnome-extensions"], quiet=True):
+            run_cmd(["gnome-extensions", "disable", old_uuid], quiet=True)
+        try:
+            if os.path.islink(old_dir):
+                os.unlink(old_dir)
+            else:
+                shutil.rmtree(old_dir)
+            print(f"Removed: {old_dir}")
+        except OSError as exc:
+            print(f"{RED}Could not remove {old_dir}: {exc}{RESET}")
+            print(f"{YELLOW}Remove it by hand before logging back in, or both will load.{RESET}")
+
+
 def install_local(args, target_base):
     """Symlinks the current directory for development (Dev Mode)."""
     src_dir = os.path.abspath(args.src) if args.src else os.getcwd()
@@ -425,6 +459,8 @@ def install_local(args, target_base):
 
     if not uuid:
         sys.exit(f"{RED}Error: UUID not found in metadata.json{RESET}")
+
+    remove_superseded(target_base, uuid)
 
     dest_dir = os.path.join(target_base, uuid)
 
@@ -485,7 +521,7 @@ def main():
               ./install.py --reset-settings
               
               # User: Download and install master branch
-              curl https://raw.githubusercontent.com/khensolomon/lesion/master/install.py | python3 -
+              curl https://raw.githubusercontent.com/khensolomon/hornbill/master/install.py | python3 -
         """)
     )
     

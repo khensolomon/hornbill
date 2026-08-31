@@ -1,12 +1,12 @@
-# English translations for Lesion package.
+# English translations for Hornbill package.
 # Copyright (C) 2026 Khen Solomon Lethil
-# This file is distributed under the same license as the Lesion package.
+# This file is distributed under the same license as the Hornbill package.
 # Automatically generated, 2026.
 #
 msgid ""
 msgstr ""
-"Project-Id-Version: Lesion\n"
-"Report-Msgid-Bugs-To: https://github.com/khensolomon/lesion/issues\n"
+"Project-Id-Version: Hornbill\n"
+"Report-Msgid-Bugs-To: https://github.com/khensolomon/hornbill/issues\n"
 "POT-Creation-Date: 2026-08-18 13:25+0000\n"
 "PO-Revision-Date: 2026-08-16 10:43+0000\n"
 "Last-Translator: Automatically generated\n"
@@ -499,8 +499,8 @@ msgid "Reset All Settings"
 msgstr "Reset All Settings"
 
 #: app/page/dashboard.js:105
-msgid "Restore every Lesion setting to its default value"
-msgstr "Restore every Lesion setting to its default value"
+msgid "Restore every Hornbill setting to its default value"
+msgstr "Restore every Hornbill setting to its default value"
 
 #: app/page/dashboard.js:138
 msgid "Custom Icon"
@@ -1188,8 +1188,8 @@ msgid "Color Mode"
 msgstr "Color Mode"
 
 #: app/panel/indicator.js:173
-msgid "Disable Lesion?"
-msgstr "Disable Lesion?"
+msgid "Disable Hornbill?"
+msgstr "Disable Hornbill?"
 
 #: app/panel/indicator.js:188
 msgid "Disable"

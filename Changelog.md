@@ -1,7 +1,449 @@
 # Changelog
 
-Notable changes to the Lesion extension. Version names follow `yy.mm.dd`
+Notable changes to the Hornbill extension (named Lesion before v138). Version names follow `yy.mm.dd`
 (EGO `version-name` allows letters, numbers, spaces, and periods only).
+
+## 26.08.31.89 (version 138) — renamed to Hornbill
+
+The project, the extension UUID, the settings schema and the translation domain
+all change together. The icon was already `hornbill.svg`; only the name lagged.
+
+### Identity
+
+| | before | after |
+|---|---|---|
+| UUID | `lesion@lethil.me` | `hornbill@lethil.me` |
+| Name | Lesion | Hornbill |
+| Schema | `org.gnome.shell.extensions.lethil` | `org.gnome.shell.extensions.hornbill` |
+| dconf path | `/org/gnome/shell/extensions/lethil/` | `/org/gnome/shell/extensions/hornbill/` |
+| gettext domain | `lesion` | `hornbill` |
+| Repository | `khensolomon/lesion` | `khensolomon/hornbill` |
+
+The schema rename moves the dconf path, so SETTINGS DO NOT CARRY OVER. Export
+before installing this version and import afterwards; the export format records
+no schema id, and `importSettings()` matches on key names alone, so a file
+written by v137 restores cleanly into v138.
+
+### The predecessor has to be removed, not just replaced
+
+The UUID *is* the identity to GNOME, so this installs a second, independent
+extension rather than replacing the first. Both would load together: duplicate
+panel buttons, and two hard failures — `addToStatusArea()` rejects a duplicate
+role, and a `GTypeName` can only be registered once per process, so whichever
+loads second throws.
+
+`install.py` gained `SUPERSEDED_UUIDS` and `remove_superseded()`, which
+disables and deletes the old UUID before installing, on both the remote and the
+dev-symlink paths. It reports failure loudly rather than continuing, because
+continuing produces the collision above.
+
+### Renamed in code
+
+- `GTypeName`: `LesionAppPanelButton`, `LesionRoundedCornersEffect`,
+  `LesionClipShadowEffect` — these must be unique per process
+- Class: `LesionExtension`
+- Panel roles: `lesion-trash`, `lesion-fav-N`, `lesion-disk-N`,
+  `lesion-showgrid`, `lesion-overview`, `lesion-run-N`, including the
+  `_role === 'lesion-trash'` identity check in `_activate()`
+- Style classes: `lesion-clock`, `lesion-tooltip`, `lesion-prefs-window`, and
+  `.lesion-dock-container` in `style/prefs.css`
+- Effect names: `lesion-mono`, `-blur`, `-bright`, `-corners`, `-shadow`,
+  `-clip-shadow`, `-panel-blur`
+- Hardcoded fallbacks that would have failed silently:
+  `extensions.js` (`?? 'lesion@lethil.me'`) and `indicator.js`
+  (`|| "lesion-indicator"`)
+- Cache directory `~/.cache/lesion`, export filename `lesion-config-*.json`
+- All user-visible strings, including the schema summary
+
+CUSTOM CSS targeting `lesion-*` classes must be updated to `hornbill-*`. It
+fails silently — the rule simply stops matching.
+
+### Fixed — the schema declared a gettext domain that never existed
+
+`schemas/…gschema.xml` carried `gettext-domain="lethil"` while `metadata.json`
+declared `lesion`. The schema's translatable summaries were being looked up in
+a domain with no catalogue behind it. Both now read `hornbill`.
+
+### Wallpaper backup migrates
+
+`~/.local/state/lesion/backup.wallpaper.v1.json` holds the pre-extension
+wallpaper, and the directory is named after the project. Left alone, turning
+the wallpaper master switch off would have restored nothing, silently.
+`_getLegacyBackupPath()` became `_getLegacyBackupPaths()`, checked
+newest-first: the old state directory, then the older in-extension location.
+The first hit is moved into place.
+
+### Translations need regenerating
+
+`po/lesion.pot` and `locale/*/LC_MESSAGES/lesion.mo` are renamed, and the
+`Lesion` msgids in `po/en.po` and the template are updated. The compiled `.mo`
+in this build is STALE — gettext tools are not available in the build
+environment. Run `po/manage.py update` then compile. Nothing breaks meanwhile:
+a msgid with no entry falls back to the English source, which is now correct.
+
+### Changelog history left alone
+
+Entries before this one still say Lesion. That is what the project was called
+at the time, and rewriting them would make the record claim otherwise.
+
+## 26.08.29.88 (version 137) — 52 strings restored to the catalogue; group coverage made provable
+
+### Fixed — helper row labels never reached the translation catalogue
+
+`_createSpinRow('Icon Size', ...)`, `_createNavRow('Panel Appearance', ...)`
+and friends pass a bare literal and let the helper wrap it. That works at
+runtime only if the helper calls `_()`, and even then xgettext sees nothing but
+the helper call — the string never enters the `.pot`, so it can never be
+translated no matter how complete a locale is.
+
+52 labels across four preferences pages were in this state:
+
+- app/page/appearance.js — 30
+- app/page/tooltips.js — 13
+- app/page/dashboard.js — 6
+- app/page/clock.js — 3
+
+Each call site is now wrapped in `N_()`, which marks the string for extraction
+without translating it, and the helper does the `_()` lookup. Both halves are
+required: `N_()` alone gets it into the catalogue but never applies the
+translation, `_()` alone applies a translation that was never collected.
+
+Two helpers were also missing the runtime half entirely —
+`AppearancePage._createColorRow()`, `_createSpinRow()` and
+`DashboardPage._createNavRow()` assigned `title: title` directly — so even a
+translated catalogue would not have shown through.
+
+### Fixed — remaining hardcoded user-visible strings
+
+- extensions.js: the uninstall dialog body and its Cancel / Remove responses.
+  The body interpolated the extension name, so it is now a `format()` call with
+  a `%s`, which keeps the name out of the translatable string.
+- window.js: the "Under Construction" placeholder page.
+- appearance.js: the "New Preset Name" / "Description..." export defaults.
+- dashboard.js: two OK responses on error dialogs.
+
+Three literals were checked and deliberately left alone: `config.js` holds a
+fallback for the extension NAME (a proper noun, not translated anywhere else),
+`window.js` names an internal navigation holder that is never rendered, and
+`apps.js` builds `${label}: ` where the label is already translated and the
+`": "` is punctuation.
+
+A scan of every `title` / `subtitle` / `label` / `heading` / `body` /
+`tooltip_text` / `description` literal across the tree now returns those three
+and nothing else.
+
+### Fixed — Panel Tooltips was invisible in Included Data
+
+The tooltip keys carry the `apps-` prefix for historical reasons — the panel
+buttons own them — so they were swept into App Buttons with no way to select
+them separately and no sign in the list that they were covered at all.
+
+`Panel Tooltips` is now its own group (19 keys). The rule the table follows is
+stated in the file: ONE GROUP PER PREFERENCES PAGE OR SECTION, so a user can
+look at the page they were just editing and find its name. Groups are not
+invented for tidiness — Panel Tooltips exists because Panel -> Tooltips exists.
+
+`apps-tooltip` must precede `apps` in the table for the same reason
+`geometry-data` precedes `geometry`: first match wins, and the wider prefix
+would otherwise swallow the narrower group.
+
+### Changed — coverage is shown, not claimed
+
+Each group row now carries its key count, and the expander subtitle reads
+`N/M settings in X/Y groups`. The per-group numbers add up to the schema total,
+so a missing group is visible rather than something to be taken on trust, and
+any key matching no prefix appears under `Other` rather than disappearing.
+
+Current state: 133 grouped + 2 internal = 135, the full schema.
+
+## 26.08.29.87 (version 136) — scoped Export, Import and Reset
+
+Data Management now works by GROUP rather than all-or-nothing. Export only the
+wallpaper, reset only the panel, import a config without dragging someone
+else's window positions along with it.
+
+### Added — app/util/categories.js
+
+Twelve groups, matched by key PREFIX rather than an enumerated key list. The
+schema already namespaces every key by the area it belongs to, so a prefix
+table stays correct as keys are added — the same reasoning behind the existing
+reset iterating `list_keys()`. A hand-maintained list of 134 keys would be
+wrong the first time a setting was added and the list not updated.
+
+Verified against the live schema: all 134 keys land in exactly one group, with
+none falling through to the `Other` catch-all, which is why that group is
+appended only when something actually matches it.
+
+Order matters in the table and is documented there: `geometry-data` is listed
+before `geometry`, or the saved window positions would be swept into the
+settings group and could never be excluded on their own.
+
+### Added — Saved Applications is its own group, excluded by default
+
+`geometry-data` is the one entry that is a record of the user's desktop rather
+than a preference: it says where they keep their windows. A configuration
+shared to pass on a look should not carry it, so it starts outside the scope
+and has to be opted in.
+
+### Added — Included Data
+
+One `Adw.ExpanderRow` in Data Management with a switch per group, applying to
+all three actions. Three separate scopes would be more precise and far easier
+to get wrong: the value last set for an export is not the one a reset should
+use, and nothing on screen would say which was in play. With a single visible
+list, every confirmation can name exactly what it is about to touch.
+
+Stored as one `as` key, `data-scope-excluded`, holding EXCLUDED ids. Storing
+exclusions rather than inclusions means a group added in a later version is in
+scope by default, instead of being silently dropped from everyone's exports
+until they noticed a switch they had no reason to look for.
+
+### Fixed — Import had no confirmation at all
+
+It read the file and overwrote every matching key immediately: the most
+destructive of the three actions and the only one without a guard, while Reset
+had a proper dialog.
+
+`SettingsManager.inspectSettings()` now reads a file without applying it, and
+the confirmation names the groups the file actually contains, intersected with
+the current scope. A file with no clock keys cannot restore the clock however
+the scope is set, and the dialog says so rather than leaving "nothing happened"
+as a mystery. Groups present in the file but excluded by scope are listed
+separately, and the Import button is withheld entirely when the intersection is
+empty.
+
+### Changed — Reset is scoped and names its targets
+
+`SettingsManager.resetSettings()` takes the same exclusion list. The dialog
+lists the groups by name when a scope is active and keeps the original
+"everything" wording when it is not. The per-page reset buttons on Appearance
+and Tooltips are unchanged — they are narrower still and remain the quickest
+route for the thing they cover.
+
+### Note — internal keys never travel
+
+`data-scope-excluded` and `open-page` are excluded from all three operations
+regardless of scope. Exporting the scope would let an imported file silently
+rewrite the recipient's, and importing it would change the rules midway through
+the operation applying them. `open-page` is transient UI state and means
+nothing on another machine. Verified: zero internal keys pass the filter even
+with every group enabled.
+
+## 26.08.29.86 (version 135) — wallpaper effects survive a background rebuild
+
+### Fixed — preset effects applied to actors that were already being destroyed
+
+`onEnable()` carried this comment:
+
+    // FIX: background actors are recreated on monitor changes and
+    // wallpaper switches, silently dropping the effects. Reapply then.
+
+Only the first half was implemented. `monitors-changed` was connected;
+wallpaper switches were not, and they are by far the common case.
+
+Changing `picture-uri` makes GNOME tear down the background actors and build
+new ones. `_applyPreset()` writes the image first (step 1) and the effect keys
+last (step 3), so by the time `wallpaper-monochrome` was set,
+`_updateEffects()` ran against actors already on their way out. The switch
+correctly showed ON — the setting really was written — and the new actors
+arrived with no effect attached. Toggling the switch by hand appeared to fix it
+only because the rebuild had finished by then.
+
+`_activate()` now also connects `child-added` on the background group, which
+fires whenever the shell installs a replacement actor, for any reason:
+wallpaper change, picture-options change, resolution change, monitor
+hotplug. `_scheduleEffects()` coalesces the burst — a rebuild adds one actor
+per monitor and a crossfade adds one before removing the old — into a single
+pass, and `monitors-changed` now routes through the same scheduler.
+
+### Fixed — dark mode was handed #000000 nobody chose
+
+`_initFromSystem()` seeded the light colour slots from the system but never the
+dark ones, and the dark keys defaulted to real colours rather than empty. A
+dark-mode user enabling the component therefore had `#000000` pushed straight
+over their system primary and secondary colours without having picked black
+anywhere.
+
+Both dark keys now default to `''` (auto-import) like their light
+counterparts, and both are seeded from the system on first activation.
+`_updateColors()` already skips empty values, so nothing is pushed before the
+seed happens.
+
+### Fixed — presets without dark colours did nothing in dark mode
+
+`_applyPreset()` maps a preset's `primary-color` and `secondary-color` onto the
+LIGHT extension keys only. The bundled presets also declare explicit dark
+colours, so they were unaffected, but any preset that did not would leave the
+dark slots empty and simply not appear for a dark-mode user.
+
+A preset's colours are now mirrored into the dark slots when the preset does
+not specify its own, so it looks like itself in either theme. An explicit dark
+value in the preset still wins.
+
+### Fixed — the master-switch opt-out could not undo a preset fully
+
+Presets set `color-shading-type`, which the backup never captured and the
+restore never put back. It is now included in both. The restore guards each key
+individually, so backup files written before this change load unchanged.
+
+## 26.08.28.85 (version 134) — indicator state and shake; minimize aims at the right button
+
+### Added — minimize and restore animate toward the owning button
+
+Mutter animates minimize and restore toward a window's "icon geometry": the
+on-screen rect that stands in for the window. Nothing was setting it, so it
+fell back to a fixed spot — which is why a Trash window belonging to a
+RIGHT-hand panel button still flew off to the left. Docks set this to their
+icon; `_syncIconGeometry()` now sets it to the button that represents the
+window, so the animation aims at what was actually clicked whichever side the
+button sits on.
+
+It runs from `_updateVisuals()`. That is a couple of property reads and one
+setter per window, and it is far cheaper than tracking every way a button can
+move: panel position, layout order, monitor changes, buttons appearing and
+disappearing. Favourites and Running buttons claim their app's windows (minus
+any a Trash or Drive button owns); Trash and Drive claim their own `_windows`.
+
+`setIconGeometry()` in `util/compat.js` handles the rect type, which became
+`Mtk.Rectangle` in GNOME 46 — imported statically, since the extension
+supports 46-51 where it always exists, with `Meta.Rectangle` kept only because
+some typelibs still expose it.
+
+### Added — indicator open / focused / unfocused state
+
+State came from an 800ms poll of `isPreferencesOpen` that could only report
+open or closed and lagged up to 800ms behind. It is replaced by
+`notify::focus-window`, `window-created` and `app-state-changed`, giving the
+same three states the app buttons show: dim when there is no window, full
+opacity when one exists, `:active` when it is the focused window.
+
+`_prefsWindow()` resolves the window through the shared extension-preferences
+application. Several extensions' preferences can be open at once, so when the
+app id is ambiguous the extension's own name is matched against the window
+title — that title is ours, and unlike a document or page title it says
+nothing about what the user is doing.
+
+### Added — shake when the preferences window is already focused
+
+Clicking the indicator while its window was open and focused did nothing:
+`openPreferences()` on an already-focused window is a no-op. It now wobbles the
+window briefly, which answers "where is it?" on a wide desktop. Nothing is
+replaced, because there was no behaviour there to replace. Open but behind
+something or on another workspace still activates; closed still opens.
+
+`util/shake.js` animates the compositor actor's `translation_x`, never the
+window's real position. GeometryManager connects `position-changed` and
+`size-changed` on every managed window, so a shake done with
+`move_resize_frame()` would read as the user repositioning the window and
+would rewrite the saved geometry mid-wobble. Actor translation leaves the frame
+rect untouched, so no signal fires.
+
+Amplitude is capped at 12px deliberately: this codebase already documents that
+extreme actor translation is implicated in Xwayland termination — the reason
+`_cloak()` skips X11 windows — so the shake stays a different order of
+magnitude from that offset. The wobble decays over six 45ms legs and always
+finishes at exactly 0.
+
+Skipped when animations are disabled in GNOME's accessibility settings, when
+the window is fullscreen or minimized, during the overview, and while a grab
+operation is in progress. `destroy()` clears any in-flight transition and
+resets translation, or a disable mid-wobble would strand the window a few
+pixels off with nothing left running to correct it.
+
+### Note
+
+The app buttons' click behaviour is unchanged. Click-to-minimize on a focused
+window is a standard taskbar idiom and stays exactly as it was; the shake is
+only on the indicator, where the click previously did nothing.
+
+## 26.08.28.84 (version 133) — clock button sized like the rest of the panel
+
+### Fixed — the clock content filled the button instead of sitting in it
+
+`_customBox` was created with no `y_expand` or `y_align`, so it defaulted to
+FILL and stretched to whatever height the dateMenu button was allocated. The
+two-line block then sat against the top of that space rather than in the middle
+of it, which is what made the clock read as a taller button than its
+neighbours even when the pill itself was the same height.
+
+It is now `y_expand: false` with `y_align: CENTER`, and both labels are
+explicitly non-expanding so the box takes the height of its text and no more.
+This is the vertical centering the report asked for.
+
+### Added — Button Inset
+
+Centering fixes the content, but whether the clock's background box lines up
+with the icon buttons' also depends on what vertical padding the active theme
+gives `.panel-button`, which varies between Adwaita and Yaru and between shell
+versions. `clock-button-inset` (0-8px, default 0) pulls the clock's background
+in vertically so it can be matched exactly without guessing at a number that
+would only be right on one theme.
+
+It is applied as `margin`, not `padding`: padding would grow the background
+box, and what is needed here is the opposite. The value is clamped in
+`_updateClockCss()` regardless of what is stored, so no setting can pull the
+panel apart.
+
+The row sits in Clock -> Appearance and is deliberately not bound to the
+Two-Line switch, since the background is inset either way.
+
+## 26.08.28.83 (version 132) — clock seconds tick, and the two-line gap is controllable
+
+### Fixed — %S never advanced
+
+The custom clock label was refreshed from exactly one source: `notify::text`
+on the shell's own clock display. That signal fires when the SHELL's displayed
+string changes, and the shell shows `%H:%M` by default — once a minute. A
+custom format containing `%S` therefore sat on a stale second for up to a full
+minute. Two shipped presets use `%S`, so this was reachable straight from the
+preset list without writing a format by hand.
+
+`_syncTicker()` starts a one-second timer, and only when the format actually
+needs one: `%S`, `%T`, `%r`, `%X`, `%c` or `%s`, with `%%` stripped first so a
+literal `%%S` is not mistaken for seconds. Nothing changes for minute-only
+formats, and System Default mode is untouched because GNOME already emits the
+signal at whatever rate it displays.
+
+`_armTick()` re-arms to the next whole second rather than looping on a flat
+1000ms interval, so the digit changes when the clock rolls over instead of
+drifting a little further from it on every tick.
+
+`_stopTicker()` removes the id from the base class source set as well as from
+GLib, or `_cleanup()` would call `source_remove()` on a dead id at disable.
+
+### Fixed — the gap between the two lines
+
+The box spacing was already `0px`, so the space between the lines was never
+spacing. It is font leading — the padding a font reserves above and below its
+glyphs — and two stacked `St.Label`s contribute two full line boxes. That made
+the dateMenu taller than every other panel button, which is what showed up as
+an oversized hover background.
+
+Three declarations were doing nothing at all and have been removed:
+
+- `line-height: 0.7em` / `0.5em` — St's CSS subset does not implement
+  `line-height`
+- `min-height: 7px` / `3px` — far below the natural height of any readable
+  font
+- `opacity: 0.8` — not an St CSS property; the date line's dimming came from
+  the `opacity` actor property set in code, which now carries the value
+  directly
+
+`_applyLineMetrics()` gives each label an explicit height keeping only
+`clock-multiline-tightness` percent of its natural one, trimming the leading
+while leaving the glyphs. Height is measured after the font size is applied,
+since a stale measurement would reflect the previous size. Floored at 6px so no
+combination of settings can collapse the clock.
+
+### Added — three rows under Clock -> Appearance
+
+`Top Line Size` (40-200%), `Bottom Line Size` (30-200%) and `Line Tightness`
+(50-100%), all bound to the Two-Line Clock switch for sensitivity. Sizes are
+adjustable rather than fixed because how much leading a font reserves varies
+with the font, so no single number is right for every setup.
+
+Defaults reproduce the previous font sizes closely (88% and 62%, against the
+old 90% and 65%) with tightness at 80%.
 
 ## 26.08.27.82 (version 131) — the location grace was cloaking windows with nothing to restore
 
