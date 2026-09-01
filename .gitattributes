@@ -1,24 +1,24 @@
-/ui
-/po
-/.vscode
-.gitignore
-.extensionignore
-.gitattributes
+/ui export-ignore
+/po export-ignore
+/.vscode export-ignore
+.gitignore export-ignore
+.extensionignore export-ignore
+.gitattributes export-ignore
 
 # Docs
-Todo.md
-Readme.md
+Todo.md export-ignore
+Readme.md export-ignore
 
 # Blog
-Makefile
+Makefile export-ignore
 
 # scripts
-check.sh
+check.sh export-ignore
 
 # JS
-app.js
-check-symbols.js
+app.js export-ignore
+check-symbols.js export-ignore
 
 # Python
-build.py
-install.py
+build.py export-ignore
+install.py export-ignore
