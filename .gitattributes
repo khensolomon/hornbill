@@ -1,0 +1,24 @@
+/ui
+/po
+/.vscode
+.gitignore
+.extensionignore
+.gitattributes
+
+# Docs
+Todo.md
+Readme.md
+
+# Blog
+Makefile
+
+# scripts
+check.sh
+
+# JS
+app.js
+check-symbols.js
+
+# Python
+build.py
+install.py
