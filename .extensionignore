@@ -1,5 +1,6 @@
 .gitignore
 .extensionignore
+.gitattributes
 
 .git/
 .vscode/
@@ -18,7 +19,6 @@ po/
 # It self-executes at import, so keep it out of the submission.
 app.js
 
-ext.sh
 build.py
 install.py
 check.sh
