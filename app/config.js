@@ -8,8 +8,8 @@ import GLib from 'gi://GLib';
 export const AppConfig = {
     // 1. Static Configuration
     defaults: {
-        id: 'org.gnome.shell.extensions.lethil',
-        title: 'Gnome Split View',
+        id: 'org.gnome.shell.extensions.hornbill',
+        title: 'Hornbill',
         window: {
             width: 800,
             height: 600,
@@ -31,7 +31,7 @@ export const AppConfig = {
         description: '',
         url: '',
         links: {},
-        "settings-schema": "org.gnome.shell.extensions.lethil", // Default to match XML
+        "settings-schema": "org.gnome.shell.extensions.hornbill", // Default to match XML
         "developer-name": ""
     },
     
@@ -62,8 +62,8 @@ export const AppConfig = {
     },
 
     get schemaId() {
-        // Critical: Must match schemas/org.gnome.shell.extensions.lethil.gschema.xml
-        return this.metadata["settings-schema"] || "org.gnome.shell.extensions.lethil";
+        // Critical: Must match schemas/org.gnome.shell.extensions.hornbill.gschema.xml
+        return this.metadata["settings-schema"] || "org.gnome.shell.extensions.hornbill";
     },
     
     get developer() {

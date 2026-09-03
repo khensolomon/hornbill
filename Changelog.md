@@ -87,10 +87,23 @@ Gates, each matching something that has actually gone wrong here:
 - `shell-version` carries no unreleased entries
 
 Release notes come from the matching `Changelog.md` section, with the text
-after the `;` in the commit subject as a summary line above it. Both builds are
-attached: `hornbill@lethil.me_v<version>.zip` and the EGO submission package
-`hornbill@lethil.me.shell-extension.zip`. `gh` is used rather than a
-third-party action, to keep the release path free of external dependencies.
+after the `;` in the commit subject as a summary line above it. Notes are
+written to `$RUNNER_TEMP`, NOT the workspace: build.py packages the working
+tree, so a notes file left in it ships inside the extension zip.
+
+One artefact is built and attached, the EGO package
+`hornbill@lethil.me.shell-extension.zip`, so what users download is
+byte-for-byte what is submitted to extensions.gnome.org rather than a sibling
+of it. Release title is `v<version-name> (build <version>)`.
+
+`gh` is used rather than a third-party action, to keep the release path free of
+external dependencies. A `concurrency` group serialises runs, since two quick
+pushes would otherwise race on tag creation with the loser failing after it had
+already built.
+
+Note: `--ego` strips `debug` from the packaged metadata, so released builds
+always have debug logging off. That is the intended behaviour for a release,
+but it does differ from a locally built zip.
 
 ### Fixed — the .mo negation .gitignore made necessary
 
@@ -121,6 +134,21 @@ quietly if "corrected":
 - `wallpaper.js` `_getLegacyBackupPaths()` names where the pre-rename backup
   actually sits on disk. Changing it aims the migration at a directory that has
   never existed, and the original wallpaper becomes unrecoverable.
+
+### Fixed — four stale schema ids in app/config.js
+
+The v138 rename swept for `lesion`. These read `lethil`, which is still correct
+in the UUID and the developer name, so they survived unnoticed:
+
+- `defaults.id`
+- `defaults["settings-schema"]`
+- the `schemaId` getter's fallback and its comment
+
+All four named `org.gnome.shell.extensions.lethil`, a schema that no longer
+exists. They are fallbacks for a missing `metadata.json` key, so nothing broke
+in normal use — but the one situation they exist for would have failed to
+resolve any schema at all. The stale `defaults.title` of "Gnome Split View" is
+now "Hornbill".
 
 ### Migration
 

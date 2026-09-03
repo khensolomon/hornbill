@@ -24,6 +24,12 @@ on:
 permissions:
   contents: write
 
+# Two pushes in quick succession would otherwise race on tag creation, and the
+# loser fails after having already built.
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   release:
     if: >-
@@ -101,7 +107,10 @@ jobs:
               summary = subject.split(';', 1)[1].strip() if ';' in subject else ''
           out = (f"{summary}\n\n---\n\n{body}" if summary else body)
 
-          with open('RELEASE_NOTES.md', 'w', encoding='utf-8') as fh:
+          # OUTSIDE the repo: build.py packages the working tree, so a notes
+          # file left in it ends up inside the extension zip.
+          dest = os.path.join(os.environ['RUNNER_TEMP'], 'RELEASE_NOTES.md')
+          with open(dest, 'w', encoding='utf-8') as fh:
               fh.write(out + "\n")
           print(f"Release notes: {len(out)} chars from the {vn} section")
           PY
@@ -121,9 +130,11 @@ jobs:
           node check-symbols.js || fail=1
           exit $fail
 
-      - name: Build packages
+      # Only the EGO package is produced. It is the same tree users need, and
+      # building one artefact means the zip attached here is byte-for-byte the
+      # one submitted to extensions.gnome.org rather than a sibling of it.
+      - name: Build package
         run: |
-          python3 build.py --strict --no-self
           python3 build.py --strict --ego
           ls -la tmp/
 
@@ -133,40 +144,60 @@ jobs:
         run: |
           python3 - <<'PY'
           import glob, json, sys, zipfile
+
+          # Bump when a new GNOME Shell major is actually released. Declaring an
+          # unreleased version is an EGO review rejection.
+          LATEST_RELEASED_SHELL = 50
+
           meta = json.load(open('metadata.json'))
           problems = []
 
-          for path in sorted(glob.glob('tmp/*.zip')):
-              names = set(zipfile.ZipFile(path).namelist())
-              is_ego = 'ego' in path.lower()
+          zips = sorted(glob.glob('tmp/*.zip'))
+          if len(zips) != 1:
+              problems.append(f"expected exactly one package, found {zips}")
+
+          for path in zips:
+              zf = zipfile.ZipFile(path)
+              names = set(zf.namelist())
 
               if 'schemas/gschemas.compiled' not in names:
                   problems.append(f"{path}: gschemas.compiled missing (preferences would not open)")
               if not any(n.endswith('.mo') for n in names):
-                  problems.append(f"{path}: no compiled catalogs")
+                  problems.append(f"{path}: no compiled catalogs (interface would be English only)")
               if 'metadata.json' not in names:
                   problems.append(f"{path}: metadata.json missing")
+              if 'app.js' in names:
+                  problems.append(f"{path}: app.js must not ship (self-executing dev harness)")
 
-              if is_ego:
-                  if 'app.js' in names:
-                      problems.append(f"{path}: app.js must not ship (self-executing dev harness)")
-                  dead = [n for n in names if '.v0' in n or '.v1' in n]
-                  if dead:
-                      problems.append(f"{path}: dead-code files present: {dead}")
-                  raw = json.loads(zipfile.ZipFile(path).read('metadata.json'))
+              dead = [n for n in names if '.v0' in n or '.v1' in n]
+              if dead:
+                  problems.append(f"{path}: dead-code files present: {dead}")
+
+              if 'metadata.json' in names:
+                  raw = json.loads(zf.read('metadata.json'))
+                  # --ego strips metadata to EGO's own schema. about.js reads
+                  # both of these directly, so stripping them blanks the
+                  # developer label and removes the Documentation group.
                   for key in ('links', 'developer-name'):
                       if key not in raw:
-                          problems.append(f"{path}: '{key}' stripped; the About page reads it directly")
+                          problems.append(f"{path}: '{key}' stripped; about.js reads it directly")
+                  for key in ('uuid', 'settings-schema', 'version', 'version-name'):
+                      if key not in raw:
+                          problems.append(f"{path}: '{key}' missing from packaged metadata")
+                  if raw.get('uuid') != meta['uuid']:
+                      problems.append(f"{path}: packaged uuid {raw.get('uuid')!r} != {meta['uuid']!r}")
 
-          unreleased = [v for v in meta['shell-version'] if int(v) > 50]
+          unreleased = [v for v in meta['shell-version'] if int(v) > LATEST_RELEASED_SHELL]
           if unreleased:
-              problems.append(f"metadata.json: unreleased shell-version entries {unreleased}")
+              problems.append(
+                  f"metadata.json: shell-version lists unreleased {unreleased}; "
+                  f"raise LATEST_RELEASED_SHELL here once it ships")
 
           if problems:
               for p in problems:
                   print(f"::error::{p}")
               sys.exit(1)
-          print(f"Verified {len(glob.glob('tmp/*.zip'))} package(s)")
+          print(f"Verified {zips[0]}")
           PY
 
       - name: Create release
@@ -175,6 +206,6 @@ jobs:
         run: |
           gh release create "${{ steps.meta.outputs.tag }}" \
             --target "${{ github.sha }}" \
-            --title "${{ steps.meta.outputs.name }} ${{ steps.meta.outputs.version_name }} (build ${{ steps.meta.outputs.version }})" \
-            --notes-file RELEASE_NOTES.md \
-            tmp/*.zip
+            --title "v${{ steps.meta.outputs.version_name }} (build ${{ steps.meta.outputs.version }})" \
+            --notes-file "$RUNNER_TEMP/RELEASE_NOTES.md" \
+            tmp/hornbill@lethil.me.shell-extension.zip
