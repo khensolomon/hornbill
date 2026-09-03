@@ -1,5 +1,10 @@
+# Generated at build/install time — never committed.
+# schemas/gschemas.compiled is produced by glib-compile-schemas, and
+# locale/**/*.mo by po/manage.py (msgfmt, or its built-in fallback writer).
+*.compiled
+*.mo
+
 *.v[0-9]*.*
 *tmp/
-*.compiled
 *.zip
 __pycache__

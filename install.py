@@ -96,19 +96,22 @@ def compile_locales(root_dir):
     """
     Refresh locale/<lang>/LC_MESSAGES/*.mo via po/manage.py.
 
-    Best effort: gettext is a developer dependency, not an end-user one, and
-    the repository ships prebuilt .mo files. A missing msgfmt therefore warns
-    rather than failing the install.
+    gettext is a developer dependency, not an end-user one, so compile_catalogs()
+    falls back to its own MO writer when msgfmt is absent. .mo files are no
+    longer committed, so there is nothing to fall back on otherwise — the old
+    "using the .mo files already in locale/" message described files that would
+    not be there.
     """
     manage = load_po_manager(root_dir)
     if manage is None:
+        print(f"{YELLOW}No po/ directory in this source; interface stays in English.{RESET}")
         return False
 
     try:
         written = manage.compile_catalogs(root_dir, verbose=True)
     except manage.MissingToolError as e:
         print(f"{YELLOW}Locale compilation skipped: {e}{RESET}")
-        print("Using the .mo files already in locale/.")
+        print("The interface will stay in English.")
         return False
     except subprocess.CalledProcessError as e:
         print(f"{YELLOW}Locale compilation failed: msgfmt exited {e.returncode}{RESET}")
@@ -275,10 +278,24 @@ def install_schemas(src_schemas_dir):
                 print(f"Compiled {files_found} global schema(s) in {GLOBAL_SCHEMAS_DIR}")
             except subprocess.CalledProcessError:
                 print(f"{RED}Warning: Failed to compile global schemas.{RESET}")
-        
+            except FileNotFoundError:
+                # Only CalledProcessError was caught before, so an ABSENT
+                # binary escaped as a traceback rather than a message. The
+                # compiled schema is not optional — without it the extension
+                # cannot open its preferences at all.
+                sys.exit(
+                    f"{RED}Error: 'glib-compile-schemas' not found.{RESET}\n"
+                    "It ships with GLib and is normally present on any GNOME system.\n"
+                    "Debian/Ubuntu: sudo apt install libglib2.0-bin\n"
+                    "Fedora:        sudo dnf install glib2-devel"
+                )
+
         # 2. Local Compile (for portability/standard compliance)
-        subprocess.run(["glib-compile-schemas", src_schemas_dir], check=False)
-        print("Compiled schemas locally.")
+        try:
+            subprocess.run(["glib-compile-schemas", src_schemas_dir], check=False)
+            print("Compiled schemas locally.")
+        except FileNotFoundError:
+            print(f"{YELLOW}Warning: local schema compile skipped (glib-compile-schemas absent).{RESET}")
     
     return found_ids
 
@@ -423,7 +440,10 @@ def install_remote(args, target_base):
 # buttons, and two hard failures — addToStatusArea() rejects a duplicate role,
 # and a GTypeName can only be registered once per process. Removing the
 # predecessor is not tidiness, it is what makes the new one able to run.
-SUPERSEDED_UUIDS = ["hornbill@lethil.me"]
+# HISTORICAL VALUE — do not update to the current UUID. This names what to
+# find and delete; pointing it at hornbill@lethil.me would match the guard
+# below, skip, and leave the old Lesion install running alongside the new one.
+SUPERSEDED_UUIDS = ["lesion@lethil.me"]
 
 
 def remove_superseded(target_base, current_uuid):

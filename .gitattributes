@@ -1,6 +1,14 @@
+# Files kept out of `git archive` output, which is what GitHub serves for
+# "Download ZIP" and for the auto-generated source archives on a Release.
+#
+# `/po export-ignore` was REMOVED deliberately. install.py compiles catalogs
+# from po/*.po at install time; with po/ excluded it never could, and now that
+# .mo files are untracked there is nothing left to fall back on. Excluding po/
+# would mean no translations for anyone installing from source.
+
 /ui export-ignore
-/po export-ignore
 /.vscode export-ignore
+/.github export-ignore
 .gitignore export-ignore
 .extensionignore export-ignore
 .gitattributes export-ignore

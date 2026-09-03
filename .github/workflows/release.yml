@@ -1,0 +1,180 @@
+name: Release
+
+# Triggered by the commit message, not by a tag:
+#
+#     Release: extension; short summary of why
+#
+# 'extension' is the target, leaving room for other targets later without a
+# second workflow. head_commit is the LAST commit of a push, so the release
+# commit has to be the final one — push it on its own if in doubt.
+#
+# workflow_dispatch is the escape hatch: a commit-message trigger otherwise
+# needs an empty commit to re-run.
+
+on:
+  push:
+    branches: [master]
+  workflow_dispatch:
+    inputs:
+      summary:
+        description: "One-line summary for the release notes"
+        required: false
+        default: ""
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      startsWith(github.event.head_commit.message, 'Release: extension;')
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # tags are needed for the duplicate-tag guard
+
+      # glib-compile-schemas lives in libglib2.0-bin; msgfmt in gettext.
+      # Both are mandatory here: build.py --strict fails rather than falling
+      # back, so a release can never ship a stale or missing gschemas.compiled.
+      - name: Install build tools
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends libglib2.0-bin gettext
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Read version from metadata.json
+        id: meta
+        run: |
+          VERSION_NAME=$(python3 -c "import json;print(json.load(open('metadata.json'))['version-name'])")
+          VERSION=$(python3 -c "import json;print(json.load(open('metadata.json'))['version'])")
+          UUID=$(python3 -c "import json;print(json.load(open('metadata.json'))['uuid'])")
+          NAME=$(python3 -c "import json;print(json.load(open('metadata.json'))['name'])")
+          echo "version_name=$VERSION_NAME" >> "$GITHUB_OUTPUT"
+          echo "version=$VERSION"           >> "$GITHUB_OUTPUT"
+          echo "uuid=$UUID"                 >> "$GITHUB_OUTPUT"
+          echo "name=$NAME"                 >> "$GITHUB_OUTPUT"
+          echo "tag=v$VERSION_NAME"         >> "$GITHUB_OUTPUT"
+          echo "Releasing $NAME $VERSION_NAME (build $VERSION) as v$VERSION_NAME"
+
+      # The highest-value gate: catches "forgot to bump metadata.json" before
+      # anything is published, which is the mistake most likely to happen.
+      - name: Refuse to reuse a tag
+        run: |
+          if git rev-parse -q --verify "refs/tags/${{ steps.meta.outputs.tag }}" >/dev/null; then
+            echo "::error::Tag ${{ steps.meta.outputs.tag }} already exists. Bump 'version' and 'version-name' in metadata.json."
+            exit 1
+          fi
+
+      - name: Extract release notes from Changelog.md
+        id: notes
+        run: |
+          python3 - <<'PY'
+          import json, os, re, sys
+          meta = json.load(open('metadata.json'))
+          vn, v = meta['version-name'], meta['version']
+
+          text = open('Changelog.md', encoding='utf-8').read()
+          # Headings look like: ## 26.08.31.89 (version 138) — title
+          pattern = re.compile(r'^##\s+' + re.escape(vn) + r'\s*\(version\s+' + str(v) + r'\)(.*?)$',
+                               re.MULTILINE)
+          m = pattern.search(text)
+          if not m:
+              print(f"::error::No Changelog.md section for {vn} (version {v}). "
+                    f"Every release needs an entry.")
+              sys.exit(1)
+
+          start = m.end()
+          nxt = re.compile(r'^##\s', re.MULTILINE).search(text, start)
+          body = text[start:nxt.start() if nxt else len(text)].strip()
+
+          summary = os.environ.get('DISPATCH_SUMMARY', '').strip()
+          if not summary:
+              msg = os.environ.get('COMMIT_MESSAGE', '')
+              # Only the subject line, and only past the first ';'
+              subject = msg.splitlines()[0] if msg else ''
+              summary = subject.split(';', 1)[1].strip() if ';' in subject else ''
+          out = (f"{summary}\n\n---\n\n{body}" if summary else body)
+
+          with open('RELEASE_NOTES.md', 'w', encoding='utf-8') as fh:
+              fh.write(out + "\n")
+          print(f"Release notes: {len(out)} chars from the {vn} section")
+          PY
+        env:
+          # Actions expressions have no slice(), so the raw message is passed
+          # through and split in Python: everything after the first ';' in
+          # "Release: extension; ..." becomes the summary line.
+          COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
+          DISPATCH_SUMMARY: ${{ inputs.summary }}
+
+      - name: Verify sources
+        run: |
+          fail=0
+          for f in $(find app extension.js prefs.js app.js -name '*.js' | sort); do
+            node --input-type=module --check < "$f" || { echo "::error file=$f::syntax error"; fail=1; }
+          done
+          node check-symbols.js || fail=1
+          exit $fail
+
+      - name: Build packages
+        run: |
+          python3 build.py --strict --no-self
+          python3 build.py --strict --ego
+          ls -la tmp/
+
+      # Each of these corresponds to something that has actually gone wrong
+      # in this project before.
+      - name: Verify packages
+        run: |
+          python3 - <<'PY'
+          import glob, json, sys, zipfile
+          meta = json.load(open('metadata.json'))
+          problems = []
+
+          for path in sorted(glob.glob('tmp/*.zip')):
+              names = set(zipfile.ZipFile(path).namelist())
+              is_ego = 'ego' in path.lower()
+
+              if 'schemas/gschemas.compiled' not in names:
+                  problems.append(f"{path}: gschemas.compiled missing (preferences would not open)")
+              if not any(n.endswith('.mo') for n in names):
+                  problems.append(f"{path}: no compiled catalogs")
+              if 'metadata.json' not in names:
+                  problems.append(f"{path}: metadata.json missing")
+
+              if is_ego:
+                  if 'app.js' in names:
+                      problems.append(f"{path}: app.js must not ship (self-executing dev harness)")
+                  dead = [n for n in names if '.v0' in n or '.v1' in n]
+                  if dead:
+                      problems.append(f"{path}: dead-code files present: {dead}")
+                  raw = json.loads(zipfile.ZipFile(path).read('metadata.json'))
+                  for key in ('links', 'developer-name'):
+                      if key not in raw:
+                          problems.append(f"{path}: '{key}' stripped; the About page reads it directly")
+
+          unreleased = [v for v in meta['shell-version'] if int(v) > 50]
+          if unreleased:
+              problems.append(f"metadata.json: unreleased shell-version entries {unreleased}")
+
+          if problems:
+              for p in problems:
+                  print(f"::error::{p}")
+              sys.exit(1)
+          print(f"Verified {len(glob.glob('tmp/*.zip'))} package(s)")
+          PY
+
+      - name: Create release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "${{ steps.meta.outputs.tag }}" \
+            --target "${{ github.sha }}" \
+            --title "${{ steps.meta.outputs.name }} ${{ steps.meta.outputs.version_name }} (build ${{ steps.meta.outputs.version }})" \
+            --notes-file RELEASE_NOTES.md \
+            tmp/*.zip

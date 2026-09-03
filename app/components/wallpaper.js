@@ -84,7 +84,10 @@ export class WallpaperManager extends ExtensionComponent {
      */
     _getLegacyBackupPaths() {
         return [
-            GLib.build_filenamev([GLib.get_user_state_dir(), 'hornbill', this.backupFile]),
+            // HISTORICAL VALUE — do not update to 'hornbill'. This is where
+            // the pre-rename backup actually sits on disk; changing it points
+            // the migration at a directory that has never existed.
+            GLib.build_filenamev([GLib.get_user_state_dir(), 'lesion', this.backupFile]),
             GLib.build_filenamev([this._extension.path, this.backupFile]),
         ];
     }

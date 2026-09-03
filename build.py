@@ -79,16 +79,18 @@ def compile_locales(root_dir, required=False):
     """
     Refresh locale/<lang>/LC_MESSAGES/*.mo via po/manage.py.
 
-    Returns True when catalogs were compiled. When gettext is missing this
-    warns and returns False unless `required` is set, because the repository
-    ships prebuilt .mo files and a stale catalog is better than a failed run.
+    `required` is passed through as strict=, so a release build demands real
+    msgfmt rather than accepting the built-in fallback writer. The fallback
+    exists for end-user installs; it does not run msgfmt --check, so it cannot
+    catch a malformed format string or plural form, and a published release
+    should not be the first place such a mistake shows up.
     """
     manage = load_po_manager(root_dir)
     if manage is None:
         return False
 
     try:
-        written = manage.compile_catalogs(root_dir, verbose=True)
+        written = manage.compile_catalogs(root_dir, verbose=True, strict=required)
     except manage.MissingToolError as e:
         message = f"Locale compilation skipped: {e}"
         if required:
@@ -142,6 +144,16 @@ def parse_arguments():
         action="store_false", 
         dest="include_self",
         help="Do NOT include this build.py script in the final zip file."
+    )
+
+    parser.add_argument(
+        "--strict",
+        action="store_true",
+        help=(
+            "Fail instead of warning when glib-compile-schemas or msgfmt is "
+            "missing. Use in CI: the default warn-and-continue would publish a "
+            "release with a stale or absent gschemas.compiled."
+        )
     )
 
     parser.add_argument(
@@ -264,9 +276,9 @@ def main():
     #    a schema that no longer matches schemas/*.gschema.xml.
     if args.compile_assets:
         print("Compiling translation catalogs...")
-        compile_locales(os.getcwd(), required=args.ego)
+        compile_locales(os.getcwd(), required=args.ego or args.strict)
         print("Compiling GSettings schemas...")
-        compile_schemas(os.getcwd(), required=args.ego)
+        compile_schemas(os.getcwd(), required=args.ego or args.strict)
 
     # 3. Define Filename
     if args.ego:

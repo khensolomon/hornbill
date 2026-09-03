@@ -3,6 +3,132 @@
 Notable changes to the Hornbill extension (named Lesion before v138). Version names follow `yy.mm.dd`
 (EGO `version-name` allows letters, numbers, spaces, and periods only).
 
+## 26.09.01.90 (version 139) — generated files leave the repo; release workflow
+
+`*.mo` and `*.compiled` are no longer committed. They are produced at build or
+install time, and the pieces needed to guarantee that are in place.
+
+### Added — a dependency-free .mo writer
+
+`po/manage.py` shelled out to `msgfmt` and raised `MissingToolError` without
+it. With the catalogs untracked there is nothing left to fall back on, so a
+user without gettext would have got no translations at all — not a degraded
+install, an untranslatable one.
+
+`compile_catalogs()` now falls back to `compile_catalogs_pure()`, which writes
+MO files directly. The format is a magic number, two offset tables and two
+string blobs. Two traps, both of which fail silently and are commented in
+place:
+
+- `text.encode().decode('unicode_escape')` is the obvious way to resolve PO
+  escapes and it is wrong: it decodes UTF-8 as latin-1, so every non-ASCII
+  character becomes mojibake. `_unescape()` handles only PO's own escapes.
+- The two offset tables are CONCATENATED, not interleaved. Interleaving
+  produces a file that parses without error but whose header cannot be found,
+  so the charset falls back to ASCII and the first non-ASCII translation raises
+  `UnicodeDecodeError` — a bug that would only surface when someone contributed
+  a non-English locale.
+
+Verified against the real `po/en.po`: 281 entries, 20,560 bytes, read back
+correctly by a standard gettext reader with the charset resolved from the
+header.
+
+`msgfmt` stays the primary path. It runs `--check`, which validates format
+strings and plural forms; the fallback cannot, and a published release should
+not be where such a mistake first appears.
+
+### Added — build.py --strict
+
+`compile_locales()` and `compile_schemas()` warned and continued when their
+tools were missing — correct on a workstation, wrong in CI, where it would
+publish a release containing a stale or absent `gschemas.compiled`. Since
+`*.compiled` was never tracked, "using it as it stands" meant using nothing.
+
+`--strict` forces both to fail instead, independently of `--ego`, and passes
+`strict=True` through to `compile_catalogs()` so a release build demands real
+`msgfmt` rather than accepting the fallback.
+
+### Fixed — install.py crashed instead of explaining
+
+`install_schemas()` caught only `CalledProcessError`. A MISSING
+`glib-compile-schemas` raises `FileNotFoundError`, which escaped as a traceback.
+It now exits with the package name for Debian/Ubuntu and Fedora. The local
+compile is guarded too.
+
+`compile_locales()` printed "Using the .mo files already in locale/" when
+msgfmt was absent — describing files that, from this version, are not there.
+
+### Changed — .gitattributes keeps po/
+
+`/po export-ignore` is removed. install.py compiles catalogs from `po/*.po`;
+with `po/` excluded from source archives it never could, and now that `.mo`
+files are untracked there would be nothing to fall back on. Everything else in
+the list is unchanged; `/.github` is added.
+
+### Added — .github/workflows/release.yml
+
+Triggered by a commit message beginning `Release: extension;` on master, with
+`workflow_dispatch` as an escape hatch since a message trigger otherwise needs
+an empty commit to re-run. `head_commit` is the last commit of a push, so the
+release commit must be the final one.
+
+Version, tag and title all come from `metadata.json`, never the commit message,
+so the tag and the shipped `version-name` cannot drift.
+
+Gates, each matching something that has actually gone wrong here:
+
+- the tag must not already exist — catches a forgotten version bump before
+  anything is published
+- `Changelog.md` must contain a section for this exact version
+- every JS file parses, and `check-symbols.js` passes
+- `gschemas.compiled` and at least one `.mo` are present in each zip
+- the EGO zip contains no `app.js` and no `*.v0*` dead-code files
+- the EGO zip retains `links` and `developer-name`, which `about.js` reads
+- `shell-version` carries no unreleased entries
+
+Release notes come from the matching `Changelog.md` section, with the text
+after the `;` in the commit subject as a summary line above it. Both builds are
+attached: `hornbill@lethil.me_v<version>.zip` and the EGO submission package
+`hornbill@lethil.me.shell-extension.zip`. `gh` is used rather than a
+third-party action, to keep the release path free of external dependencies.
+
+### Fixed — the .mo negation .gitignore made necessary
+
+build.py and install.py read `.gitignore` as ignore patterns, so adding `*.mo`
+there immediately dropped every compiled catalog from the package. The
+extension still ran, just permanently in English — the same silent failure
+`!schemas/gschemas.compiled` already existed to prevent. `.extensionignore`
+now negates `locale/**/*.mo` as well.
+
+Caught by building and inspecting the zip rather than by reading the diff; the
+CI package check asserts both artefacts are present for exactly this reason.
+
+### Fixed — Makefile still used the old UUID
+
+`EXT ?= lesion@lethil.me` was missed by the v138 rename: the sweep covered
+`app/**/*.js`, the root JS entry points and the Python scripts, but not the
+Makefile. Every `make` target — enable, disable, reload, logs — was addressing
+an extension that no longer exists.
+
+Two other occurrences remain and are correct. Both are now marked
+HISTORICAL VALUE in place, because they read as stale text and would break
+quietly if "corrected":
+
+- `install.py` `SUPERSEDED_UUIDS` names the PREDECESSOR to find and delete.
+  Pointing it at the current UUID would match its own skip guard and leave the
+  old install running alongside the new one — the collision the code exists to
+  prevent.
+- `wallpaper.js` `_getLegacyBackupPaths()` names where the pre-rename backup
+  actually sits on disk. Changing it aims the migration at a directory that has
+  never existed, and the original wallpaper becomes unrecoverable.
+
+### Migration
+
+The tracked artefacts have to be removed from the index once:
+
+    git rm --cached schemas/gschemas.compiled
+    git rm --cached locale/*/LC_MESSAGES/*.mo
+
 ## 26.08.31.89 (version 138) — renamed to Hornbill
 
 The project, the extension UUID, the settings schema and the translation domain

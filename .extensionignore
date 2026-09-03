@@ -1,6 +1,5 @@
 .gitignore
 .extensionignore
-.gitattributes
 
 .git/
 .vscode/
@@ -19,6 +18,7 @@ po/
 # It self-executes at import, so keep it out of the submission.
 app.js
 
+ext.sh
 build.py
 install.py
 check.sh
@@ -33,3 +33,8 @@ Changelog.md
 # schema is dropped from every package and app/config.js cannot resolve its
 # GSettings schema, so preferences fail to open on a clean install.
 !schemas/gschemas.compiled
+
+# Same trap, same fix. `*.mo` joined .gitignore when the catalogs stopped being
+# committed, which silently dropped every compiled translation from the package
+# — the extension still ran, just always in English.
+!locale/**/*.mo
