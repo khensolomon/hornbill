@@ -290,7 +290,7 @@ export function createExtensionsUI() {
         systemGroup.set_visible(systemCount > 0);
 
         if (userCount === 0 && systemCount === 0) {
-            statusRow.set_title('No extensions found');
+            statusRow.set_title(_('No extensions found'));
             spinner.stop();
             statusGroup.set_visible(true);
         }
@@ -303,7 +303,7 @@ export function createExtensionsUI() {
             loading = false;
             loadedOnce = true;
             if (err) {
-                statusRow.set_title('Could not load extensions');
+                statusRow.set_title(_('Could not load extensions'));
                 spinner.stop();
                 statusGroup.set_visible(true);
                 return;
@@ -317,8 +317,8 @@ export function createExtensionsUI() {
         if (err || !p) {
             logError('Could not reach org.gnome.Shell.Extensions', err);
             spinner.stop();
-            statusRow.set_title('Extensions service unavailable');
-            statusRow.set_subtitle('Could not reach GNOME Shell.');
+            statusRow.set_title(_('Extensions service unavailable'));
+            statusRow.set_subtitle(_('Could not reach GNOME Shell.'));
             return;
         }
         proxy = p;

@@ -13,6 +13,7 @@ import { AppConfig } from "../config.js";
 import { logError, log } from "../util/logger.js";
 import { gettext as _ } from '../util/gettext.js';
 import { ShakeAnimator } from '../util/shake.js';
+import { TooltipManager } from '../components/tooltip.js';
 import { setIconGeometry } from '../util/compat.js';
 
 /** The shell's extension-preferences tool; every prefs window belongs to it. */
@@ -116,6 +117,22 @@ export class Indicator {
     // could only ever report open/closed and lagged up to 800ms behind.
     this._shaker = new ShakeAnimator();
 
+    // The indicator was the one button Hornbill adds to the panel WITHOUT a
+    // hover label — an oversight rather than a decision. It gets its own
+    // manager because components stay independent of each other; the label
+    // actor is created lazily, so this costs nothing until first hover.
+    // The 'apps-tooltips-enabled' and delay settings are shared, since the
+    // Tooltips page describes itself as covering every button Hornbill adds.
+    // TooltipManager reads button._clickButton, because on AppPanelButton the
+    // inner St.Button owns the pointer and the outer PanelMenu.Button's hover
+    // is unreliable on its own. This indicator has the same two-layer shape but
+    // kept the inner button on the component, so expose it the same way or the
+    // label would rarely appear.
+    this.button._clickButton = this._clickButton;
+
+    this._tooltips = new TooltipManager(AppConfig.getSettings());
+    this._tooltips.attach(this.button, AppConfig.name);
+
     this._displaySignals = [
       global.display.connect('notify::focus-window', () => this._updateState()),
       global.display.connect('window-created', () => this._updateState()),
@@ -197,21 +214,27 @@ export class Indicator {
    * A short wobble answers "where is it?" on a wide desktop without changing
    * any existing behaviour, because there was none to change.
    */
-  _activatePrefs() {
+  _activatePrefs(page = null) {
     const win = this._prefsWindow();
 
     if (win && global.display.focus_window === win) {
+      // Navigate first when a page was asked for: the window is already in
+      // front, so the only thing missing is the destination and the cue.
+      if (page) this.extension.openPreferences(page);
       this._shaker?.shake(win, 6);
       return;
     }
 
     if (win) {
-      // Open but behind something, or on another workspace.
-      win.activate(global.get_current_time());
+      // Open but behind something, or on another workspace. openPreferences()
+      // raises through Main.activateWindow and sets the target page, so it
+      // covers both halves; win.activate() alone would only raise.
+      if (page) this.extension.openPreferences(page);
+      else win.activate(global.get_current_time());
       return;
     }
 
-    this.extension.openPreferences();
+    this.extension.openPreferences(page);
   }
 
   _destroyButton() {
@@ -225,6 +248,10 @@ export class Indicator {
       try { Shell.AppSystem.get_default().disconnect(this._appSystemSignal); }
       catch (e) { log('[Indicator] disconnect failed', e); }
       this._appSystemSignal = 0;
+    }
+    if (this._tooltips) {
+      this._tooltips.destroy();
+      this._tooltips = null;
     }
     if (this._shaker) {
       this._shaker.destroy();
@@ -349,20 +376,21 @@ export class Indicator {
     // Order: Preferences, Extensions, Disable, About, Close.
     // Disable is fenced by separators because it is the destructive item.
     if (!isPrefsOpen) {
-      const prefsItem = new PopupMenu.PopupMenuItem("Preferences");
-      prefsItem.connect("activate", () => this.extension.openPreferences());
+      const prefsItem = new PopupMenu.PopupMenuItem(_("Preferences"));
+      prefsItem.connect("activate", () => this._activatePrefs());
       menu.addMenuItem(prefsItem);
     }
 
-    const extensionsItem = new PopupMenu.PopupMenuItem("Extensions");
-    extensionsItem.connect("activate", () =>
-      this.extension.openPreferences("extensions"),
-    );
+    // Every entry goes through _activatePrefs so the shake and the raise
+    // behave identically whether the button or a menu item was used. Calling
+    // openPreferences() directly, as these did, skipped both.
+    const extensionsItem = new PopupMenu.PopupMenuItem(_("Extensions"));
+    extensionsItem.connect("activate", () => this._activatePrefs("extensions"));
     menu.addMenuItem(extensionsItem);
 
     menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
 
-    const quitItem = new PopupMenu.PopupMenuItem("Disable Extension");
+    const quitItem = new PopupMenu.PopupMenuItem(_("Disable Extension"));
     quitItem.connect("activate", () => {
       this._confirmDisable();
     });
@@ -370,14 +398,12 @@ export class Indicator {
 
     menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
 
-    const aboutItem = new PopupMenu.PopupMenuItem("About");
-    aboutItem.connect("activate", () => {
-      this.extension.openPreferences("about");
-    });
+    const aboutItem = new PopupMenu.PopupMenuItem(_("About"));
+    aboutItem.connect("activate", () => this._activatePrefs("about"));
     menu.addMenuItem(aboutItem);
 
     if (isPrefsOpen) {
-      const closeItem = new PopupMenu.PopupMenuItem("Close");
+      const closeItem = new PopupMenu.PopupMenuItem(_("Close"));
       closeItem.connect("activate", () => {
         this.extension.closePreferences();
       });

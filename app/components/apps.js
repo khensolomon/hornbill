@@ -1117,7 +1117,7 @@ export class AppsManager extends ExtensionComponent {
         if (isRunning) {
             this._appendSeparator(menu);
             // Header for windows
-            const header = new PopupMenu.PopupMenuItem('Open Windows', { reactive: false });
+            const header = new PopupMenu.PopupMenuItem(_('Open Windows'), { reactive: false });
             header.actor.add_style_class_name('popup-subtitle-menu-item');
             header.actor.style = 'font-weight: bold; padding-bottom: 4px; opacity: 0.7;';
             menu.addMenuItem(header);

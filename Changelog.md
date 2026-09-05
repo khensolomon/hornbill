@@ -3,6 +3,116 @@
 Notable changes to the Hornbill extension (named Lesion before v138). Version names follow `yy.mm.dd`
 (EGO `version-name` allows letters, numbers, spaces, and periods only).
 
+## 26.09.03.92 (version 141) — indicator tooltip, a broken icon, and four handlers that outlived their pages
+
+### Fixed — the missing icon in Layout
+
+`Running Apps` used `preferences-system-windows-symbolic`, which no longer
+exists in Adwaita, so GTK substituted the broken-image glyph. Now
+`focus-windows-symbolic`, already used for window-related entries elsewhere.
+
+Every `icon_name`, `set_from_icon_name` and `ThemedIcon` in the tree was checked
+against the installed theme: 28 names referenced, 28 resolve, and this was the
+only one that did not.
+
+### Fixed — the indicator had no tooltip
+
+It was the one button Hornbill adds to the panel without a hover label. That
+was an oversight, not a decision, and it comes with a second bug: `attach()`
+reads `button._clickButton`, because on AppPanelButton the inner `St.Button`
+owns the pointer and the outer button's hover is unreliable alone. The
+indicator has the same two-layer shape but kept its inner button on the
+component, so the label would rarely have appeared even once attached. The
+inner button is now exposed the same way.
+
+It uses its own `TooltipManager` — components stay independent of one another —
+and the label actor is created lazily, so a second manager costs nothing until
+first hover. The `apps-tooltips-enabled` and delay settings are shared, since
+the Tooltips page describes itself as covering every button Hornbill adds.
+
+### Not a bug — the clock, quick settings and workspace indicator
+
+Those are GNOME's, not Hornbill's. It does not create them, the shell destroys
+and recreates them on its own schedule, and their `statusArea` keys are
+internal role strings rather than names worth showing. The clock already
+displays its own text. This was decided when tooltips were added in v122 and
+still holds.
+
+Show Apps and Overview are Hornbill's and do have tooltips.
+
+### Fixed — four settings handlers survived their own pages
+
+A preferences page is destroyed when you navigate away, but
+`AppConfig.getSettings()` is a long-lived singleton that outlives it. Four
+pages connected `changed::` handlers and never disconnected them:
+
+- clock.js — `clock-format-mode`
+- layout.js — `apps-indicator-color`
+- stylesheet.js — `custom-styles`
+- dashboard.js — `indicator-custom-icon`
+
+Left connected, the handler runs against destroyed widgets. The reachable path
+is Dashboard -> Reset, which resets every key at once and emits `changed::` for
+all of them, including keys belonging to pages no longer on screen: open Clock,
+navigate to Dashboard, reset, and `formatEntryRow.visible` is set on a widget
+that no longer exists.
+
+All four now disconnect on `destroy`, the pattern `geometry.js` already used.
+`window.js` connects `notify::collapsed` on the split view without tracking it,
+which is left alone deliberately — that object and its handler share a
+lifetime, so there is nothing to outlive.
+
+### Fixed — a copy-feedback timer with no owner
+
+`appearance.js` restored the copy button's icon after 1500ms without capturing
+the source id. Navigating away inside that window left it firing against a
+destroyed button. Captured, cancelled on destroy, and re-armed rather than
+stacked if the button is clicked twice.
+
+## 26.09.02.91 (version 140) — deep links, menu shake, and the strings the scan missed
+
+### Fixed — a deep link navigated by a different route than a click
+
+`contentNav.pushName()`, the entry point prefs.js uses when `open-page` is set,
+pushed the target as a SUB-PAGE. Clicking a sidebar row calls `loadMainPage()`
+and then `listBox.select_row()`. Two different routes to the same destination,
+and only one of them touched the sidebar.
+
+So opening About or Extensions from the indicator menu showed the right page
+while the sidebar kept whatever was selected before — and left the navigation
+stack in a state no click could produce.
+
+`pushName()` now calls `goToPage()` for anything that has a sidebar row, which
+is exactly what a click does. `pushSubPage` remains for targets with no row.
+The row lookup that `goToPage` did inline is now `findSidebarRow()`, shared with
+the new `hasSidebarRow()`, so selection and navigation cannot drift apart again.
+
+### Fixed — menu items skipped the shake and the raise
+
+`_activatePrefs()` holds the "already focused, so wobble it" behaviour added in
+v134, but only the panel button called it. Every menu item called
+`this.extension.openPreferences()` directly and bypassed it.
+
+All entries route through `_activatePrefs()` now, which takes an optional page.
+When the window is already focused it navigates and then shakes; when it is
+open but behind something it navigates and raises, since `openPreferences()`
+goes through `Main.activateWindow` while `win.activate()` alone only raises.
+
+### Fixed — 9 more untranslated strings
+
+The v137 sweep scanned property assignments (`title:`, `subtitle:`). These are
+CONSTRUCTOR and METHOD arguments, a shape it never looked at:
+
+- indicator.js — every menu label: Preferences, Extensions, Disable Extension,
+  About, Close
+- apps.js — the "Open Windows" menu header
+- extensions.js — three empty and error states, plus "Could not reach GNOME Shell."
+- wallpaper.js — "No image set" and "Error"
+- dashboard.js — "Invalid Path" and "Default"
+
+The scanner now covers `PopupMenuItem`, `add_response`, `set_title`,
+`set_subtitle`, `set_label` and `set_tooltip_text` as well, and reports zero.
+
 ## 26.09.01.90 (version 139) — generated files leave the repo; release workflow
 
 `*.mo` and `*.compiled` are no longer committed. They are produced at build or
@@ -149,6 +259,42 @@ exists. They are fallbacks for a missing `metadata.json` key, so nothing broke
 in normal use — but the one situation they exist for would have failed to
 resolve any schema at all. The stale `defaults.title` of "Gnome Split View" is
 now "Hornbill".
+
+### Changed — About page and Readme
+
+`metadata.json` `description` is one source for two audiences: the EGO listing,
+which needs the feature text, and the About header, which does not. Set whole
+into a centred 40-character label it rendered as roughly 19 stacked lines.
+
+`about.js` now takes the first paragraph as the header tagline and turns each
+remaining one into a row in a new **Features** group. A paragraph without the
+`Area \u2014 text` shape is shown as plain text rather than dropped, so
+rewording the description cannot silently lose a line.
+
+The description itself was reweighted. It led with "one-click presets that
+recreate the macOS menu bar or the Windows 11 taskbar" — the most prominent
+sentence in it described two preset files — while Wallpaper sat under "Extras"
+beside custom CSS, and Tooltips, Popup Menus, Screen Corners and Data
+Management were not mentioned at all.
+
+It now follows the preference pages, the same rule the Data Management groups
+use: if a page exists it is named, if it does not it is not invented. Presets
+remain, as a trailing clause rather than the headline.
+
+### Fixed — Readme promised a shell version the extension refuses
+
+It claimed GNOME Shell 46-51 while `metadata.json` declares 46-50. Corrected,
+and the feature list is now verified against the description paragraphs.
+
+Also rewritten: both install routes with a table of what each gives you, and a
+Development section covering the generated-files-are-not-committed rule, which
+is the first thing a fresh clone runs into — no `gschemas.compiled` means
+preferences cannot open.
+
+Three things I documented and then had to correct against the actual scripts:
+`install.py --uninstall` and `--local` do not exist (`--mode dev` does), and
+`manage.py update` still requires `xgettext`, since the built-in writer only
+replaces `msgfmt` for `compile`.
 
 ### Migration
 

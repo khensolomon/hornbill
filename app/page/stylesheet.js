@@ -242,7 +242,14 @@ function _addCustomStylesGroup(page, settings) {
     };
     refresh();
 
-    settings.connect('changed::custom-styles', refresh);
+    const customStylesSignal = settings.connect('changed::custom-styles', refresh);
+
+    // A page is destroyed when you navigate away, but AppConfig.getSettings()
+    // is a long-lived singleton that outlives it. An undisconnected handler then
+    // fires against destroyed widgets — reachable via Dashboard -> Reset, which
+    // resets every key at once and emits 'changed::' for all of them, including
+    // keys belonging to pages that are no longer on screen.
+    page.connect('destroy', () => settings.disconnect(customStylesSignal));
 
     const onAdd = (btn) => _onAddClicked(btn.get_root(), settings);
     headerAdd.connect('clicked', () => onAdd(headerAdd));

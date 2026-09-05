@@ -226,11 +226,11 @@ export class DashboardPage extends Adw.PreferencesPage {
                     const gicon = new Gio.FileIcon({ file: file });
                     previewIcon.set_from_gicon(gicon);
                 } catch (e) {
-                    row.set_subtitle('Invalid Path');
+                    row.set_subtitle(_('Invalid Path'));
                     previewIcon.set_from_icon_name('dialog-error-symbolic');
                 }
             } else {
-                row.set_subtitle('Default');
+                row.set_subtitle(_('Default'));
                 const defaultPath = GLib.build_filenamev([AppConfig.path, 'icon', 'hornbill-symbolic.svg']);
                 if (GLib.file_test(defaultPath, GLib.FileTest.EXISTS)) {
                     const gicon = Gio.icon_new_for_string(defaultPath);
@@ -242,7 +242,14 @@ export class DashboardPage extends Adw.PreferencesPage {
         };
 
         // Listen for external changes
-        this._settings.connect('changed::indicator-custom-icon', updateUi);
+        const iconSignal = this._settings.connect('changed::indicator-custom-icon', updateUi);
+
+        // A page is destroyed when you navigate away, but AppConfig.getSettings()
+        // is a long-lived singleton that outlives it. An undisconnected handler then
+        // fires against destroyed widgets — reachable via Dashboard -> Reset, which
+        // resets every key at once and emits 'changed::' for all of them, including
+        // keys belonging to pages that are no longer on screen.
+        this.connect('destroy', () => this._settings.disconnect(iconSignal));
         updateUi();
 
         const box = new Gtk.Box({ spacing: 6, valign: Gtk.Align.CENTER });

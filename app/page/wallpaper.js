@@ -440,9 +440,9 @@ function _createImageRow(settings, key, title) {
                 const file = Gio.File.new_for_uri(currentUri);
                 row.set_subtitle(file.get_basename() || currentUri);
             } else {
-                row.set_subtitle('No image set');
+                row.set_subtitle(_('No image set'));
             }
-        } catch(e) { row.set_subtitle('Error'); }
+        } catch(e) { row.set_subtitle(_('Error')); }
     };
 
     updateSubtitle();

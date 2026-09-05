@@ -235,7 +235,14 @@ export function createLayoutUI() {
     };
     updateColorBtn();
     
-    settings.connect('changed::apps-indicator-color', updateColorBtn);
+    const indicatorColorSignal = settings.connect('changed::apps-indicator-color', updateColorBtn);
+
+    // A page is destroyed when you navigate away, but AppConfig.getSettings()
+    // is a long-lived singleton that outlives it. An undisconnected handler then
+    // fires against destroyed widgets — reachable via Dashboard -> Reset, which
+    // resets every key at once and emits 'changed::' for all of them, including
+    // keys belonging to pages that are no longer on screen.
+    page.connect('destroy', () => settings.disconnect(indicatorColorSignal));
 
     colorBtn.connect('notify::rgba', () => {
         const c = colorBtn.get_rgba();
@@ -471,7 +478,7 @@ export function createLayoutUI() {
     createSection('Favorites', 'favorites', 'Manage the pinned favorites launcher.', 'starred-symbolic');
 
     /** SECTION: Running Apps Taskbar */
-    createSection('Running Apps', 'running', 'Manage the taskbar for running applications.', 'preferences-system-windows-symbolic');
+    createSection('Running Apps', 'running', 'Manage the taskbar for running applications.', 'focus-windows-symbolic');
 
     /** SECTION: Disks & Volumes */
     createSection('Disks', 'disks', 'Manage mounted drives and volumes.', 'drive-harddisk-symbolic');

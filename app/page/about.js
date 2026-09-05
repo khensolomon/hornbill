@@ -36,7 +36,17 @@ export function createAboutUI(navigator, goToPage) {
         : `v${metadata.version}`;
     const version = new Gtk.Label({ label: versionLabel, css_classes: ['title-4', 'dim-label'], margin_bottom: 12 });
     const developer = new Gtk.Label({ label: metadata["developer-name"] || 'Unknown Developer', css_classes: ['heading'] });
-    const description = new Gtk.Label({ label: metadata.description || '', justify: Gtk.Justification.CENTER, wrap: true, css_classes: ['body'], margin_top: 6, max_width_chars: 40 });
+    // metadata.description is one source for two audiences: the EGO listing,
+    // which needs the full feature text, and this header, which does not. Set
+    // whole into a centred 40-character label it came out as ~19 stacked lines.
+    // The first paragraph is the tagline; the rest become proper rows below.
+    const paragraphs = (metadata.description || '')
+        .split(/\n\s*\n/)
+        .map(part => part.trim())
+        .filter(Boolean);
+    const tagline = paragraphs.shift() || '';
+
+    const description = new Gtk.Label({ label: tagline, justify: Gtk.Justification.CENTER, wrap: true, css_classes: ['body'], margin_top: 6, max_width_chars: 40 });
 
     headerBox.append(logoWidget);
     headerBox.append(appName);
@@ -47,6 +57,27 @@ export function createAboutUI(navigator, goToPage) {
     const headerGroup = new Adw.PreferencesGroup();
     headerGroup.add(headerBox);
     page.add(headerGroup);
+
+    // --- FEATURES ---
+    // Each remaining paragraph is "Area — what it does", which maps to the
+    // preference pages. Anything without that shape is shown as plain text
+    // rather than dropped, so a reworded description cannot silently lose a line.
+    if (paragraphs.length > 0) {
+        const featureGroup = new Adw.PreferencesGroup({ title: _('Features') });
+
+        paragraphs.forEach(part => {
+            const split = part.match(/^([^\u2014]{1,40})\u2014\s*([\s\S]+)$/);
+            const row = new Adw.ActionRow({
+                title: split ? split[1].trim() : _('Also'),
+                subtitle: split ? split[2].trim() : part,
+                activatable: false,
+            });
+            row.set_subtitle_lines(0); // wrap instead of ellipsising
+            featureGroup.add(row);
+        });
+
+        page.add(featureGroup);
+    }
 
     // --- SYSTEM / DIAGNOSTICS (moved here from the old dashboard hero) ---
     const sysGroup = new Adw.PreferencesGroup({

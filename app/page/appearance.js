@@ -456,10 +456,24 @@ export class AppearancePage extends Adw.PreferencesPage {
                 copyBtn.set_icon_name('dialog-warning-symbolic');
             }
             
-            GLib.timeout_add(GLib.PRIORITY_DEFAULT, 1500, () => {
+            // Captured and cancelled on destroy: navigating away within the
+            // 1.5s window would otherwise leave this firing against a widget
+            // that no longer exists.
+            if (copyBtn._resetIconId) GLib.source_remove(copyBtn._resetIconId);
+            copyBtn._resetIconId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 1500, () => {
+                copyBtn._resetIconId = 0;
                 copyBtn.set_icon_name('edit-copy-symbolic');
                 return GLib.SOURCE_REMOVE;
             });
+            if (!copyBtn._resetIconGuarded) {
+                copyBtn._resetIconGuarded = true;
+                copyBtn.connect('destroy', () => {
+                    if (copyBtn._resetIconId) {
+                        GLib.source_remove(copyBtn._resetIconId);
+                        copyBtn._resetIconId = 0;
+                    }
+                });
+            }
 
         } catch (err) {
             logError('Copy Failed:', err);

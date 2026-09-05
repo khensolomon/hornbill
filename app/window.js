@@ -105,12 +105,29 @@ export function createUI() {
         }
     };
 
+    /**
+     * Deep-link entry point, called by prefs.js when 'open-page' is set.
+     *
+     * This used to push the target as a SUB-PAGE, which is a different route
+     * from the one a sidebar click takes (loadMainPage + select_row). The page
+     * appeared, but the sidebar kept whatever was selected before, so opening
+     * About or Extensions from the indicator menu left the menu highlighting
+     * the wrong item and the nav stack in a state a click could never produce.
+     *
+     * Sidebar destinations now go through goToPage(), exactly as if the row had
+     * been clicked. pushSubPage remains for targets that have no sidebar row.
+     */
     contentNav.pushName = (subPageId) => {
         const targetDef = findPageDefinition(subPageId);
-        if (targetDef) {
-            const subContent = targetDef.ui ? targetDef.ui(contentNav) : new Adw.StatusPage({ title: 'No UI' });
-            pushSubPage(targetDef, subContent);
+        if (!targetDef) return;
+
+        if (hasSidebarRow(subPageId)) {
+            goToPage(subPageId);
+            return;
         }
+
+        const subContent = targetDef.ui ? targetDef.ui(contentNav) : new Adw.StatusPage({ title: 'No UI' });
+        pushSubPage(targetDef, subContent);
     };
 
     // --- Custom row factory ---
@@ -206,20 +223,25 @@ export function createUI() {
         splitView.set_show_content(true);
     };
 
+    const findSidebarRow = (pageId) => {
+        let row = listBox.get_first_child();
+        while (row) {
+            if (row._pageData && row._pageData.id === pageId) return row;
+            row = row.get_next_sibling();
+        }
+        return null;
+    };
+
+    const hasSidebarRow = (pageId) => findSidebarRow(pageId) !== null;
+
     const goToPage = (pageId, ...args) => {
         const targetPage = findPageDefinition(pageId);
-        searchBar.set_search_mode(false); 
-        if (targetPage) {
-            loadMainPage(targetPage, ...args);
-            let row = listBox.get_first_child();
-            while (row) {
-                if (row._pageData && row._pageData.id === pageId) {
-                    listBox.select_row(row);
-                    break;
-                }
-                row = row.get_next_sibling();
-            }
-        }
+        searchBar.set_search_mode(false);
+        if (!targetPage) return;
+
+        loadMainPage(targetPage, ...args);
+        const row = findSidebarRow(pageId);
+        if (row) listBox.select_row(row);
     };
 
     // --- SIDEBAR POPULATION ---
