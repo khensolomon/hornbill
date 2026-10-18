@@ -299,8 +299,9 @@ export class GeometryManager extends ExtensionComponent {
     /**
      * True for apps the user excluded (rule 8). Matched against both the app
      * id and WM_CLASS, case-insensitively. The app id is often unknown at
-     * 'window-created'; _beginRestore and the save path re-run
-     * _shouldManage(), so an excluded app is dropped once it resolves.
+     * 'window-created'; _tryResolveRestore() re-checks exclusion and the
+     * save path re-runs _shouldManage(), so an excluded app is dropped once
+     * it resolves.
      */
     _isExcluded(win) {
         let excluded;
@@ -330,10 +331,17 @@ export class GeometryManager extends ExtensionComponent {
      * (rule 7). Identity is computed live: pre-existing windows were never
      * resolved, and a window's identity can change after mapping.
      */
-    _siblingsOf(win, appId) {
+    _siblingsOf(win, appId, blockingFor = null) {
         const out = [];
-        for (const other of this._windowData.keys()) {
+        for (const [other, otherData] of this._windowData) {
             if (other === win || !this._isAlive(other)) continue;
+            // For the restore decision, only a window that is already placed
+            // (restored or settled) or was created earlier counts. Otherwise
+            // two windows resolving close together could each see the other
+            // and both be left unrestored.
+            if (blockingFor && !(otherData.restored || otherData.settled ||
+                                 otherData.createdAt < blockingFor.createdAt))
+                continue;
             let otherId = null;
             try { otherId = this._identityFor(other); } catch (e) { continue; }
             if (otherId && otherId === appId) out.push(other);
@@ -455,8 +463,14 @@ export class GeometryManager extends ExtensionComponent {
             if (resolved || !idNow || this._isLocationPending(idNow, data))
                 this._cloak(win, data);
 
-            if (!resolved)
+            // data.restored without a restore: left in place (rule 7).
+            if (!resolved && !data.restored)
                 this._scheduleRestore(win, data, 0);
+        } else {
+            // Recorded now, while the window tracker certainly knows the
+            // window: at 'unmanaged' it may have let go, and the WM_CLASS
+            // fallback can differ in case from the app id.
+            try { data.lastIdentity = this._identityFor(win); } catch (e) { log('_trackWindow: _identityFor() failed', e); }
         }
     }
 
@@ -679,7 +693,7 @@ export class GeometryManager extends ExtensionComponent {
         // marked restored so every pending path stops, then revealed and
         // settled like a window with nothing saved. Returns false so the
         // caller in _trackWindow does not cloak it.
-        if (this._siblingsOf(win, appId).length > 0) {
+        if (this._siblingsOf(win, appId, data).length > 0) {
             log(`[Geometry] '${appId}' already has an open window — leaving this one in place`);
             data.restored = true;
             data.finalApplyDone = true;
@@ -796,6 +810,9 @@ export class GeometryManager extends ExtensionComponent {
      */
     _preplace(win, data, appId) {
         if (data.prePlaced || !data.cloaked) return;
+        // Another window of this app is open, so this one will be left in
+        // place (rule 7); pre-placing would stack it on the open window.
+        if (this._siblingsOf(win, appId, data).length > 0) return;
         // Same hard rule as _beginRestore: NO GEOMETRY OPERATIONS DURING
         // WINDOW CONSTRUCTION. _tryResolveRestore is called again from the
         // 'first-frame' and 'shown' handlers, so this lands at exactly the
@@ -871,6 +888,8 @@ export class GeometryManager extends ExtensionComponent {
                 if (!this._isAlive(win) || data.restored) return GLib.SOURCE_REMOVE;
 
                 if (this._tryResolveRestore(win, data)) return GLib.SOURCE_REMOVE;
+                // Left in place (rule 7) or excluded and untracked (rule 8).
+                if (data.restored || !this._windowData.has(win)) return GLib.SOURCE_REMOVE;
 
                 // Identity known but nothing saved (and no alias): no
                 // restore is coming — stop hiding the window.
