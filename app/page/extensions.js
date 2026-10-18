@@ -4,6 +4,7 @@ import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
 import Gdk from 'gi://Gdk';
 import { AppConfig } from '../config.js';
+import { pageScope } from '../util/teardown.js';
 import { logError } from '../util/logger.js';
 import { gettext as _, format } from '../util/gettext.js';
 
@@ -102,6 +103,11 @@ function _listExtensionsAsync(proxy, callback) {
 
 export function createExtensionsUI() {
     const page = new Adw.PreferencesPage();
+    // The D-Bus proxy and its signal outlive navigation; the page teardown
+    // disconnects them and stops any pending refresh. Async callbacks check
+    // `disposed` so a reply arriving after teardown builds nothing.
+    const scope = pageScope();
+    let disposed = false;
 
     // A reload hint that appears only when an action needs a session reload
     // to take full effect (e.g. removing an extension).
@@ -147,6 +153,13 @@ export function createExtensionsUI() {
     let loading = false;
     let loadedOnce = false;
     let _stateChangeSource = 0;
+    scope.add(() => {
+        disposed = true;
+        if (_stateChangeSource) {
+            GLib.source_remove(_stateChangeSource);
+            _stateChangeSource = 0;
+        }
+    });
 
     const rows = [];
     const clearRows = () => {
@@ -166,6 +179,10 @@ export function createExtensionsUI() {
                     if (onOk) onOk();
                 } catch (e) {
                     logError(`${method} failed for ${uuid}`, e);
+                    // The switch already moved and no state-change signal
+                    // will follow a failed call, so rebuild from the real
+                    // state instead of leaving the row showing a lie.
+                    refresh();
                 }
             });
     };
@@ -177,9 +194,12 @@ export function createExtensionsUI() {
         const isSelf = ext.uuid === selfUuid;
         const enabled = ext.state === STATE_ENABLED;
 
+        // Other extensions' names are arbitrary text, not markup: an '&'
+        // or '<' in a name would otherwise break the label.
         const row = new Adw.ActionRow({
             title: ext.name || ext.uuid,
             subtitle: ext.uuid,
+            use_markup: false,
         });
 
         // OpenExtensionPrefs is unreliable across shell versions (it needs a
@@ -297,10 +317,12 @@ export function createExtensionsUI() {
     };
 
     const refresh = () => {
+        if (disposed) return;
         if (loading || !proxy) return;
         loading = true;
         _listExtensionsAsync(proxy, (all, err) => {
             loading = false;
+            if (disposed) return;
             loadedOnce = true;
             if (err) {
                 statusRow.set_title(_('Could not load extensions'));
@@ -314,6 +336,7 @@ export function createExtensionsUI() {
 
     // Build the proxy asynchronously; only then load the list.
     _proxyAsync((p, err) => {
+        if (disposed) return;
         if (err || !p) {
             logError('Could not reach org.gnome.Shell.Extensions', err);
             spinner.stop();
@@ -329,7 +352,7 @@ export function createExtensionsUI() {
         // the switches always reflect the real state. Debounced, because a
         // single action can emit several signals in a burst.
         try {
-            proxy.connect('g-signal', (_proxy, _sender, signalName) => {
+            scope.connect(proxy, 'g-signal', (_proxy, _sender, signalName) => {
                 if (signalName !== 'ExtensionStateChanged') return;
                 if (_stateChangeSource) return;
                 _stateChangeSource = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 250, () => {

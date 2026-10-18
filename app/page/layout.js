@@ -5,6 +5,7 @@ import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
 import GObject from 'gi://GObject';
 import { AppConfig } from '../config.js';
+import { pageScope } from '../util/teardown.js';
 import { gettext as _, N_ } from '../util/gettext.js';
 
 /**
@@ -17,6 +18,13 @@ import { gettext as _, N_ } from '../util/gettext.js';
 export function createLayoutUI() {
     const page = new Adw.PreferencesPage();
     const settings = AppConfig.getSettings();
+    // Every handler below on a shared settings object goes through scope, so
+    // the page teardown disconnects it when the page leaves the stack.
+    const scope = pageScope();
+    // True while the preset row is being synced from settings. freeze_notify()
+    // only delays notify::selected, it does not suppress it, so the guard is
+    // what stops a programmatic sync from rewriting all six indicator keys.
+    let syncingPreset = false;
 
     /**
      * Helper to attach an icon to the group header.
@@ -72,6 +80,7 @@ export function createLayoutUI() {
      * When a preset is selected (other than Custom), write values to settings.
      */
     presetRow.connect('notify::selected', () => {
+        if (syncingPreset) return;
         const idx = presetRow.selected;
         if (idx === 0) return; // Custom, do nothing
 
@@ -127,9 +136,12 @@ export function createLayoutUI() {
         }
 
         if (presetRow.selected !== matchIndex) {
-            presetRow.freeze_notify(); // Prevent triggering the setter loop
-            presetRow.selected = matchIndex;
-            presetRow.thaw_notify();
+            syncingPreset = true;
+            try {
+                presetRow.selected = matchIndex;
+            } finally {
+                syncingPreset = false;
+            }
         }
     };
 
@@ -139,7 +151,7 @@ export function createLayoutUI() {
         'apps-indicator-width', 'apps-indicator-height', 
         'apps-indicator-radius', 'apps-indicator-color'
     ];
-    keysToWatch.forEach(key => settings.connect(`changed::${key}`, updatePresetSelection));
+    keysToWatch.forEach(key => scope.connect(settings, `changed::${key}`, updatePresetSelection));
     
     // Initial check
     updatePresetSelection();
@@ -153,10 +165,10 @@ export function createLayoutUI() {
 
     /** Setting: Position Enum (Manual Handling) */
     const indPosModel = new Gtk.StringList();
-    indPosModel.append('Top');    // 0
-    indPosModel.append('Right');  // 1
-    indPosModel.append('Bottom'); // 2
-    indPosModel.append('Left');   // 3
+    indPosModel.append(_('Top'));    // 0
+    indPosModel.append(_('Right'));  // 1
+    indPosModel.append(_('Bottom')); // 2
+    indPosModel.append(_('Left'));   // 3
     
     const indPosRow = new Adw.ComboRow({
         title: _('Position'),
@@ -175,7 +187,7 @@ export function createLayoutUI() {
     });
 
     // External Change
-    settings.connect('changed::apps-indicator-pos', () => {
+    scope.connect(settings, 'changed::apps-indicator-pos', () => {
         const currentVal = settings.get_enum('apps-indicator-pos');
         if (indPosRow.selected !== currentVal) {
             indPosRow.selected = currentVal;
@@ -235,14 +247,7 @@ export function createLayoutUI() {
     };
     updateColorBtn();
     
-    const indicatorColorSignal = settings.connect('changed::apps-indicator-color', updateColorBtn);
-
-    // A page is destroyed when you navigate away, but AppConfig.getSettings()
-    // is a long-lived singleton that outlives it. An undisconnected handler then
-    // fires against destroyed widgets — reachable via Dashboard -> Reset, which
-    // resets every key at once and emits 'changed::' for all of them, including
-    // keys belonging to pages that are no longer on screen.
-    page.connect('destroy', () => settings.disconnect(indicatorColorSignal));
+    scope.connect(settings, 'changed::apps-indicator-color', updateColorBtn);
 
     colorBtn.connect('notify::rgba', () => {
         const c = colorBtn.get_rgba();
@@ -278,8 +283,8 @@ export function createLayoutUI() {
         group.add(enableRow);
 
         const posModel = new Gtk.StringList();
-        posModel.append('Left Panel');
-        posModel.append('Right Panel');
+        posModel.append(_('Left Panel'));
+        posModel.append(_('Right Panel'));
         const posRow = new Adw.ComboRow({
             title: _('Position'),
             model: posModel,
@@ -290,7 +295,7 @@ export function createLayoutUI() {
             settings.set_value(`apps-${keySuffix}-pos`, new GLib.Variant('s', nick));
         });
         
-        settings.connect(`changed::apps-${keySuffix}-pos`, () => {
+        scope.connect(settings, `changed::apps-${keySuffix}-pos`, () => {
              const val = settings.get_enum(`apps-${keySuffix}-pos`);
              if (posRow.selected !== val) posRow.selected = val;
         });
@@ -342,8 +347,8 @@ export function createLayoutUI() {
             const idxToEnum = (idx) => idx; // 0, 1, 2 map directly
 
             // 1. Icon Name — free text WITH suggestions.
-            // A GtkEntryCompletion offers common symbolic names as the user
-            // types, while any value remains typeable (themes ship hundreds
+            // A suggestion menu offers common symbolic names, while any value
+            // remains typeable (themes ship hundreds
             // of icons; a fixed dropdown would be wrong). The dropdown is a
             // shortcut, not a constraint.
             const currentIcon = settings.get_string('apps-showgrid-icon');
@@ -361,23 +366,36 @@ export function createLayoutUI() {
                 'view-more-symbolic', 'open-menu-symbolic',
                 'system-search-symbolic', 'starred-symbolic',
             ];
-            const iconStore = new Gtk.ListStore();
-            iconStore.set_column_types([GObject.TYPE_STRING]);
-            for (const name of iconSuggestions) {
-                const iter = iconStore.append();
-                iconStore.set(iter, [0], [name]);
-            }
-            const completion = new Gtk.EntryCompletion({
-                model: iconStore,
-                text_column: 0,
-                inline_completion: true,
-                popup_completion: true,
+            // A suffix menu of suggestions. GtkEntryCompletion could not be
+            // used: AdwEntryRow's delegate is a GtkText, which has no
+            // set_completion(), and GtkEntryCompletion is deprecated since
+            // GTK 4.10, so the earlier completion was never attached.
+            const suggestionList = new Gtk.ListBox({
+                selection_mode: Gtk.SelectionMode.NONE,
+                css_classes: ['boxed-list'],
             });
-            // EntryRow wraps a GtkText/GtkEntry-like delegate; attach there.
-            const delegate = iconRow.get_delegate?.();
-            if (delegate && typeof delegate.set_completion === 'function') {
-                delegate.set_completion(completion);
+            const suggestionPopover = new Gtk.Popover({ child: new Gtk.ScrolledWindow({
+                child: suggestionList,
+                hscrollbar_policy: Gtk.PolicyType.NEVER,
+                propagate_natural_height: true,
+                max_content_height: 320,
+            }) });
+            for (const name of iconSuggestions) {
+                const item = new Adw.ActionRow({ title: name, activatable: true, use_markup: false });
+                item.add_prefix(new Gtk.Image({ icon_name: name }));
+                item.connect('activated', () => {
+                    iconRow.text = name;
+                    suggestionPopover.popdown();
+                });
+                suggestionList.append(item);
             }
+            iconRow.add_suffix(new Gtk.MenuButton({
+                icon_name: 'view-more-symbolic',
+                tooltip_text: _('Suggestions'),
+                valign: Gtk.Align.CENTER,
+                css_classes: ['flat'],
+                popover: suggestionPopover,
+            }));
 
             iconRow.connect('changed', () => settings.set_string('apps-showgrid-icon', iconRow.text));
             group.add(iconRow);
@@ -594,10 +612,9 @@ export function createLayoutUI() {
     refreshFavs();
 
     // Listen for external changes (e.g. if user unpins via Shell)
-    const id = shellSettings.connect('changed::favorite-apps', refreshFavs);
-    // Note: this signal is not disconnected when the page is destroyed 
-    // in this specific functional structure, but in Prefs windows, the process usually ends 
-    // when the window closes, so it's acceptable.
+    // Listened to through scope: page navigation happens while the window
+    // stays open, so each visit would otherwise add another live handler.
+    scope.connect(shellSettings, 'changed::favorite-apps', refreshFavs);
     
     return page;
 }

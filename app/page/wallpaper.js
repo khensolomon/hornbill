@@ -6,6 +6,7 @@ import GLib from 'gi://GLib';
 import Cairo from 'cairo';
 import { logError } from '../util/logger.js';
 import { AppConfig } from '../config.js';
+import { pageScope } from '../util/teardown.js';
 import { WallpaperPresets } from '../data/wallpaper.js';
 import { gettext as _, format } from '../util/gettext.js';
 
@@ -80,11 +81,15 @@ export function createWallpaperUI() {
         // (GNOME 46) ships GTK 4.14, so no load_from_data fallback is needed.
         cssProvider.load_from_string(cssContent);
 
+        // Added per page build, so it is removed with the page; otherwise
+        // every visit stacks another provider on the display.
+        const display = Gdk.Display.get_default();
         Gtk.StyleContext.add_provider_for_display(
-            Gdk.Display.get_default(),
+            display,
             cssProvider,
             Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION
         );
+        pageScope().add(() => Gtk.StyleContext.remove_provider_for_display(display, cssProvider));
 
         // --- MASTER SWITCH ---
         const mainGroup = new Adw.PreferencesGroup();
@@ -446,8 +451,7 @@ function _createImageRow(settings, key, title) {
     };
 
     updateSubtitle();
-    const signalId = settings.connect(`changed::${key}`, updateSubtitle);
-    row.connect('destroy', () => settings.disconnect(signalId));
+    pageScope().connect(settings, `changed::${key}`, updateSubtitle);
 
     const btn = new Gtk.Button({ icon_name: 'folder-open-symbolic', valign: Gtk.Align.CENTER, css_classes: ['flat'] });
     btn.connect('clicked', () => {
@@ -509,8 +513,7 @@ function _createColorRow(settings, key, title) {
 
     updateColor();
     if (settings) {
-        const signalId = settings.connect(`changed::${key}`, updateColor);
-        row.connect('destroy', () => settings.disconnect(signalId));
+        pageScope().connect(settings, `changed::${key}`, updateColor);
     }
 
     colorBtn.connect('color-set', () => {
@@ -548,8 +551,7 @@ function _createOptionsRow(settings) {
 
     updateSelection();
     if (settings) {
-        const signalId = settings.connect('changed::picture-options', updateSelection);
-        row.connect('destroy', () => settings.disconnect(signalId));
+        pageScope().connect(settings, 'changed::picture-options', updateSelection);
     }
 
     row.connect('notify::selected-item', () => {
@@ -604,8 +606,7 @@ function _createShadingRow(settings, dependencies) {
 
     updateState();
     if (settings) {
-        const id = settings.connect('changed::color-shading-type', updateState);
-        row.connect('destroy', () => settings.disconnect(id));
+        pageScope().connect(settings, 'changed::color-shading-type', updateState);
     }
 
     row.connect('notify::selected-item', () => {
@@ -629,11 +630,10 @@ function _bindSwitch(settings, key, row) {
             settings.set_boolean(key, val);
         }
     });
-    const id = settings.connect(`changed::${key}`, () => {
+    pageScope().connect(settings, `changed::${key}`, () => {
         const val = settings.get_boolean(key);
         if (row.get_active() !== val) {
             row.set_active(val);
         }
     });
-    row.connect('destroy', () => settings.disconnect(id));
 }

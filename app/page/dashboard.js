@@ -5,6 +5,7 @@ import GLib from 'gi://GLib';
 import GObject from 'gi://GObject';
 
 import { AppConfig } from '../config.js';
+import { pageScope } from '../util/teardown.js';
 import { SettingsManager } from '../util/io.js';
 import { listCategories, labelFor, coverage } from '../util/categories.js';
 import { gettext as _, N_ } from '../util/gettext.js';
@@ -22,6 +23,8 @@ export class DashboardPage extends Adw.PreferencesPage {
         
         // State management
         this._settings = AppConfig.getSettings();
+        // Handlers on shared objects are disconnected by the page teardown.
+        this._scope = pageScope();
         this._activeDialog = null; // Track active file chooser to prevent duplicates
 
         this._buildUI();
@@ -242,14 +245,7 @@ export class DashboardPage extends Adw.PreferencesPage {
         };
 
         // Listen for external changes
-        const iconSignal = this._settings.connect('changed::indicator-custom-icon', updateUi);
-
-        // A page is destroyed when you navigate away, but AppConfig.getSettings()
-        // is a long-lived singleton that outlives it. An undisconnected handler then
-        // fires against destroyed widgets — reachable via Dashboard -> Reset, which
-        // resets every key at once and emits 'changed::' for all of them, including
-        // keys belonging to pages that are no longer on screen.
-        this.connect('destroy', () => this._settings.disconnect(iconSignal));
+        this._scope.connect(this._settings, 'changed::indicator-custom-icon', updateUi);
         updateUi();
 
         const box = new Gtk.Box({ spacing: 6, valign: Gtk.Align.CENTER });
@@ -345,27 +341,17 @@ export class DashboardPage extends Adw.PreferencesPage {
             try {
                 if (response === Gtk.ResponseType.ACCEPT) {
                     const file = d.get_file();
+                    // Throws on failure; reported below.
                     const jsonString = SettingsManager.exportSettings(this._excludedIds());
-                    
-                    if (jsonString) {
-                        // Use GLib.Bytes + replace_contents (Sync) for reliability with small config files.
-                        // Async writes inside a dialog callback can fail if the dialog is destroyed too early.
-                        const bytes = new GLib.Bytes(new TextEncoder().encode(jsonString));
-                        file.replace_contents(bytes.toArray(), null, false, Gio.FileCreateFlags.NONE, null);
-                        
-                        // Visual feedback (optional, printed to logs)
-                        // console.log("Export successful to " + file.get_path());
-                    }
+                    // Synchronous write: a small file, and an async write inside
+                    // a dialog callback can fail if the dialog is destroyed first.
+                    const bytes = new GLib.Bytes(new TextEncoder().encode(jsonString));
+                    file.replace_contents(bytes.toArray(), null, false, Gio.FileCreateFlags.NONE, null);
+                    this._showResult(_('Export Complete'), file.get_parse_name());
                 }
             } catch (error) {
                 console.error("Export failed:", error);
-                const errDialog = new Adw.MessageDialog({
-                    heading: _("Export Failed"),
-                    body: error.message,
-                    transient_for: button.get_root()
-                });
-                errDialog.add_response("ok", _("OK"));
-                errDialog.present();
+                this._showResult(_('Export Failed'), error.message);
             } finally {
                 d.destroy();
                 this._activeDialog = null;
@@ -468,16 +454,18 @@ export class DashboardPage extends Adw.PreferencesPage {
         dialog.connect('response', (d, response) => {
             if (response !== 'import') return;
             const result = SettingsManager.importSettings(jsonStr, this._excludedIds());
-            if (!result.success) {
-                const errDialog = new Adw.AlertDialog({
-                    heading: _('Import Failed'),
-                    body: result.message,
-                });
-                errDialog.add_response('ok', _('OK'));
-                errDialog.present(this.get_root());
-            }
+            this._showResult(result.success ? _('Import Complete') : _('Import Failed'), result.message);
         });
 
+        dialog.present(this.get_root());
+    }
+
+    /**
+     * One-button result dialog for export, import and reset outcomes.
+     */
+    _showResult(heading, body) {
+        const dialog = new Adw.AlertDialog({ heading, body });
+        dialog.add_response('ok', _('OK'));
         dialog.present(this.get_root());
     }
 
@@ -499,7 +487,9 @@ export class DashboardPage extends Adw.PreferencesPage {
 
         dialog.connect('response', (d, response) => {
             if (response !== 'reset') return;
-            SettingsManager.resetSettings(this._excludedIds());
+            const result = SettingsManager.resetSettings(this._excludedIds());
+            if (!result.success)
+                this._showResult(_('Reset Failed'), _('Settings could not be reset. Details are in the system log.'));
         });
 
         dialog.present(this.get_root());

@@ -6,8 +6,22 @@ import GLib from 'gi://GLib';
 import { getPages } from './page/index.js';
 import { logError } from './util/logger.js';
 import { gettext as _, format } from './util/gettext.js';
+import { collectTeardown, runTeardown } from './util/teardown.js';
 
-// NEW: Export a helper to attach responsive behaviors to the parent window explicitly
+// splitView -> function that tears down every live page. See destroyUI().
+const teardownAllFor = new WeakMap();
+
+/**
+ * Tear down every page still on the navigation stack. Called by prefs.js when
+ * the window closes; the preferences process can outlive one window, so the
+ * pages' handlers on shared objects must not be left behind.
+ */
+export function destroyUI(splitView) {
+    teardownAllFor.get(splitView)?.();
+    teardownAllFor.delete(splitView);
+}
+
+// Attach responsive behavior to the parent window.
 export function installLayout(window, splitView) {
     if (window.add_breakpoint) {
         const breakpoint = new Adw.Breakpoint({
@@ -61,6 +75,28 @@ export function createUI() {
     contentHolderPage.set_child(contentNav);
     splitView.set_content(contentHolderPage);
 
+    // --- Page lifetimes ---
+    // navPage -> teardown list collected while its content was built.
+    const liveTeardowns = new Map();
+
+    const buildContent = (build) => collectTeardown(build);
+
+    const disposePage = (navPage) => {
+        const teardown = liveTeardowns.get(navPage);
+        if (!teardown) return;
+        liveTeardowns.delete(navPage);
+        runTeardown(teardown);
+    };
+
+    const disposeAllPages = () => {
+        for (const navPage of [...liveTeardowns.keys()])
+            disposePage(navPage);
+    };
+
+    // Back navigation and pop_to_page() emit 'popped' once per removed page.
+    contentNav.connect('popped', (_nav, navPage) => disposePage(navPage));
+    teardownAllFor.set(splitView, disposeAllPages);
+
     // --- Helpers ---
     const findPageDefinition = (id) => {
         const sections = getPages();
@@ -80,12 +116,14 @@ export function createUI() {
         return null;
     };
 
-    const pushSubPage = (pageData, widget) => {
+    const pushSubPage = (pageData, built) => {
+        const { result: widget, teardown } = built;
         // AdwNavigationView requires unique tags; pushing a tag already in
         // the stack throws "Duplicate page tag" and aborts the whole UI. If
         // the page is already present, navigate to it instead of re-adding.
         const existing = contentNav.find_page ? contentNav.find_page(pageData.id) : null;
         if (existing) {
+            runTeardown(teardown); // the freshly built content is discarded
             contentNav.pop_to_page(existing); return;
         }
         const navPage = new Adw.NavigationPage({ title: pageData.title, tag: pageData.id });
@@ -93,9 +131,11 @@ export function createUI() {
         toolbar.add_top_bar(new Adw.HeaderBar());
         toolbar.set_content(widget);
         navPage.set_child(toolbar);
+        liveTeardowns.set(navPage, teardown);
         try {
             contentNav.push(navPage);
         } catch (e) {
+            disposePage(navPage);
             // Duplicate tag or similar — navigate to the existing page
             // instead of letting the exception abort the UI.
             try {
@@ -126,8 +166,9 @@ export function createUI() {
             return;
         }
 
-        const subContent = targetDef.ui ? targetDef.ui(contentNav) : new Adw.StatusPage({ title: 'No UI' });
-        pushSubPage(targetDef, subContent);
+        const built = buildContent(() =>
+            targetDef.ui ? targetDef.ui(contentNav) : new Adw.StatusPage({ title: 'No UI' }));
+        pushSubPage(targetDef, built);
     };
 
     // --- Custom row factory ---
@@ -167,8 +208,9 @@ export function createUI() {
                     const row = new Adw.ActionRow({ title: subItem.title, subtitle: subItem.description || '', activatable: true });
                     row.add_suffix(new Gtk.Image({ icon_name: 'go-next-symbolic' }));
                     row.connect('activated', () => {
-                        const subContent = subItem.ui ? subItem.ui(navigator) : new Adw.StatusPage({ title: 'No UI' });
-                        pushSubPage(subItem, subContent);
+                        const built = buildContent(() =>
+                            subItem.ui ? subItem.ui(navigator) : new Adw.StatusPage({ title: 'No UI' }));
+                        pushSubPage(subItem, built);
                     });
                     prefGroup.add(row);
                 });
@@ -196,10 +238,16 @@ export function createUI() {
     };
 
     const loadMainPage = (pageData, ...args) => {
-        let widget;
-        if (pageData.ui) widget = pageData.ui(contentNav, goToPage, ...args);
-        else if (pageData.pages || pageData.groups) widget = createAutoMenuUI(pageData, contentNav, ...args);
-        else widget = new Adw.StatusPage({ title: _('Under Construction') });
+        // Everything currently on the stack is about to be replaced. Tear it
+        // down explicitly: replace() is not guaranteed to emit 'popped', and
+        // the old pages' handlers on shared settings must not survive.
+        disposeAllPages();
+
+        const { result: widget, teardown } = buildContent(() => {
+            if (pageData.ui) return pageData.ui(contentNav, goToPage, ...args);
+            if (pageData.pages || pageData.groups) return createAutoMenuUI(pageData, contentNav, ...args);
+            return new Adw.StatusPage({ title: _('Under Construction') });
+        });
 
         let navPage = (widget instanceof Adw.NavigationPage) ? widget : null;
         if (!navPage) {
@@ -214,6 +262,7 @@ export function createUI() {
             toolbar.set_content(widget);
             navPage.set_child(toolbar);
         }
+        liveTeardowns.set(navPage, teardown);
         try {
             contentNav.replace([navPage]);
         } catch (e) {

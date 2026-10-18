@@ -3,6 +3,7 @@ import Gtk from 'gi://Gtk';
 import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
 import { AppConfig } from '../config.js';
+import { pageScope } from '../util/teardown.js';
 import { logError } from '../util/logger.js';
 import { gettext as _ } from '../util/gettext.js';
 
@@ -23,6 +24,7 @@ export function createStylesheetUI(navigator) {
     }
 
     const settings = AppConfig.getSettings();
+    const scope = pageScope();
 
     // 1. Custom Styles (the user's own work comes first)
     _addCustomStylesGroup(page, settings);
@@ -151,10 +153,11 @@ function _addBundledStylesGroup(page, settings) {
         const file = Gio.File.new_for_path(GLib.build_filenamev([cssDir, cssFile]));
         const description = _extractCssDescription(file);
 
-        const row = new Adw.ActionRow({ 
+        const row = new Adw.ActionRow({
             title: cssFile,
-            subtitle: description || "", 
-            subtitle_lines: 1 
+            subtitle: description || "",
+            subtitle_lines: 1,
+            use_markup: false, // file names and CSS comments are not markup
         });
 
         const toggle = new Gtk.Switch({ 
@@ -242,14 +245,8 @@ function _addCustomStylesGroup(page, settings) {
     };
     refresh();
 
-    const customStylesSignal = settings.connect('changed::custom-styles', refresh);
-
-    // A page is destroyed when you navigate away, but AppConfig.getSettings()
-    // is a long-lived singleton that outlives it. An undisconnected handler then
-    // fires against destroyed widgets — reachable via Dashboard -> Reset, which
-    // resets every key at once and emits 'changed::' for all of them, including
-    // keys belonging to pages that are no longer on screen.
-    page.connect('destroy', () => settings.disconnect(customStylesSignal));
+    // Shared settings outlive the page; the page teardown disconnects this.
+    scope.connect(settings, 'changed::custom-styles', refresh);
 
     const onAdd = (btn) => _onAddClicked(btn.get_root(), settings);
     headerAdd.connect('clicked', () => onAdd(headerAdd));
@@ -284,8 +281,9 @@ function _createCustomStyleRow(uri, enabled, settings) {
     const description = _extractCssDescription(file);
 
     const row = new Adw.ActionRow({
-        title: basename || 'Invalid File',
+        title: basename || _('Invalid File'),
         subtitle: description || file.get_path() || uri,
+        use_markup: false, // paths and CSS comments are not markup
         subtitle_lines: 1
     });
 

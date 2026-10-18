@@ -3,6 +3,7 @@ import Gtk from "gi://Gtk";
 import Gio from "gi://Gio";
 import Pango from "gi://Pango";
 import { AppConfig } from "../config.js";
+import { pageScope } from "../util/teardown.js";
 import { gettext as _, N_ } from '../util/gettext.js';
 
 /**
@@ -95,6 +96,7 @@ export function createClockUI() {
 
   const page = new Adw.PreferencesPage();
   const settings = AppConfig.getSettings();
+  const scope = pageScope();
 
   // --- GROUP 1: POSITIONING ---
   const posGroup = new Adw.PreferencesGroup({
@@ -302,15 +304,9 @@ export function createClockUI() {
     formatEntryRow.visible = isCustom;
     presetRow.visible = isCustom;
   };
-  const formatModeSignal = settings.connect("changed::clock-format-mode", updateVis);
+  // Shared settings outlive the page; the page teardown disconnects this.
+  scope.connect(settings, "changed::clock-format-mode", updateVis);
   updateVis();
-
-  // A page is destroyed when you navigate away, but AppConfig.getSettings()
-  // is a long-lived singleton that outlives it. An undisconnected handler then
-  // fires against destroyed widgets — reachable via Dashboard -> Reset, which
-  // resets every key at once and emits 'changed::' for all of them, including
-  // keys belonging to pages that are no longer on screen.
-  page.connect("destroy", () => settings.disconnect(formatModeSignal));
 
   // --- GROUP 3: FORMATTING GUIDE ---
   const formattingGuideGroup = new Adw.PreferencesGroup({
