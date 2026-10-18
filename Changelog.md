@@ -3,6 +3,79 @@
 Notable changes to the Hornbill extension (named Lesion before v138). Version names follow `yy.mm.dd`
 (EGO `version-name` allows letters, numbers, spaces, and periods only).
 
+## 26.10.18.93 (version 142) — teardown on disable and on page change, atomic import, and the translation catalogue
+
+### Fixed — handlers and state that outlived disable
+
+- Panel menus: the `open-state-changed` handler was never disconnected.
+  Cleanup checked liveness with `get_parent()`, which a PopupMenu does not
+  have, so every menu entry was skipped. Handlers accumulated on every
+  refresh and kept restyling buttons after disable.
+- Panel menus: the `popup-menu` and `popup-menu-boxpointer` classes added
+  to stock menus are now removed again.
+- Effects and Geometry: one-shot `shown` and `first-frame` handlers are
+  tracked and disconnected. One that fired after disable attached effects
+  that nothing cleaned up.
+- Activities: the stock button is restored to the state it was found in.
+  Its container was forced to `reactive = true` and `can_focus` stayed
+  false.
+- The Empty Trash and Disable Hornbill dialogs are destroyed on disable
+  instead of keeping their modal grab.
+- The preferences-window `unmanaged` handler, file-monitor handlers and
+  the cached settings object are released on disable.
+
+### Fixed — preferences pages leaked handlers on every visit
+
+Pages are now built inside a teardown scope (`app/util/teardown.js`), and
+the window tears each page down when it leaves the navigation stack or the
+window closes. Disconnecting on `destroy` was unreliable: a handler
+closure that references the page keeps the page alive, so `destroy` never
+fires. Layout and Extensions never disconnected at all; Layout added 14
+handlers per visit, Extensions a D-Bus signal that rebuilt hidden lists.
+
+### Fixed — import
+
+Every key is validated first (type, integer, enum and range) and the file
+is refused as a whole if any key fails, then applied atomically. Bad enum
+values used to fail with only a warning, floats were truncated into
+integer keys, a partly bad file was applied halfway, and success was
+reported regardless. Export, import and reset now report their outcome.
+
+### Fixed — other
+
+- Safely Remove: the finish call now matches the call that was started;
+  unmounts were finished with the eject finisher.
+- Geometry: window moves made by Mutter when a monitor is removed no
+  longer overwrite the saved per-monitor position, and a maximized window
+  remembers which monitor it was maximized on.
+- Geometry no longer resets window opacity that Effects set.
+- Corners appear when the radius is raised from 0 without another toggle.
+- The clock stylesheet is rewritten and reloaded only when it changes,
+  not on every panel refresh.
+- The blur layer no longer shifts when a panel margin is set.
+- Layout: syncing the preset row no longer rewrites all six indicator
+  keys; the Icon Name suggestions, which were never attached, are now a
+  suffix menu.
+- Wallpaper no longer stacks a CSS provider per visit.
+- Extension, CSS file and path names are no longer parsed as markup.
+
+### Translations
+
+About 120 visible strings were not marked, and five source files were
+missing from `POTFILES.in`. The template now holds 497 messages, up from
+281.
+
+### Packaging and tooling
+
+- `.github/`, `.gitattributes` and the unreferenced `wallpaper/connection*.svg`
+  drafts no longer ship.
+- Removed unused schema keys: `clock-custom-time`, `clock-custom-date`,
+  `panel-bg-blend-mode`.
+- `build.py` packages its own directory regardless of the working
+  directory and fails when the package cannot be moved.
+- `make reload` no longer reports a restart that never happened, and
+  `make reset` clears the schema's real path.
+
 ## 26.09.03.92 (version 141) — indicator tooltip, a broken icon, and four handlers that outlived their pages
 
 ### Fixed — the missing icon in Layout

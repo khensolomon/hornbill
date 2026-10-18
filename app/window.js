@@ -238,11 +238,6 @@ export function createUI() {
     };
 
     const loadMainPage = (pageData, ...args) => {
-        // Everything currently on the stack is about to be replaced. Tear it
-        // down explicitly: replace() is not guaranteed to emit 'popped', and
-        // the old pages' handlers on shared settings must not survive.
-        disposeAllPages();
-
         const { result: widget, teardown } = buildContent(() => {
             if (pageData.ui) return pageData.ui(contentNav, goToPage, ...args);
             if (pageData.pages || pageData.groups) return createAutoMenuUI(pageData, contentNav, ...args);
@@ -262,6 +257,11 @@ export function createUI() {
             toolbar.set_content(widget);
             navPage.set_child(toolbar);
         }
+        // Everything on the stack is about to be replaced, so tear it down
+        // explicitly: replace() emits 'replaced', not 'popped'. Done only
+        // after the new page built, so a failed build leaves the current
+        // page working.
+        disposeAllPages();
         liveTeardowns.set(navPage, teardown);
         try {
             contentNav.replace([navPage]);

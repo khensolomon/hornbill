@@ -88,12 +88,29 @@ export class GeometryManager extends ExtensionComponent {
         // Mutter relocates windows itself when a monitor is removed. Those
         // moves are not user intent and must not overwrite the saved
         // per-monitor slot, so saving pauses briefly after a layout change.
+        // Mutter may already have moved windows by the time any handler here
+        // runs (its own handler on the monitor manager is connected first),
+        // so the pause alone can be too late. Unsaved changes are therefore
+        // also discarded: the pending debounced write is cancelled and the
+        // cache reloaded from the last persisted state. At most the last
+        // SAVE_DEBOUNCE_SEC of genuine moves before a monitor change is lost.
         this._monitorsChangedAt = 0;
+        const markMonitorsChanged = () => {
+            this._monitorsChangedAt = GLib.get_monotonic_time();
+            if (this._saveTimeoutId) {
+                GLib.source_remove(this._saveTimeoutId);
+                this._saveTimeoutId = null;
+                this._loadCache();
+            }
+        };
         this._signals.push({
             obj: Main.layoutManager,
-            id: Main.layoutManager.connect('monitors-changed', () => {
-                this._monitorsChangedAt = GLib.get_monotonic_time();
-            }),
+            id: Main.layoutManager.connect('monitors-changed', markMonitorsChanged),
+        });
+        const monitorManager = global.backend.get_monitor_manager();
+        this._signals.push({
+            obj: monitorManager,
+            id: monitorManager.connect('monitors-changed-internal', markMonitorsChanged),
         });
 
         // Location names for the file-manager split. Kept here rather than

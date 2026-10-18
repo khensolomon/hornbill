@@ -31,6 +31,10 @@ export function collectTeardown(build) {
     current = teardown;
     try {
         return { result: build(), teardown };
+    } catch (e) {
+        // Release whatever the failed build registered before it threw.
+        runTeardown(teardown);
+        throw e;
     } finally {
         current = prev;
     }

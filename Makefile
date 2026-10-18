@@ -13,7 +13,7 @@ prefs:
 
 reset:
 	@echo "-- Resetting extension $(EXT) ..."
-	dconf reset -f /org/gnome/shell/extensions/$(EXT)/
+	dconf reset -f /org/gnome/shell/extensions/hornbill/
 
 uninstall:
 	@echo "-- Uninstalling extension $(EXT) ..."
