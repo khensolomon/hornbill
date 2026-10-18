@@ -2,10 +2,10 @@
   "uuid": "hornbill@lethil.me",
   "name": "Hornbill",
   "description": "Personalize the GNOME desktop from one place.\n\nPanel — colors, gradients, blur, borders, shadows, popup menu styling, and per-button appearance. Reorder items or move them between left, center, and right. Presets included, among them a macOS menu bar and a Windows 11 taskbar.\n\nApps — favorites, running apps, removable drives, and trash as panel buttons, each with a hover tooltip and an open or focused indicator.\n\nClock — reposition it, reformat it, or split it into two lines.\n\nWindows — remember each application's size and position, round window and screen corners, and dim unfocused windows.\n\nWallpaper — separate light and dark images and colors, with blur, monochrome, and brightness applied to the desktop background.\n\nAdvanced — custom CSS, a manager for your other extensions, and export, import, or reset settings by group.",
-  "version": 141,
+  "version": 142,
   "settings-schema": "org.gnome.shell.extensions.hornbill",
   "gettext-domain": "hornbill",
-  "version-name": "26.09.03.92",
+  "version-name": "26.10.18.93",
   "shell-version": [
     "46",
     "47",
