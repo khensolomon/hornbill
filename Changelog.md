@@ -89,6 +89,14 @@ missing from `POTFILES.in`. The template now holds 497 messages, up from
 
 ### Packaging and tooling
 
+- The release trigger is more forgiving: the commit subject must start
+  with `release: extension` followed by `;`, `:`, `-`, a dash or a space,
+  in any case and with or without spaces around the colon. Text after the
+  separator becomes the release-notes summary. The match is anchored to
+  the start of the subject and to the whole word, so `release: extensions`,
+  `prerelease: extension` and merge commits never release. The trigger is
+  parsed in a small job of its own, since workflow expressions have no
+  regular expressions.
 - `.github/`, `.gitattributes` and the unreferenced `wallpaper/connection*.svg`
   drafts no longer ship.
 - Removed unused schema keys: `clock-custom-time`, `clock-custom-date`,

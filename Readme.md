@@ -93,7 +93,14 @@ Layout: `app/components/` runs inside GNOME Shell, `app/page/` builds the prefer
 node check-symbols.js   # verify every import resolves
 ```
 
-Releases are cut by CI from a commit whose message starts with `Release: extension;`, using the version in `metadata.json`.
+Releases are cut by CI, using the version in `metadata.json`, when the last commit of a push to `master` has a subject starting with `release: extension` followed by a separator: `;`, `:`, `-`, a dash, or a space. Case and the spaces around the colon do not matter, and any text after the separator becomes the summary line of the release notes:
+
+```
+release: extension; fix torn-off tab geometry
+Release:extension - fix torn-off tab geometry
+```
+
+`release: extensions`, `prerelease: extension` and merge commits do not trigger a release. The workflow can also be run by hand from the Actions tab.
 
 ## Contributing
 
