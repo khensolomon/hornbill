@@ -79,7 +79,7 @@ export class Indicator {
   }
 
   _createButton() {
-    const nameId = AppConfig.name || "Hornbill Extension";
+    const nameId = AppConfig.name || _("Hornbill Extension");
 
     this.button = new PanelMenu.Button(0.5, nameId, false);
     this.button.clear_actions();

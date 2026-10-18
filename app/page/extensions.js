@@ -229,10 +229,10 @@ export function createExtensionsUI() {
         const removeBtn = new Gtk.Button({
             icon_name: 'user-trash-symbolic',
             tooltip_text: isSelf
-                ? 'Cannot remove the extension you are configuring'
+                ? _('Cannot remove the extension you are configuring')
                 : isUser
-                    ? 'Remove this extension'
-                    : 'System extensions cannot be removed here',
+                    ? _('Remove this extension')
+                    : _('System extensions cannot be removed here'),
             valign: Gtk.Align.CENTER,
             css_classes: ['flat'],
             sensitive: isUser && !isSelf,

@@ -6,7 +6,7 @@ import GLib from 'gi://GLib';
 import { AppConfig } from '../config.js';
 import { pageScope } from '../util/teardown.js';
 import { logError } from '../util/logger.js';
-import { gettext as _ } from '../util/gettext.js';
+import { gettext as _, format } from '../util/gettext.js';
 
 export function createGeometryUI() {
     const page = new Adw.PreferencesPage();
@@ -109,7 +109,7 @@ export function createGeometryUI() {
             if (!info) return '';
             if (info.max) return _('Maximized');
             if (info.w === undefined || info.x === undefined) return _('No geometry recorded');
-            return `Size: ${info.w}\u00d7${info.h} \u2022 Pos: ${info.x},${info.y}`;
+            return format(_('Size: %s \u2022 Pos: %s'), `${info.w}\u00d7${info.h}`, `${info.x},${info.y}`);
         };
 
         // One row per stored entry. The file manager's Trash and Drive

@@ -356,7 +356,7 @@ function _onAddClicked(parentWindow, settings) {
     });
 
     const filter = new Gtk.FileFilter();
-    filter.set_name('CSS Files');
+    filter.set_name(_('CSS Files'));
     filter.add_pattern('*.css');
     fileChooser.add_filter(filter);
 

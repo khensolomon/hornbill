@@ -8,7 +8,7 @@ import { AppConfig } from '../config.js';
 import { pageScope } from '../util/teardown.js';
 import { SettingsManager } from '../util/io.js';
 import { listCategories, labelFor, coverage } from '../util/categories.js';
-import { gettext as _, N_ } from '../util/gettext.js';
+import { gettext as _, format, N_ } from '../util/gettext.js';
 
 export class DashboardPage extends Adw.PreferencesPage {
     static {
@@ -59,12 +59,12 @@ export class DashboardPage extends Adw.PreferencesPage {
         });
         this.add(navGroup);
 
-        navGroup.add(this._createNavRow(N_('Wallpaper Engine'), 'Manage dual-mode backgrounds', 'preferences-desktop-wallpaper-symbolic', 'wallpaper'));
-        navGroup.add(this._createNavRow(N_('Stylesheet'), 'Hand-edit custom CSS', 'text-x-generic-symbolic', 'stylesheet'));
-        navGroup.add(this._createNavRow(N_('Panel Layout'), 'Arrange panel items and their styling', 'view-grid-symbolic', 'panel-layout'));
-        navGroup.add(this._createNavRow(N_('Panel Appearance'), 'Panel colors, borders, and presets', 'preferences-desktop-appearance-symbolic', 'panel-appearance'));
-        navGroup.add(this._createNavRow(N_('Window Effects'), 'Rounding, shadows, and transparency', 'focus-windows-symbolic', 'window-effects'));
-        navGroup.add(this._createNavRow(N_('Window Geometry'), 'Remember and restore window size and position', 'video-single-display-symbolic', 'window-geometry'));
+        navGroup.add(this._createNavRow(N_('Wallpaper Engine'), N_('Manage dual-mode backgrounds'), 'preferences-desktop-wallpaper-symbolic', 'wallpaper'));
+        navGroup.add(this._createNavRow(N_('Stylesheet'), N_('Hand-edit custom CSS'), 'text-x-generic-symbolic', 'stylesheet'));
+        navGroup.add(this._createNavRow(N_('Panel Layout'), N_('Arrange panel items and their styling'), 'view-grid-symbolic', 'panel-layout'));
+        navGroup.add(this._createNavRow(N_('Panel Appearance'), N_('Panel colors, borders, and presets'), 'preferences-desktop-appearance-symbolic', 'panel-appearance'));
+        navGroup.add(this._createNavRow(N_('Window Effects'), N_('Rounding, shadows, and transparency'), 'focus-windows-symbolic', 'window-effects'));
+        navGroup.add(this._createNavRow(N_('Window Geometry'), N_('Remember and restore window size and position'), 'video-single-display-symbolic', 'window-geometry'));
 
         // --- 4. DATA MANAGEMENT ---
         const dataGroup = new Adw.PreferencesGroup({
@@ -143,7 +143,7 @@ export class DashboardPage extends Adw.PreferencesPage {
                 // The count is shown so coverage is verifiable rather than
                 // taken on trust: the per-group numbers add up to the schema
                 // total, and anything unaccounted for surfaces as 'Other'.
-                subtitle: `${_(cat.blurb)} \u00b7 ${cat.keyCount} ${_('settings')}`,
+                subtitle: `${_(cat.blurb)} \u00b7 ${format(_('%s settings'), cat.keyCount)}`,
                 active: !this._excludedIds().includes(cat.id),
             });
             row.connect('notify::active', () => this._setIncluded(cat.id, row.active));
@@ -176,7 +176,7 @@ export class DashboardPage extends Adw.PreferencesPage {
         const { grouped } = coverage(allKeys);
 
         this._scopeExpander.set_subtitle(
-            `${inScope}/${grouped} ${_('settings in')} ${selected.length}/${cats.length} ${_('groups')}`
+            format(_('%s/%s settings in %s/%s groups'), inScope, grouped, selected.length, cats.length)
         );
     }
 
@@ -287,7 +287,7 @@ export class DashboardPage extends Adw.PreferencesPage {
         });
 
         const filter = new Gtk.FileFilter();
-        filter.set_name("Images");
+        filter.set_name(_("Images"));
         filter.add_mime_type("image/svg+xml");
         filter.add_mime_type("image/png");
         dialog.add_filter(filter);
@@ -331,7 +331,7 @@ export class DashboardPage extends Adw.PreferencesPage {
         dialog.set_current_name(`hornbill-config-${dateStr}.json`);
 
         const filter = new Gtk.FileFilter();
-        filter.set_name("JSON Config");
+        filter.set_name(_("JSON Config"));
         filter.add_pattern("*.json");
         dialog.add_filter(filter);
 
@@ -375,7 +375,7 @@ export class DashboardPage extends Adw.PreferencesPage {
         });
 
         const filter = new Gtk.FileFilter();
-        filter.set_name("JSON Config");
+        filter.set_name(_("JSON Config"));
         filter.add_pattern("*.json");
         dialog.add_filter(filter);
 

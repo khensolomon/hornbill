@@ -8,7 +8,7 @@ import { logError } from '../util/logger.js';
 import { AppConfig } from '../config.js';
 import { pageScope } from '../util/teardown.js';
 import { WallpaperPresets } from '../data/wallpaper.js';
-import { gettext as _, format } from '../util/gettext.js';
+import { gettext as _, format, N_ } from '../util/gettext.js';
 
 // Global reference to prevent GC closing the dialog
 let _activeWallpaperChooser = null;
@@ -24,14 +24,14 @@ export function createWallpaperUI() {
         try {
             bgSettings = new Gio.Settings({ schema_id: 'org.gnome.desktop.background' });
         } catch (e) {
-            _addError(page, "Error: org.gnome.desktop.background schema missing", e);
+            _addError(page, N_("Error: org.gnome.desktop.background schema missing"), e);
             return page;
         }
 
         try {
             extSettings = AppConfig.getSettings();
         } catch (e) {
-            _addError(page, "Extension Schema Error", e);
+            _addError(page, N_("Extension Schema Error"), e);
         }
 
         if (!extSettings) return page;
@@ -232,11 +232,11 @@ export function createWallpaperUI() {
         extSettings.bind('wallpaper-show-image', showImageRow, 'active', Gio.SettingsBindFlags.DEFAULT);
         imgGroup.add(showImageRow);
 
-        const lightRow = _createImageRow(extSettings, 'wallpaper-image-light', 'Light Mode Image');
+        const lightRow = _createImageRow(extSettings, 'wallpaper-image-light', _('Light Mode Image'));
         extSettings.bind('wallpaper-show-image', lightRow, 'sensitive', Gio.SettingsBindFlags.GET);
         imgGroup.add(lightRow);
 
-        const darkRow = _createImageRow(extSettings, 'wallpaper-image-dark', 'Dark Mode Image');
+        const darkRow = _createImageRow(extSettings, 'wallpaper-image-dark', _('Dark Mode Image'));
         extSettings.bind('wallpaper-show-image', darkRow, 'sensitive', Gio.SettingsBindFlags.GET);
         imgGroup.add(darkRow);
 
@@ -295,20 +295,20 @@ export function createWallpaperUI() {
         page.add(colorGroup);
 
         // Bind to EXTENSION settings for Light Colors
-        const lightSecRow = _createColorRow(extSettings, 'wallpaper-secondary-color-light', 'Light Secondary');
-        const darkSecRow = _createColorRow(extSettings, 'wallpaper-secondary-color-dark', 'Dark Secondary');
+        const lightSecRow = _createColorRow(extSettings, 'wallpaper-secondary-color-light', _('Light Secondary'));
+        const darkSecRow = _createColorRow(extSettings, 'wallpaper-secondary-color-dark', _('Dark Secondary'));
         
         const shadingRow = _createShadingRow(bgSettings, [lightSecRow, darkSecRow]);
         colorGroup.add(shadingRow);
 
-        colorGroup.add(_createColorRow(extSettings, 'wallpaper-primary-color-light', 'Light Primary'));
+        colorGroup.add(_createColorRow(extSettings, 'wallpaper-primary-color-light', _('Light Primary')));
         colorGroup.add(lightSecRow);
         
-        colorGroup.add(_createColorRow(extSettings, 'wallpaper-primary-color-dark', 'Dark Primary'));
+        colorGroup.add(_createColorRow(extSettings, 'wallpaper-primary-color-dark', _('Dark Primary')));
         colorGroup.add(darkSecRow);
 
     } catch (e) {
-        _addError(page, "Critical UI Error", e);
+        _addError(page, N_("Critical UI Error"), e);
     }
 
     return page;
@@ -430,7 +430,7 @@ function _getExtensionPath() {
 function _addError(page, title, e) {
     logError(title, e);
     const g = new Adw.PreferencesGroup();
-    g.add(new Adw.ActionRow({ title: title, subtitle: e.toString() }));
+    g.add(new Adw.ActionRow({ title: _(title), subtitle: e.toString() }));
     page.add(g);
 }
 
@@ -466,7 +466,7 @@ function _createImageRow(settings, key, title) {
             
             // Filters
             const filter = new Gtk.FileFilter();
-            filter.set_name("Images");
+            filter.set_name(_("Images"));
             filter.add_mime_type("image/png");
             filter.add_mime_type("image/jpeg");
             filter.add_mime_type("image/svg+xml");
@@ -475,7 +475,7 @@ function _createImageRow(settings, key, title) {
             dialog.add_filter(filter);
             
             const allFilter = new Gtk.FileFilter();
-            allFilter.set_name("All Files");
+            allFilter.set_name(_("All Files"));
             allFilter.add_pattern("*");
             dialog.add_filter(allFilter);
             

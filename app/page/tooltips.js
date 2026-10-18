@@ -7,8 +7,8 @@ import { AppConfig } from '../config.js';
 import { log, logError } from '../util/logger.js';
 import { gettext as _, N_ } from '../util/gettext.js';
 
-const BORDER_STYLES = ['Solid', 'Dotted', 'Dashed', 'Double', 'Groove', 'Ridge', 'Inset', 'Outset', 'None'];
-const FONT_WEIGHTS = ['Light', 'Normal', 'Medium', 'Bold'];
+const BORDER_STYLES = [N_('Solid'), N_('Dotted'), N_('Dashed'), N_('Double'), N_('Groove'), N_('Ridge'), N_('Inset'), N_('Outset'), N_('None')];
+const FONT_WEIGHTS = [N_('Light'), N_('Normal'), N_('Medium'), N_('Bold')];
 
 /**
  * Styling for the hover labels on Hornbill's own panel buttons.
@@ -63,10 +63,10 @@ export class TooltipsPage extends Adw.PreferencesPage {
         const styleGroups = [];
 
         behaviourGroup.add(this._createSpinRow(
-            'Delay', 'apps-tooltip-delay', 0, 2000, 50,
+            N_('Delay'), 'apps-tooltip-delay', 0, 2000, 50,
             _('Milliseconds of hover before the tooltip appears')));
         behaviourGroup.add(this._createSpinRow(
-            'Offset', 'apps-tooltip-offset', 0, 40, 1,
+            N_('Offset'), 'apps-tooltip-offset', 0, 40, 1,
             _('Gap between the button edge and the tooltip')));
 
         // --- 2. Text ---
@@ -92,10 +92,10 @@ export class TooltipsPage extends Adw.PreferencesPage {
         bgGroup.add(this._createColorRow(N_('Background Color'), 'apps-tooltip-bg-color'));
         bgGroup.add(this._createSpinRow(N_('Corner Radius'), 'apps-tooltip-radius', 0, 40, 1));
         bgGroup.add(this._createSpinRow(
-            'Horizontal Padding', 'apps-tooltip-pad-x', 0, 40, 1,
+            N_('Horizontal Padding'), 'apps-tooltip-pad-x', 0, 40, 1,
             _('Space between the text and the left and right edges')));
         bgGroup.add(this._createSpinRow(
-            'Vertical Padding', 'apps-tooltip-pad-y', 0, 40, 1,
+            N_('Vertical Padding'), 'apps-tooltip-pad-y', 0, 40, 1,
             _('Space between the text and the top and bottom edges')));
 
         // --- 4. Border ---

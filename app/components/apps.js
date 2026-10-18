@@ -15,7 +15,7 @@ import { TooltipManager } from './tooltip.js';
 import { setIconGeometry } from '../util/compat.js';
 import { setVertical } from '../util/compat.js';
 import { log, logError } from '../util/logger.js'; 
-import { gettext as _ } from '../util/gettext.js';
+import { gettext as _, format } from '../util/gettext.js';
 
 /**
  * Base Button Class for Application Panel Items
@@ -1165,7 +1165,7 @@ export class AppsManager extends ExtensionComponent {
             menu.addMenuItem(header);
 
             windows.forEach(w => {
-                let title = w.get_title() || 'Untitled Window';
+                let title = w.get_title() || _('Untitled Window');
                 if (title.length > 40) title = title.substring(0, 37) + '...';
                 
                 // Add a small dot if focused
@@ -1175,9 +1175,9 @@ export class AppsManager extends ExtensionComponent {
                 this._appendAction(menu, title, () => w.activate(global.get_current_time()));
             });
             this._appendSeparator(menu);
-            this._appendAction(menu, 'New Window', () => app.open_new_window(-1));
+            this._appendAction(menu, _('New Window'), () => app.open_new_window(-1));
         } else {
-            this._appendAction(menu, 'Open', () => app.open_new_window(-1));
+            this._appendAction(menu, _('Open'), () => app.open_new_window(-1));
         }
 
         const settings = new Gio.Settings({ schema_id: 'org.gnome.shell' });
@@ -1185,7 +1185,7 @@ export class AppsManager extends ExtensionComponent {
         const isPinned = favorites.includes(appId);
 
         this._appendSeparator(menu);
-        this._appendAction(menu, isPinned ? 'Unpin from Favorites' : 'Pin to Favorites', () => {
+        this._appendAction(menu, isPinned ? _('Unpin from Favorites') : _('Pin to Favorites'), () => {
             if (isPinned) {
                 const newFavs = favorites.filter(id => id !== appId);
                 settings.set_strv('favorite-apps', newFavs);
@@ -1208,7 +1208,7 @@ export class AppsManager extends ExtensionComponent {
             if (prefAction) {
                 this._appendSeparator(menu);
                 // Get localized name (e.g., "Preferences")
-                const label = appInfo.get_action_name(prefAction) || 'Preferences';
+                const label = appInfo.get_action_name(prefAction) || _('Preferences');
                 this._appendAction(menu, label, () => {
                     try {
                         appInfo.launch_action(prefAction, null);
@@ -1221,7 +1221,7 @@ export class AppsManager extends ExtensionComponent {
 
         // --- RENAMED: System Settings Link -> "System" ---
         this._appendSeparator(menu);
-        this._appendAction(menu, 'System', () => {
+        this._appendAction(menu, _('System'), () => {
             try {
                 // Remove .desktop suffix for control center argument if present, though it often handles both
                 const cleanId = appId.replace(/\.desktop$/i, '');
@@ -1232,21 +1232,21 @@ export class AppsManager extends ExtensionComponent {
         });
 
         // --- RENAMED: "About" -> "Software" (User preferred) ---
-        this._appendAction(menu, 'Software', () => {
+        this._appendAction(menu, _('Software'), () => {
             const uri = this._resolveAppStoreId(appId);
             try {
                 Gio.AppInfo.launch_default_for_uri(uri, null);
             } catch(e) {
-                Main.notify('Hornbill', `Unable to find ${app.get_name()} in Software Center.`);
+                Main.notify('Hornbill', format(_('Unable to find %s in Software Center.'), app.get_name()));
             }
         });
 
         // --- RENAMED: "Identity" -> "Properties" (User preferred)
-        this._appendAction(menu, 'Properties', () => this._showIdentityDialog(app, appId));
+        this._appendAction(menu, _('Properties'), () => this._showIdentityDialog(app, appId));
 
         if (isRunning) {
             this._appendSeparator(menu);
-            this._appendAction(menu, 'Quit', () => app.request_quit());
+            this._appendAction(menu, _('Quit'), () => app.request_quit());
         }
     }
 
@@ -1259,19 +1259,19 @@ export class AppsManager extends ExtensionComponent {
 
         // Build Data Strings
         const info = [
-            `Name: ${app.get_name()}`,
-            `ID: ${appId}`
+            `${_('Name')}: ${app.get_name()}`,
+            `${_('ID')}: ${appId}`
         ];
         
         const appInfo = app.get_app_info();
         if (appInfo) {
-            info.push(`Command: ${appInfo.get_commandline() || 'N/A'}`);
-            info.push(`Path: ${appInfo.get_filename() || 'N/A'}`);
+            info.push(`${_('Command')}: ${appInfo.get_commandline() || _('N/A')}`);
+            info.push(`${_('Path')}: ${appInfo.get_filename() || _('N/A')}`);
         }
         
         const windows = app.get_windows();
         if (windows.length > 0 && windows[0].get_wm_class) {
-             info.push(`WM Class: ${windows[0].get_wm_class()}`);
+             info.push(`${_('WM Class')}: ${windows[0].get_wm_class()}`);
         }
 
         const fullTextToCopy = info.join('\n');
@@ -1549,9 +1549,9 @@ export class AppsManager extends ExtensionComponent {
             try {
                 if (eject) source.eject_with_operation_finish(res);
                 else source.unmount_with_operation_finish(res);
-                Main.notify('Safely Removed', `${name} can now be unplugged.`);
+                Main.notify(_('Safely Removed'), format(_('%s can now be unplugged.'), name));
             } catch (e) {
-                Main.notify('Safely Remove Failed', e.message);
+                Main.notify(_('Safely Remove Failed'), e.message);
                 logError('Safely Remove Failed', e);
             }
         };
@@ -1662,9 +1662,9 @@ export class AppsManager extends ExtensionComponent {
                 menu.removeAll();
                 const wins = btn._windows || [];
                 if (wins.length > 0) {
-                    this._appendAction(menu, 'Quit', () => wins.forEach(w => w.delete(global.get_current_time())));
+                    this._appendAction(menu, _('Quit'), () => wins.forEach(w => w.delete(global.get_current_time())));
                 } else {
-                    this._appendAction(menu, 'Open', () => Gio.AppInfo.launch_default_for_uri('trash:///', null));
+                    this._appendAction(menu, _('Open'), () => Gio.AppInfo.launch_default_for_uri('trash:///', null));
                 }
 
                 let hasTrash = false;
@@ -1679,7 +1679,7 @@ export class AppsManager extends ExtensionComponent {
 
                 if (hasTrash) {
                     this._appendSeparator(menu);
-                    this._appendAction(menu, 'Empty Trash', () => this._confirmEmptyTrash(), true);
+                    this._appendAction(menu, _('Empty Trash'), () => this._confirmEmptyTrash(), true);
                 }
             }
         );
@@ -1734,15 +1734,15 @@ export class AppsManager extends ExtensionComponent {
                     menu.removeAll();
                     const wins = btn._windows || [];
                     if (wins.length > 0) {
-                        this._appendAction(menu, 'Close', () => wins.forEach(w => w.delete(global.get_current_time())));
+                        this._appendAction(menu, _('Close'), () => wins.forEach(w => w.delete(global.get_current_time())));
                     } else {
-                        this._appendAction(menu, 'Open', () => {
+                        this._appendAction(menu, _('Open'), () => {
                             const f = mount.get_root();
                             Gio.AppInfo.launch_default_for_uri(f.get_uri(), null);
                         });
                     }
                     this._appendSeparator(menu);
-                    const actionName = mount.can_eject() ? 'Eject' : 'Unmount';
+                    const actionName = mount.can_eject() ? _('Eject') : _('Unmount');
                     this._appendAction(menu, actionName, () => this._safelyRemove(mount));
                 }
             );
@@ -1780,7 +1780,7 @@ export class AppsManager extends ExtensionComponent {
 
         if (mode === 2) {
             // Text Mode
-            const text = this.getSettings().get_string('apps-showgrid-text') || 'Apps';
+            const text = this.getSettings().get_string('apps-showgrid-text') || _('Apps');
             actor = new St.Label({
                  text: text,
                  y_align: Clutter.ActorAlign.CENTER,
@@ -1827,7 +1827,7 @@ export class AppsManager extends ExtensionComponent {
             },
             (menu) => {
                 menu.removeAll();
-                this._appendAction(menu, 'Toggle Grid', () => Main.overview.dash.showAppsButton.clicked());
+                this._appendAction(menu, _('Toggle Grid'), () => Main.overview.dash.showAppsButton.clicked());
             }
         );
         btn._managesOverview = true;
@@ -1887,7 +1887,7 @@ export class AppsManager extends ExtensionComponent {
                 if (global.workspace_manager) {
                     const n = global.workspace_manager.get_n_workspaces();
                     for(let i=0; i<n; i++) {
-                        this._appendAction(menu, `Switch to Workspace ${i+1}`, () => {
+                        this._appendAction(menu, format(_('Switch to Workspace %s'), i+1), () => {
                              global.workspace_manager.get_workspace_by_index(i).activate(global.get_current_time());
                         });
                     }

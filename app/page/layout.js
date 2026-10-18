@@ -320,16 +320,16 @@ export function createLayoutUI() {
 
     /** SECTION: Show Applications Button */
     createSection(
-        'Show Applications', 
+        _('Show Applications'), 
         'showgrid', 
-        'Settings for the application grid toggle button.',
+        _('Settings for the application grid toggle button.'),
         'view-app-grid-symbolic',
         (group) => {
             // Mode Selection: Icon | File | Text
             const modeModel = new Gtk.StringList();
-            modeModel.append('Icon Name'); // 0
-            modeModel.append('File Path'); // 1
-            modeModel.append('Text Label'); // 2
+            modeModel.append(_('Icon Name')); // 0
+            modeModel.append(_('File Path')); // 1
+            modeModel.append(_('Text Label')); // 2
 
             const modeRow = new Adw.ComboRow({
                 title: _('Display Mode'),
@@ -403,7 +403,7 @@ export function createLayoutUI() {
             // 2. File Path Entry + Button
             const fileRow = new Adw.ActionRow({
                 title: _('Icon File'),
-                subtitle: settings.get_string('apps-showgrid-path') || 'No file selected'
+                subtitle: settings.get_string('apps-showgrid-path') || _('No file selected')
             });
             
             const fileBtn = new Gtk.Button({
@@ -422,7 +422,7 @@ export function createLayoutUI() {
                     // Add filters if desired
                     const filters = new Gio.ListStore({ item_type: Gtk.FileFilter });
                     const imageFilter = new Gtk.FileFilter();
-                    imageFilter.set_name("Images");
+                    imageFilter.set_name(_("Images"));
                     imageFilter.add_mime_type("image/*");
                     filters.append(imageFilter);
                     dialog.set_filters(filters);
@@ -478,9 +478,9 @@ export function createLayoutUI() {
 
     /** SECTION: Overview Button */
     createSection(
-        'Overview', 
+        _('Overview'), 
         'overview', 
-        'Settings for the activities overview button.',
+        _('Settings for the activities overview button.'),
         'view-paged-symbolic',
         (group) => {
             const hideDefaultRow = new Adw.SwitchRow({
@@ -493,16 +493,16 @@ export function createLayoutUI() {
     );
 
     /** SECTION: Favorites (Pinned Apps) */
-    createSection('Favorites', 'favorites', 'Manage the pinned favorites launcher.', 'starred-symbolic');
+    createSection(_('Favorites'), 'favorites', _('Manage the pinned favorites launcher.'), 'starred-symbolic');
 
     /** SECTION: Running Apps Taskbar */
-    createSection('Running Apps', 'running', 'Manage the taskbar for running applications.', 'focus-windows-symbolic');
+    createSection(_('Running Apps'), 'running', _('Manage the taskbar for running applications.'), 'focus-windows-symbolic');
 
     /** SECTION: Disks & Volumes */
-    createSection('Disks', 'disks', 'Manage mounted drives and volumes.', 'drive-harddisk-symbolic');
+    createSection(_('Disks'), 'disks', _('Manage mounted drives and volumes.'), 'drive-harddisk-symbolic');
 
     /** SECTION: Trash */
-    createSection('Trash', 'trash', 'Manage the trash bin button.', 'user-trash-symbolic');
+    createSection(_('Trash'), 'trash', _('Manage the trash bin button.'), 'user-trash-symbolic');
 
     /** * SECTION: Manage Favorites
      * Interface for reordering pinned applications.
