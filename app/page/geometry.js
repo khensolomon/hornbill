@@ -47,6 +47,54 @@ export function createGeometryUI() {
     mainGroup.add(wsRow);
     mainGroup.add(x11Row);
 
+    // --- SECTION 1b: EXCLUDED APPLICATIONS ---
+    // Apps that save and restore their own window layout (GIMP) are left
+    // alone entirely, so the two mechanisms never fight over a window.
+    const excludeGroup = new Adw.PreferencesGroup({
+        title: _('Excluded Applications'),
+        description: _('Apps that remember their own window layout. Their windows are never moved or saved. Matched by app id or window class.'),
+    });
+    settings.bind('geometry-enabled', excludeGroup, 'sensitive', Gio.SettingsBindFlags.GET);
+    page.add(excludeGroup);
+
+    const addRow = new Adw.EntryRow({
+        title: _('Add app id or window class'),
+        show_apply_button: true,
+    });
+    addRow.connect('apply', () => {
+        const name = addRow.text.trim();
+        if (!name) return;
+        const list = settings.get_strv('geometry-exclude-apps');
+        if (!list.some(n => n.toLowerCase() === name.toLowerCase()))
+            settings.set_strv('geometry-exclude-apps', [...list, name]);
+        addRow.text = '';
+    });
+    excludeGroup.add(addRow);
+
+    let excludeRows = [];
+    const refreshExcluded = () => {
+        for (const row of excludeRows) excludeGroup.remove(row);
+        excludeRows = [];
+        for (const name of settings.get_strv('geometry-exclude-apps')) {
+            const row = new Adw.ActionRow({ title: name, use_markup: false });
+            const removeBtn = new Gtk.Button({
+                icon_name: 'user-trash-symbolic',
+                tooltip_text: _('Remove'),
+                valign: Gtk.Align.CENTER,
+                css_classes: ['flat'],
+            });
+            removeBtn.connect('clicked', () => {
+                const list = settings.get_strv('geometry-exclude-apps').filter(n => n !== name);
+                settings.set_strv('geometry-exclude-apps', list);
+            });
+            row.add_suffix(removeBtn);
+            excludeGroup.add(row);
+            excludeRows.push(row);
+        }
+    };
+    refreshExcluded();
+    scope.connect(settings, 'changed::geometry-exclude-apps', refreshExcluded);
+
     // --- SECTION 2: DATA LIST ---
     const dataGroup = new Adw.PreferencesGroup({
         title: _('Saved Applications'),

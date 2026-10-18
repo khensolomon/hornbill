@@ -37,6 +37,17 @@ import { isMaximized, maximize, unmaximize } from '../util/compat.js';
  *
  * 6. The store is pruned (age + size cap) so 'geometry-data' cannot grow
  *    without bound.
+ *
+ * 7. One slot per app, written only by a SOLE window. A window that opens
+ *    while another window of the same app is open (a torn-off browser tab,
+ *    a second Files window) is neither restored nor saved while that other
+ *    window stays open. When windows close and one remains, that survivor
+ *    is saved at once, so the window closed last is the one remembered.
+ *    Previously every window read and wrote the shared slot, and a
+ *    temporary torn-off tab overwrote the main window's geometry.
+ *
+ * 8. Apps listed in 'geometry-exclude-apps' (GIMP by default) manage their
+ *    own window layout and are not tracked at all, so the two never fight.
  */
 
 // Tuning constants
@@ -277,11 +288,80 @@ export class GeometryManager extends ExtensionComponent {
         // NORMAL only: dialogs, popups, tooltips, docks and menus must not
         // read from or write to the per-app slot.
         if (win.get_window_type() !== Meta.WindowType.NORMAL) return false;
+        if (this._isExcluded(win)) return false;
         try {
             if (typeof win.get_transient_for === 'function' && win.get_transient_for()) return false;
             if (typeof win.is_skip_taskbar === 'function' && win.is_skip_taskbar()) return false;
         } catch (e) { log('_shouldManage: get_transient_for() failed', e); }
         return true;
+    }
+
+    /**
+     * True for apps the user excluded (rule 8). Matched against both the app
+     * id and WM_CLASS, case-insensitively. The app id is often unknown at
+     * 'window-created'; _beginRestore and the save path re-run
+     * _shouldManage(), so an excluded app is dropped once it resolves.
+     */
+    _isExcluded(win) {
+        let excluded;
+        try {
+            excluded = this.getSettings().get_strv('geometry-exclude-apps');
+        } catch (e) {
+            logError('[Geometry] could not read geometry-exclude-apps', e);
+            return false;
+        }
+        if (!excluded.length) return false;
+        const names = new Set(excluded.map(s => s.trim().toLowerCase()).filter(Boolean));
+        const candidates = [];
+        try {
+            const app = Shell.WindowTracker.get_default().get_window_app(win);
+            const appId = app?.get_id()?.replace(/\.desktop$/, '');
+            if (appId) candidates.push(appId);
+        } catch (e) { log('_isExcluded: get_window_app() failed', e); }
+        try {
+            const wmClass = win.get_wm_class();
+            if (wmClass) candidates.push(wmClass);
+        } catch (e) { log('_isExcluded: get_wm_class() failed', e); }
+        return candidates.some(c => names.has(c.toLowerCase()));
+    }
+
+    /**
+     * Other tracked, live windows that resolve to the same slot identity
+     * (rule 7). Identity is computed live: pre-existing windows were never
+     * resolved, and a window's identity can change after mapping.
+     */
+    _siblingsOf(win, appId) {
+        const out = [];
+        for (const other of this._windowData.keys()) {
+            if (other === win || !this._isAlive(other)) continue;
+            let otherId = null;
+            try { otherId = this._identityFor(other); } catch (e) { continue; }
+            if (otherId && otherId === appId) out.push(other);
+        }
+        return out;
+    }
+
+    /**
+     * 'unmanaged' handler. When a window closes and exactly one window of the
+     * same app is left, that survivor has just become the sole window, so its
+     * current geometry is saved now (rule 7). Moves it made while it shared
+     * the app with other windows were deliberately not saved.
+     */
+    _onWindowClosed(win) {
+        const data = this._windowData.get(win);
+        let appId = data?.lastIdentity ?? null;
+        if (!appId && data) {
+            // Never resolved or saved (e.g. tracked at enable and not moved
+            // since): the app is usually still known while unmanaging.
+            try { appId = this._identityFor(win); } catch (e) { appId = null; }
+        }
+        this._untrackWindow(win);
+        if (!appId) return;
+        const remaining = this._siblingsOf(null, appId);
+        if (remaining.length === 1) {
+            log(`[Geometry] '${appId}': one window left — saving its geometry`);
+            this._onWindowChanged(remaining[0]);
+        }
     }
 
     _trackWindow(win, isNew) {
@@ -314,7 +394,7 @@ export class GeometryManager extends ExtensionComponent {
         };
         this._windowData.set(win, data);
 
-        data.signals.push(win.connect('unmanaged', () => this._untrackWindow(win)));
+        data.signals.push(win.connect('unmanaged', () => this._onWindowClosed(win)));
         data.signals.push(win.connect('size-changed', () => this._onWindowChanged(win)));
         data.signals.push(win.connect('position-changed', () => this._onWindowChanged(win)));
 
@@ -359,6 +439,9 @@ export class GeometryManager extends ExtensionComponent {
             } catch (e) { log('_trackWindow: connect() failed', e); }
 
             const resolved = this._tryResolveRestore(win, data);
+            // An excluded app is untracked during resolution; nothing more
+            // may be done to its window.
+            if (!this._windowData.has(win)) return;
             let idNow = null;
             idNow = this._identityFor(win);
 
@@ -572,6 +655,40 @@ export class GeometryManager extends ExtensionComponent {
         if (this._isLocationPending(appId, data)) {
             this._preplace(win, data, appId);
             this._scheduleLocationCommit(win, data);
+            return false;
+        }
+
+        data.lastIdentity = appId;
+
+        // RULE 8: the app id is often unknown when _trackWindow() first ran
+        // _shouldManage(); drop an excluded app as soon as it resolves.
+        if (this._isExcluded(win)) {
+            log(`[Geometry] '${appId}' is excluded — not managing its windows`);
+            // Marked done so callbacks already in flight (first-frame, the
+            // identity poll) find nothing left to apply.
+            data.restored = true;
+            data.finalApplyDone = true;
+            this._reveal(win, data);
+            this._untrackWindow(win);
+            return false;
+        }
+
+        // RULE 7: another window of this app is already open, so this one
+        // (a torn-off tab, a second window) is left where the app placed it.
+        // Restoring it would fly it onto the existing window's slot. It is
+        // marked restored so every pending path stops, then revealed and
+        // settled like a window with nothing saved. Returns false so the
+        // caller in _trackWindow does not cloak it.
+        if (this._siblingsOf(win, appId).length > 0) {
+            log(`[Geometry] '${appId}' already has an open window — leaving this one in place`);
+            data.restored = true;
+            data.finalApplyDone = true;
+            if (data.timerId) {
+                GLib.source_remove(data.timerId);
+                data.timerId = 0;
+            }
+            this._reveal(win, data);
+            this._settleLater(win, data);
             return false;
         }
 
@@ -1339,6 +1456,11 @@ export class GeometryManager extends ExtensionComponent {
         if (!this._isAlive(win)) return;
         const appId = this._identityFor(win);
         if (!appId || appId.startsWith('__') || this._isSyntheticId(appId)) return;
+        data.lastIdentity = appId;
+
+        // RULE 7: only a sole window writes the slot. _onWindowClosed()
+        // saves the survivor once the others are gone.
+        if (this._siblingsOf(win, appId).length > 0) return;
 
         // Dialogs/transients must never write into the app slot, even if
         // they were mis-typed as NORMAL at creation time.

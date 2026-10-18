@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Hornbill\n"
 "Report-Msgid-Bugs-To: https://github.com/khensolomon/hornbill/issues\n"
-"POT-Creation-Date: 2026-10-18 07:15+0200\n"
+"POT-Creation-Date: 2026-10-18 09:27+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -17,7 +17,7 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 
-#: app/components/apps.js:591 app/page/geometry.js:118 app/page/layout.js:505
+#: app/components/apps.js:591 app/page/geometry.js:166 app/page/layout.js:505
 msgid "Trash"
 msgstr ""
 
@@ -1252,7 +1252,8 @@ msgid ""
 "“%s” will be uninstalled from your account. This cannot be undone from here."
 msgstr ""
 
-#: app/page/extensions.js:414 app/page/stylesheet.js:318
+#: app/page/extensions.js:414 app/page/geometry.js:82
+#: app/page/stylesheet.js:317
 msgid "Remove"
 msgstr ""
 
@@ -1283,54 +1284,68 @@ msgid ""
 "the session"
 msgstr ""
 
-#: app/page/geometry.js:52 app/util/categories.js:30
+#: app/page/geometry.js:54
+msgid "Excluded Applications"
+msgstr ""
+
+#: app/page/geometry.js:55
+msgid ""
+"Apps that remember their own window layout. Their windows are never moved or "
+"saved. Matched by app id or window class."
+msgstr ""
+
+#: app/page/geometry.js:61
+msgid "Add app id or window class"
+msgstr ""
+
+#: app/page/geometry.js:100 app/util/categories.js:30
 msgid "Saved Applications"
 msgstr ""
 
-#: app/page/geometry.js:53
+#: app/page/geometry.js:101
 msgid "Manage currently stored window positions"
 msgstr ""
 
-#: app/page/geometry.js:110
+#: app/page/geometry.js:158
 msgid "Maximized"
 msgstr ""
 
-#: app/page/geometry.js:111
+#: app/page/geometry.js:159
 msgid "No geometry recorded"
 msgstr ""
 
-#: app/page/geometry.js:112
+#: app/page/geometry.js:160
 #, javascript-format
 msgid "Size: %s • Pos: %s"
 msgstr ""
 
-#: app/page/geometry.js:118
+#: app/page/geometry.js:166
 msgid "Drive"
 msgstr ""
 
-#: app/page/geometry.js:147
+#: app/page/geometry.js:195
 msgid "No Saved Windows"
 msgstr ""
 
-#: app/page/geometry.js:148
+#: app/page/geometry.js:196
 msgid "Move windows around to populate this list"
 msgstr ""
 
-#: app/page/geometry.js:190
+#: app/page/geometry.js:238
 msgid "Forget this window"
 msgstr ""
 
-#: app/page/geometry.js:240
+#: app/page/geometry.js:288
 msgid "Clear Saved Geometry"
 msgstr ""
 
-#: app/page/geometry.js:241
+#: app/page/geometry.js:289
 msgid ""
 "Remove all remembered window positions and sizes. Entries rebuild as you "
 "move windows"
 msgstr ""
 
-#: app/page/geometry.js:247
+#: app/page/geometry.js:295
 msgid "Clear all saved window geometry"
 msgstr ""
 
@@ -1639,67 +1654,67 @@ msgstr ""
 msgid "Schema ID not found in configuration."
 msgstr ""
 
-#: app/page/stylesheet.js:86
+#: app/page/stylesheet.js:85
 msgid "Copy CSS"
 msgstr ""
 
-#: app/page/stylesheet.js:134
+#: app/page/stylesheet.js:133
 msgid "Bundled Styles"
 msgstr ""
 
-#: app/page/stylesheet.js:135
+#: app/page/stylesheet.js:134
 msgid ""
 "Demo styles shipped with the extension — view their CSS as a cheat sheet for "
 "writing your own."
 msgstr ""
 
-#: app/page/stylesheet.js:145
+#: app/page/stylesheet.js:144
 msgid "No Styles Found"
 msgstr ""
 
-#: app/page/stylesheet.js:146
+#: app/page/stylesheet.js:145
 msgid "No .css files were found in style/bundled"
 msgstr ""
 
-#: app/page/stylesheet.js:171
+#: app/page/stylesheet.js:170
 msgid "View CSS"
 msgstr ""
 
-#: app/page/stylesheet.js:201
+#: app/page/stylesheet.js:200
 msgid "Custom Styles"
 msgstr ""
 
-#: app/page/stylesheet.js:202
+#: app/page/stylesheet.js:201
 msgid ""
 "Add your own CSS files from anywhere on your computer. Files reload "
 "automatically when edited."
 msgstr ""
 
-#: app/page/stylesheet.js:212
+#: app/page/stylesheet.js:211
 msgid "Enable or disable all custom styles"
 msgstr ""
 
-#: app/page/stylesheet.js:220
+#: app/page/stylesheet.js:219
 msgid "Add Style File"
 msgstr ""
 
-#: app/page/stylesheet.js:235
+#: app/page/stylesheet.js:234
 msgid "Add Style File…"
 msgstr ""
 
-#: app/page/stylesheet.js:284
+#: app/page/stylesheet.js:283
 msgid "Invalid File"
 msgstr ""
 
-#: app/page/stylesheet.js:295
+#: app/page/stylesheet.js:294
 msgid "Open File"
 msgstr ""
 
-#: app/page/stylesheet.js:352
+#: app/page/stylesheet.js:351
 msgid "Select CSS File"
 msgstr ""
 
-#: app/page/stylesheet.js:359
+#: app/page/stylesheet.js:358
 msgid "CSS Files"
 msgstr ""
 
@@ -2054,7 +2069,7 @@ msgstr ""
 msgid "Options for %s"
 msgstr ""
 
-#: app/window.js:249
+#: app/window.js:244
 msgid "Under Construction"
 msgstr ""
 
