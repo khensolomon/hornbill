@@ -168,6 +168,11 @@
     </key>
     <key name="geometry-restore-workspace" type="b"><default>true</default></key>
     <key name="geometry-manage-x11" type="b"><default>true</default></key>
+    <key name="geometry-exclude-apps" type="as">
+      <default>['org.gimp.GIMP', 'gimp', 'gimp-2.10']</default>
+      <summary>Applications whose windows geometry leaves alone</summary>
+      <description>App ids (desktop file name without .desktop) or WM_CLASS values, matched case-insensitively. For apps that save and restore their own window layout.</description>
+    </key>
     <key name="effects-manage-x11" type="b"><default>true</default></key>
     <key name="geometry-data" type="s">
       <default>"{}"</default>

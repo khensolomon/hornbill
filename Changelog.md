@@ -3,7 +3,7 @@
 Notable changes to the Hornbill extension (named Lesion before v138). Version names follow `yy.mm.dd`
 (EGO `version-name` allows letters, numbers, spaces, and periods only).
 
-## 26.10.18.93 (version 142) — teardown on disable and on page change, atomic import, and the translation catalogue
+## 26.10.18.93 (version 142) — multi-window apps in geometry, teardown on disable and page change, atomic import
 
 ### Fixed — handlers and state that outlived disable
 
@@ -32,6 +32,28 @@ window closes. Disconnecting on `destroy` was unreliable: a handler
 closure that references the page keeps the page alive, so `destroy` never
 fires. Layout and Extensions never disconnected at all; Layout added 14
 handlers per visit, Extensions a D-Bus signal that rebuilt hidden lists.
+
+### Fixed — a torn-off browser tab overwrote the main window's geometry
+
+Geometry kept one slot per app, and every window of the app both restored
+from it and saved to it. Dragging a tab out of Chrome created a second
+window that was flown onto the main window's saved spot, and its moves then
+replaced the main window's geometry. Closing the tab did not undo that, so
+the next launch opened where the tab had been.
+
+Only a sole window now writes the slot. A window that opens while another
+window of the same app is open (a torn-off tab, a second Files window) is
+left where the app places it and is not saved. When windows close and one
+remains, that survivor is saved at once, so the window closed last is the
+one remembered. Chrome web apps resolve to their own app id and keep their
+own slot.
+
+### New — excluded applications
+
+Apps that save and restore their own window layout are listed under
+Window → Geometry → Excluded Applications (`geometry-exclude-apps`) and are
+not tracked at all, so the two mechanisms never fight over a window. GIMP
+is excluded by default.
 
 ### Fixed — import
 
