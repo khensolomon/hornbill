@@ -1,5 +1,7 @@
 .gitignore
 .extensionignore
+.gitattributes
+.github/
 
 .git/
 .vscode/
@@ -7,6 +9,10 @@ ui/
 
 # Build output
 tmp/
+
+# Draft artwork. Not referenced by any preset in app/data/wallpaper.js, and
+# unused media in a submission is grounds for an EGO rejection.
+wallpaper/connection*.svg
 
 # Translation sources. The runtime needs locale/ (compiled .mo catalogs),
 # never the .po/.pot sources.

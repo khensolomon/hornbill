@@ -14,7 +14,7 @@ const MAXIMIZE_IS_FLAGLESS = Meta.MaximizeFlags === undefined || SHELL_MAJOR >= 
  * Compatibility helpers.
  *
  * Every API that behaves differently across supported GNOME versions
- * (46–51) lives here, so a new GNOME release means updating ONE file
+ * (46–50, as declared in metadata.json) lives here, so a new GNOME release means updating ONE file
  * instead of hunting through every component.
  */
 
@@ -64,7 +64,7 @@ export function unmaximize(win) {
  * panel button actually sits. Docks set this to their icon; so do we.
  *
  * Meta.Rectangle became Mtk.Rectangle in GNOME 46. The extension supports
- * 46-51, so Mtk is always present and imported statically; Meta.Rectangle is
+ * 46-50, so Mtk is always present and imported statically; Meta.Rectangle is
  * kept as a fallback only because some typelibs still expose it.
  */
 export function setIconGeometry(win, x, y, width, height) {

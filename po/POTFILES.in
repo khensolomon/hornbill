@@ -1,6 +1,5 @@
 # Source files scanned for translatable strings.
-# Regenerate the template with: ./po/update-pot.sh
-app.js
+# Regenerate the template with: python3 po/manage.py update
 app/components/apps.js
 app/components/base.js
 app/components/clock.js
@@ -9,6 +8,7 @@ app/components/geometry.js
 app/components/index.js
 app/components/panels.js
 app/components/styles.js
+app/components/tooltip.js
 app/components/wallpaper.js
 app/config.js
 app/data/panels.js
@@ -23,11 +23,16 @@ app/page/geometry.js
 app/page/index.js
 app/page/layout.js
 app/page/stylesheet.js
+app/page/tooltips.js
 app/page/wallpaper.js
 app/panel/indicator.js
+app/util/categories.js
 app/util/compat.js
+app/util/gettext.js
 app/util/io.js
 app/util/logger.js
+app/util/shake.js
+app/util/teardown.js
 app/window.js
 extension.js
 prefs.js
