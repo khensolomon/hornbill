@@ -128,6 +128,9 @@ export class EffectsManager extends ExtensionComponent {
     onEnable() {
         // win -> { effect, sigs, actor, target, shadow, bindings }
         this._windows = new Map();
+        // win -> 'shown' handler id, for windows that had no actor yet.
+        // Tracked so disable() can disconnect them before they fire.
+        this._pendingShown = new Map();
 
         const id = global.display.connect('window-created', (d, win) => {
             this.idleOnce(() => this._maybeAttach(win), GLib.PRIORITY_DEFAULT);
@@ -154,16 +157,29 @@ export class EffectsManager extends ExtensionComponent {
         this._signals.push({ obj: global.display, id: restackId });
 
         this._syncAll();
+        this._cornersWereEnabled = this._cornersEnabled();
 
         this.observe('changed::corners-enabled', () => this._rebuildAll());
         this.observe('changed::transparency-enabled', () => this._rebuildAll());
-        this.observe('changed::corners-radius', () => this._syncAll());
+        // A radius of 0 counts as corners off, so crossing 0 changes which
+        // per-window machinery must exist. _syncAll() skips windows that are
+        // already attached, which left corners missing after raising the
+        // radius from 0 until some other toggle forced a rebuild.
+        this.observe('changed::corners-radius', () => {
+            const enabled = this._cornersEnabled();
+            if (enabled !== this._cornersWereEnabled) this._rebuildAll();
+            else this._syncAll();
+        });
         this.observe('changed::corners-smart-edges', () => this._syncAll());
         this.observe('changed::transparency-opacity', () => this._syncAll());
         this.observe('changed::transparency-focused-opacity', () => this._syncAll());
     }
 
     onDisable() {
+        for (const [win, id] of this._pendingShown) {
+            try { win.disconnect(id); } catch (e) { /* window already gone */ }
+        }
+        this._pendingShown.clear();
         this._detachAll();
     }
 
@@ -200,6 +216,7 @@ export class EffectsManager extends ExtensionComponent {
     _rebuildAll() {
         this._detachAll();
         this._syncAll();
+        this._cornersWereEnabled = this._cornersEnabled();
     }
 
     _shouldRound(win) {
@@ -219,6 +236,7 @@ export class EffectsManager extends ExtensionComponent {
     }
 
     _maybeAttach(win) {
+        if (!this._isEnabled) return;
         if (!this._anyEnabled()) return;
         if (this._windows.has(win)) return;
         if (!this._shouldRound(win)) {
@@ -228,10 +246,13 @@ export class EffectsManager extends ExtensionComponent {
 
         const actor = win.get_compositor_private();
         if (!actor) {
+            if (this._pendingShown.has(win)) return;
             const id = win.connect('shown', () => {
+                this._pendingShown.delete(win);
                 win.disconnect(id);
                 this._maybeAttach(win);
             });
+            this._pendingShown.set(win, id);
             return;
         }
 

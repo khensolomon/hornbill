@@ -49,7 +49,7 @@ export class StyleManager extends ExtensionComponent {
     _watchFile(file) {
         try {
             const monitor = file.monitor_file(Gio.FileMonitorFlags.NONE, null);
-            monitor.connect('changed', (m, f, of, eventType) => {
+            const id = monitor.connect('changed', (m, f, of, eventType) => {
                 if (eventType === Gio.FileMonitorEvent.CHANGES_DONE_HINT ||
                     eventType === Gio.FileMonitorEvent.CHANGED ||
                     eventType === Gio.FileMonitorEvent.CREATED) {
@@ -63,19 +63,20 @@ export class StyleManager extends ExtensionComponent {
                     });
                 }
             });
-            this._monitors.push(monitor);
+            this._monitors.push({ monitor, id });
         } catch (e) {
             logError('Failed to monitor stylesheet', e);
         }
     }
 
     _clearMonitors() {
-        for (const m of this._monitors ?? []) {
+        for (const { monitor, id } of this._monitors ?? []) {
             // Guarded deliberately. This runs from onDisable(), where a
             // monitor's underlying GObject may already be disposed; the
             // throw would abort the loop and leak every later monitor.
             // Same failure mode as base.js _cleanup. Do not unwrap.
-            try { m.cancel(); } catch (e) { log('_clearMonitors: cancel() failed', e); }
+            try { monitor.disconnect(id); } catch (e) { log('_clearMonitors: disconnect() failed', e); }
+            try { monitor.cancel(); } catch (e) { log('_clearMonitors: cancel() failed', e); }
         }
         this._monitors = [];
     }
@@ -97,8 +98,9 @@ export class StyleManager extends ExtensionComponent {
                 const file = Gio.File.new_for_path(path);
                 if (file.query_exists(null)) {
                     theme.load_stylesheet(file);
+                    // Not watched: bundled styles live in the installed
+                    // extension directory and never change at runtime.
                     this._stylesheetFiles.push(file);
-                    this._watchFile(file);
                     log(`Applied bundled style: ${cssFile}`);
                 }
             } catch (e) {

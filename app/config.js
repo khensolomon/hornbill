@@ -53,6 +53,14 @@ export const AppConfig = {
         this.appId = metadata.uuid || this.defaults.id;
     },
 
+    /**
+     * Drop the cached Gio.Settings. Called from the extension's disable() so
+     * no settings object created during enable() outlives it.
+     */
+    release() {
+        this._settings = null;
+    },
+
     get uuid() {
         return this.metadata.uuid || this.defaults.id;
     },

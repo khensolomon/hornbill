@@ -120,12 +120,7 @@ const AppPanelButton = GObject.registerClass(
             this._placeholder = null;
             this._dragMonitor = null;
             this._container = null;
-            
-            // Effects (Only add if it's an icon-like actor)
-            if (this.iconActor instanceof St.Icon) {
-                this._desatEffect = new Clutter.DesaturateEffect({ factor: 0.0 });
-                this.iconActor.add_effect(this._desatEffect);
-            }
+
 
 
             // CLICK HANDLING.
@@ -755,15 +750,8 @@ export class AppsManager extends ExtensionComponent {
         }
 
         this._clearAll();
-        // Restore Default Activities if hidden
-        const act = Main.panel.statusArea.activities;
-        if (act) {
-            act.container.show();
-            act.container.reactive = true;
-            act.reactive = true;
-            act.can_focus = true;
-            act.track_hover = true;
-        }
+        // Restore the stock Activities button exactly as it was found.
+        this._restoreActivities();
 
         if (this._windowSignals) {
             for (const [win, ids] of this._windowSignals) {
@@ -781,11 +769,63 @@ export class AppsManager extends ExtensionComponent {
             this._tooltips = null;
         }
 
+        if (this._trashDialog) {
+            this._trashDialog.destroy();
+            this._trashDialog = null;
+        }
+
         // Cleanup Identity Dialog if open
         if (this._identityDialog) {
             this._identityDialog.destroy();
             this._identityDialog = null;
         }
+    }
+
+    /**
+     * Hide the stock Activities button. Its original state is captured the
+     * first time, so _restoreActivities() returns it to exactly that state
+     * instead of forcing values (its container is not reactive by default).
+     */
+    _hideActivities() {
+        const act = Main.panel.statusArea.activities;
+        if (!act) return;
+        const cont = act.container;
+        if (!this._activitiesState) {
+            this._activitiesState = {
+                act,
+                contVisible: cont.visible,
+                contReactive: cont.reactive,
+                contCanFocus: cont.can_focus,
+                reactive: act.reactive,
+                canFocus: act.can_focus,
+                trackHover: act.track_hover,
+            };
+        }
+        cont.hide();
+        cont.reactive = false;
+        cont.can_focus = false;
+        act.reactive = false;
+        act.can_focus = false;
+        act.track_hover = false;
+        if (act.remove_style_pseudo_class) act.remove_style_pseudo_class('active');
+    }
+
+    _restoreActivities() {
+        const saved = this._activitiesState;
+        if (!saved) return;
+        this._activitiesState = null;
+        // The shell may have recreated the button meanwhile; only restore
+        // the actor that was actually changed.
+        if (Main.panel.statusArea.activities !== saved.act) return;
+        try {
+            const cont = saved.act.container;
+            cont.visible = saved.contVisible;
+            cont.reactive = saved.contReactive;
+            cont.can_focus = saved.contCanFocus;
+            saved.act.reactive = saved.reactive;
+            saved.act.can_focus = saved.canFocus;
+            saved.act.track_hover = saved.trackHover;
+        } catch (e) { logError('Failed to restore the Activities button', e); }
     }
 
     _trackWindow(win) {
@@ -812,8 +852,10 @@ export class AppsManager extends ExtensionComponent {
     _handleWindowChange() {
         if (this._updateTimeout) GLib.source_remove(this._updateTimeout);
         this._updateTimeout = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 50, () => {
-            this._updateState();
+            // Cleared first: if _updateState() throws, a stale id would make
+            // the next source_remove() fail with "Source ID not found".
             this._updateTimeout = null;
+            this._updateState();
             return GLib.SOURCE_REMOVE;
         });
     }
@@ -1306,11 +1348,16 @@ export class AppsManager extends ExtensionComponent {
             style: 'padding: 4px 12px;'
         });
         
+        // The JS wrapper stays truthy after destroy, so liveness is tracked
+        // explicitly: closing the panel within 2 s of copying must not set a
+        // label on a disposed button.
+        let copyBtnAlive = true;
+        copyBtn.connect('destroy', () => { copyBtnAlive = false; });
         copyBtn.connect('clicked', () => {
             St.Clipboard.get_default().set_text(St.ClipboardType.CLIPBOARD, fullTextToCopy);
             copyBtn.label = _('Copied!');
             this.timeoutOnce(2000, () => {
-                if (copyBtn) copyBtn.label = _('Copy Info');
+                if (copyBtnAlive) copyBtn.label = _('Copy Info');
             });
         });
 
@@ -1464,7 +1511,14 @@ export class AppsManager extends ExtensionComponent {
     }
 
     _confirmEmptyTrash() {
+        if (this._trashDialog) return;
         const dialog = new ModalDialog.ModalDialog();
+        // Tracked so onDisable() can close it: an untracked dialog would keep
+        // its modal grab after the extension is disabled (e.g. screen lock).
+        this._trashDialog = dialog;
+        dialog.connect('destroy', () => {
+            if (this._trashDialog === dialog) this._trashDialog = null;
+        });
         dialog.setButtons([
             { label: _('Cancel'), action: () => dialog.close(), key: Clutter.KEY_Escape },
             { 
@@ -1487,9 +1541,13 @@ export class AppsManager extends ExtensionComponent {
 
     _safelyRemove(mount) {
         const name = mount.get_name();
+        // Decided once, so the finish call always matches the call that was
+        // started. Every Gio.Mount has eject_with_operation_finish, so testing
+        // for the method sent unmounts to the eject finisher.
+        const eject = mount.can_eject();
         const callback = (source, res) => {
             try {
-                if (source.eject_with_operation_finish) source.eject_with_operation_finish(res);
+                if (eject) source.eject_with_operation_finish(res);
                 else source.unmount_with_operation_finish(res);
                 Main.notify('Safely Removed', `${name} can now be unplugged.`);
             } catch (e) {
@@ -1497,7 +1555,7 @@ export class AppsManager extends ExtensionComponent {
                 logError('Safely Remove Failed', e);
             }
         };
-        if (mount.can_eject()) mount.eject_with_operation(Gio.MountUnmountFlags.NONE, null, null, callback);
+        if (eject) mount.eject_with_operation(Gio.MountUnmountFlags.NONE, null, null, callback);
         else mount.unmount_with_operation(Gio.MountUnmountFlags.NONE, null, null, callback);
     }
 
@@ -1799,25 +1857,8 @@ export class AppsManager extends ExtensionComponent {
         // (diagnosed: all releases targeted ActivitiesButton, never the
         // buttons). Disable reactivity and input on hide; restore on show.
         const hideDefault = this.getSettings().get_boolean('apps-overview-hide-default');
-        const act = Main.panel.statusArea.activities;
-        if (act) {
-            const cont = act.container;
-            if (hideDefault) {
-                cont.hide();
-                cont.reactive = false;
-                cont.can_focus = false;
-                act.reactive = false;
-                act.can_focus = false;
-                act.track_hover = false;
-                if (act.remove_style_pseudo_class) act.remove_style_pseudo_class('active');
-            } else {
-                cont.show();
-                cont.reactive = true;
-                act.reactive = true;
-                act.can_focus = true;
-                act.track_hover = true;
-            }
-        }
+        if (hideDefault) this._hideActivities();
+        else this._restoreActivities();
 
         if (!this.getSettings().get_boolean('apps-overview-enabled')) return;
 
