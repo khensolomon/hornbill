@@ -6,8 +6,9 @@ import GLib from 'gi://GLib';
 import Cairo from 'cairo';
 import { logError } from '../util/logger.js';
 import { AppConfig } from '../config.js';
+import { pageScope } from '../util/teardown.js';
 import { WallpaperPresets } from '../data/wallpaper.js';
-import { gettext as _, format } from '../util/gettext.js';
+import { gettext as _, format, N_ } from '../util/gettext.js';
 
 // Global reference to prevent GC closing the dialog
 let _activeWallpaperChooser = null;
@@ -23,14 +24,14 @@ export function createWallpaperUI() {
         try {
             bgSettings = new Gio.Settings({ schema_id: 'org.gnome.desktop.background' });
         } catch (e) {
-            _addError(page, "Error: org.gnome.desktop.background schema missing", e);
+            _addError(page, N_("Error: org.gnome.desktop.background schema missing"), e);
             return page;
         }
 
         try {
             extSettings = AppConfig.getSettings();
         } catch (e) {
-            _addError(page, "Extension Schema Error", e);
+            _addError(page, N_("Extension Schema Error"), e);
         }
 
         if (!extSettings) return page;
@@ -80,11 +81,15 @@ export function createWallpaperUI() {
         // (GNOME 46) ships GTK 4.14, so no load_from_data fallback is needed.
         cssProvider.load_from_string(cssContent);
 
+        // Added per page build, so it is removed with the page; otherwise
+        // every visit stacks another provider on the display.
+        const display = Gdk.Display.get_default();
         Gtk.StyleContext.add_provider_for_display(
-            Gdk.Display.get_default(),
+            display,
             cssProvider,
             Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION
         );
+        pageScope().add(() => Gtk.StyleContext.remove_provider_for_display(display, cssProvider));
 
         // --- MASTER SWITCH ---
         const mainGroup = new Adw.PreferencesGroup();
@@ -227,11 +232,11 @@ export function createWallpaperUI() {
         extSettings.bind('wallpaper-show-image', showImageRow, 'active', Gio.SettingsBindFlags.DEFAULT);
         imgGroup.add(showImageRow);
 
-        const lightRow = _createImageRow(extSettings, 'wallpaper-image-light', 'Light Mode Image');
+        const lightRow = _createImageRow(extSettings, 'wallpaper-image-light', _('Light Mode Image'));
         extSettings.bind('wallpaper-show-image', lightRow, 'sensitive', Gio.SettingsBindFlags.GET);
         imgGroup.add(lightRow);
 
-        const darkRow = _createImageRow(extSettings, 'wallpaper-image-dark', 'Dark Mode Image');
+        const darkRow = _createImageRow(extSettings, 'wallpaper-image-dark', _('Dark Mode Image'));
         extSettings.bind('wallpaper-show-image', darkRow, 'sensitive', Gio.SettingsBindFlags.GET);
         imgGroup.add(darkRow);
 
@@ -290,20 +295,20 @@ export function createWallpaperUI() {
         page.add(colorGroup);
 
         // Bind to EXTENSION settings for Light Colors
-        const lightSecRow = _createColorRow(extSettings, 'wallpaper-secondary-color-light', 'Light Secondary');
-        const darkSecRow = _createColorRow(extSettings, 'wallpaper-secondary-color-dark', 'Dark Secondary');
+        const lightSecRow = _createColorRow(extSettings, 'wallpaper-secondary-color-light', _('Light Secondary'));
+        const darkSecRow = _createColorRow(extSettings, 'wallpaper-secondary-color-dark', _('Dark Secondary'));
         
         const shadingRow = _createShadingRow(bgSettings, [lightSecRow, darkSecRow]);
         colorGroup.add(shadingRow);
 
-        colorGroup.add(_createColorRow(extSettings, 'wallpaper-primary-color-light', 'Light Primary'));
+        colorGroup.add(_createColorRow(extSettings, 'wallpaper-primary-color-light', _('Light Primary')));
         colorGroup.add(lightSecRow);
         
-        colorGroup.add(_createColorRow(extSettings, 'wallpaper-primary-color-dark', 'Dark Primary'));
+        colorGroup.add(_createColorRow(extSettings, 'wallpaper-primary-color-dark', _('Dark Primary')));
         colorGroup.add(darkSecRow);
 
     } catch (e) {
-        _addError(page, "Critical UI Error", e);
+        _addError(page, N_("Critical UI Error"), e);
     }
 
     return page;
@@ -425,7 +430,7 @@ function _getExtensionPath() {
 function _addError(page, title, e) {
     logError(title, e);
     const g = new Adw.PreferencesGroup();
-    g.add(new Adw.ActionRow({ title: title, subtitle: e.toString() }));
+    g.add(new Adw.ActionRow({ title: _(title), subtitle: e.toString() }));
     page.add(g);
 }
 
@@ -446,8 +451,7 @@ function _createImageRow(settings, key, title) {
     };
 
     updateSubtitle();
-    const signalId = settings.connect(`changed::${key}`, updateSubtitle);
-    row.connect('destroy', () => settings.disconnect(signalId));
+    pageScope().connect(settings, `changed::${key}`, updateSubtitle);
 
     const btn = new Gtk.Button({ icon_name: 'folder-open-symbolic', valign: Gtk.Align.CENTER, css_classes: ['flat'] });
     btn.connect('clicked', () => {
@@ -462,7 +466,7 @@ function _createImageRow(settings, key, title) {
             
             // Filters
             const filter = new Gtk.FileFilter();
-            filter.set_name("Images");
+            filter.set_name(_("Images"));
             filter.add_mime_type("image/png");
             filter.add_mime_type("image/jpeg");
             filter.add_mime_type("image/svg+xml");
@@ -471,7 +475,7 @@ function _createImageRow(settings, key, title) {
             dialog.add_filter(filter);
             
             const allFilter = new Gtk.FileFilter();
-            allFilter.set_name("All Files");
+            allFilter.set_name(_("All Files"));
             allFilter.add_pattern("*");
             dialog.add_filter(allFilter);
             
@@ -509,8 +513,7 @@ function _createColorRow(settings, key, title) {
 
     updateColor();
     if (settings) {
-        const signalId = settings.connect(`changed::${key}`, updateColor);
-        row.connect('destroy', () => settings.disconnect(signalId));
+        pageScope().connect(settings, `changed::${key}`, updateColor);
     }
 
     colorBtn.connect('color-set', () => {
@@ -548,8 +551,7 @@ function _createOptionsRow(settings) {
 
     updateSelection();
     if (settings) {
-        const signalId = settings.connect('changed::picture-options', updateSelection);
-        row.connect('destroy', () => settings.disconnect(signalId));
+        pageScope().connect(settings, 'changed::picture-options', updateSelection);
     }
 
     row.connect('notify::selected-item', () => {
@@ -604,8 +606,7 @@ function _createShadingRow(settings, dependencies) {
 
     updateState();
     if (settings) {
-        const id = settings.connect('changed::color-shading-type', updateState);
-        row.connect('destroy', () => settings.disconnect(id));
+        pageScope().connect(settings, 'changed::color-shading-type', updateState);
     }
 
     row.connect('notify::selected-item', () => {
@@ -629,11 +630,10 @@ function _bindSwitch(settings, key, row) {
             settings.set_boolean(key, val);
         }
     });
-    const id = settings.connect(`changed::${key}`, () => {
+    pageScope().connect(settings, `changed::${key}`, () => {
         const val = settings.get_boolean(key);
         if (row.get_active() !== val) {
             row.set_active(val);
         }
     });
-    row.connect('destroy', () => settings.disconnect(id));
 }

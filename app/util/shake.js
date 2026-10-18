@@ -83,7 +83,13 @@ export class ShakeAnimator {
                 translation_x: Math.round(amp * LEGS[i]),
                 duration: LEG_MS,
                 mode: Clutter.AnimationMode.EASE_IN_OUT_QUAD,
-                onComplete: () => step(i + 1),
+                // onStopped, not onComplete: it also fires when the
+                // transition is interrupted (window closed mid-wobble, or
+                // a restart), so a dead actor never stays in _active.
+                onStopped: (finished) => {
+                    if (finished) step(i + 1);
+                    else this._active.delete(actor);
+                },
             });
         };
 

@@ -35,7 +35,7 @@ export function createAboutUI(navigator, goToPage) {
         ? `${metadata['version-name']} (${metadata.version})`
         : `v${metadata.version}`;
     const version = new Gtk.Label({ label: versionLabel, css_classes: ['title-4', 'dim-label'], margin_bottom: 12 });
-    const developer = new Gtk.Label({ label: metadata["developer-name"] || 'Unknown Developer', css_classes: ['heading'] });
+    const developer = new Gtk.Label({ label: metadata["developer-name"] || _('Unknown Developer'), css_classes: ['heading'] });
     // metadata.description is one source for two audiences: the EGO listing,
     // which needs the full feature text, and this header, which does not. Set
     // whole into a centred 40-character label it came out as ~19 stacked lines.

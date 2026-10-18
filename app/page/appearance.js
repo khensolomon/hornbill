@@ -68,7 +68,7 @@ export class AppearancePage extends Adw.PreferencesPage {
         this._settings.bind('panel-bg-gradient-enabled', gradColorRow, 'sensitive', Gio.SettingsBindFlags.GET);
         bgGroup.add(gradColorRow);
 
-        const gradDirRow = this._createComboRow(N_('Gradient Direction'), 'panel-bg-gradient-dir', ['Vertical', 'Horizontal'], false);
+        const gradDirRow = this._createComboRow(N_('Gradient Direction'), 'panel-bg-gradient-dir', [N_('Vertical'), N_('Horizontal')], false);
         this._settings.bind('panel-bg-gradient-enabled', gradDirRow, 'sensitive', Gio.SettingsBindFlags.GET);
         bgGroup.add(gradDirRow);
 
@@ -107,7 +107,7 @@ export class AppearancePage extends Adw.PreferencesPage {
         borderGroup.add(this._createSpinRow(N_('Size'), 'panel-border-size', 0, 10));
         borderGroup.add(this._createColorRow(N_('Color'), 'panel-border-color'));
         
-        const borderStyles = ['Solid','Dotted','Dashed','Double','Groove','Ridge','Inset','Outset','None'];
+        const borderStyles = [N_('Solid'),N_('Dotted'),N_('Dashed'),N_('Double'),N_('Groove'),N_('Ridge'),N_('Inset'),N_('Outset'),N_('None')];
         borderGroup.add(this._createComboRow(N_('Style'), 'panel-border-style', borderStyles, true));
         
         const bottomOnly = new Adw.SwitchRow({ 
@@ -182,7 +182,7 @@ export class AppearancePage extends Adw.PreferencesPage {
 
         appBtnGroup.add(this._createSpinRow(N_('Icon Size'), 'apps-icon-size', 12, 64, 2));
         appBtnGroup.add(this._createSpinRow(
-            'Item Padding', 'apps-btn-padding', 0, 24, 1,
+            N_('Item Padding'), 'apps-btn-padding', 0, 24, 1,
             _('Horizontal space inside each item, independent of panel button padding')));
 
         const desatRow = new Adw.SwitchRow({ title: _('Monochrome Icons') });
@@ -190,10 +190,10 @@ export class AppearancePage extends Adw.PreferencesPage {
         appBtnGroup.add(desatRow);
 
         appBtnGroup.add(this._createSpinRow(
-            'Running Opacity', 'apps-opacity-running', 0, 255, 5,
+            N_('Running Opacity'), 'apps-opacity-running', 0, 255, 5,
             _('Opacity for running apps (0-255)')));
         appBtnGroup.add(this._createSpinRow(
-            'Stopped Opacity', 'apps-opacity-stopped', 0, 255, 5,
+            N_('Stopped Opacity'), 'apps-opacity-stopped', 0, 255, 5,
             _('Opacity for inactive favorites (0-255)')));
 
         // --- 7. Popup Menus ---
@@ -284,13 +284,13 @@ export class AppearancePage extends Adw.PreferencesPage {
         PanelsPresets.forEach(preset => {
             const row = new Adw.ActionRow({ 
                 title: _(preset.name),
-                subtitle: preset.description
+                subtitle: _(preset.description)
             });
             
             const applyBtn = new Gtk.Button({ 
                 icon_name: 'media-playback-start-symbolic',
                 valign: Gtk.Align.CENTER,
-                tooltip_text: format(_('Apply %s'), preset.name)
+                tooltip_text: format(_('Apply %s'), _(preset.name))
             });
             
             applyBtn.add_css_class('flat');
@@ -552,7 +552,7 @@ export class AppearancePage extends Adw.PreferencesPage {
 
     _createComboRow(title, key, options, isEnum = true) {
         const model = new Gtk.StringList();
-        options.forEach(opt => model.append(opt));
+        options.forEach(opt => model.append(_(opt)));
         
         let initialVal;
         if (isEnum) {
@@ -561,7 +561,7 @@ export class AppearancePage extends Adw.PreferencesPage {
             initialVal = this._settings.get_int(key);
         }
         
-        const row = new Adw.ComboRow({ title: title, model: model, selected: initialVal });
+        const row = new Adw.ComboRow({ title: _(title), model: model, selected: initialVal });
         row.connect('notify::selected', () => {
             if (isEnum) {
                 this._settings.set_enum(key, row.selected);

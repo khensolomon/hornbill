@@ -37,6 +37,14 @@ export default class HornbillExtension extends Extension {
       for (const id of this._adoptTimers) GLib.source_remove(id);
       this._adoptTimers.clear();
     }
+    if (this._prefsWindow && this._prefsUnmanagedId) {
+      try {
+        this._prefsWindow.disconnect(this._prefsUnmanagedId);
+      } catch (e) {
+        // Window already gone.
+      }
+    }
+    this._prefsUnmanagedId = 0;
     this._prefsWindow = null;
 
     [...this._instances].reverse().forEach((instance) => {
@@ -47,9 +55,9 @@ export default class HornbillExtension extends Extension {
       }
     });
     this._instances = [];
+    AppConfig.release();
   }
 
-  // Find this extension's own preferences window
   /**
    * Hold a live reference to the preferences window.
    *
@@ -61,6 +69,7 @@ export default class HornbillExtension extends Extension {
    */
   _trackPrefsWindow() {
     this._prefsWindow = null;
+    this._prefsUnmanagedId = 0;
     this._adoptTimers = new Set();
 
     const isPrefsWindow = (win) => {
@@ -81,19 +90,31 @@ export default class HornbillExtension extends Extension {
     const adopt = (win) => {
       if (!win || this._prefsWindow === win) return false;
       if (!isPrefsWindow(win)) return false;
+      if (this._prefsWindow && this._prefsUnmanagedId) {
+        try {
+          this._prefsWindow.disconnect(this._prefsUnmanagedId);
+        } catch (e) {
+          // Previous window already gone.
+        }
+      }
       this._prefsWindow = win;
       log(
         `Preferences window tracked: '${win.get_title ? win.get_title() : "?"}'`,
       );
+      // Tracked so disable() can disconnect it while the window is open.
       const id = win.connect("unmanaged", () => {
-        if (this._prefsWindow === win) this._prefsWindow = null;
         win.disconnect(id);
+        if (this._prefsWindow === win) {
+          this._prefsWindow = null;
+          this._prefsUnmanagedId = 0;
+        }
       });
+      this._prefsUnmanagedId = id;
       return true;
     };
 
     // Adopt anything already open (e.g. after the extension is re-enabled).
-    for (const w of global?.display?.list_all_windows()) {
+    for (const w of global.display.list_all_windows()) {
       if (adopt(w)) break;
     }
 

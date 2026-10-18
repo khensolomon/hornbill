@@ -34,7 +34,7 @@ gnome-extensions enable hornbill@lethil.me
 
 ### From extensions.gnome.org
 
-Search for **Hornbill** and install from there. Updates arrive through the Extensions app.
+Not listed yet; the submission is pending. Once listed, search for **Hornbill** and install from there, and updates arrive through the Extensions app.
 
 ### From source
 

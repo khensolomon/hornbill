@@ -3,6 +3,7 @@ import Gtk from "gi://Gtk";
 import Gio from "gi://Gio";
 import Pango from "gi://Pango";
 import { AppConfig } from "../config.js";
+import { pageScope } from "../util/teardown.js";
 import { gettext as _, N_ } from '../util/gettext.js';
 
 /**
@@ -95,6 +96,7 @@ export function createClockUI() {
 
   const page = new Adw.PreferencesPage();
   const settings = AppConfig.getSettings();
+  const scope = pageScope();
 
   // --- GROUP 1: POSITIONING ---
   const posGroup = new Adw.PreferencesGroup({
@@ -114,7 +116,7 @@ export function createClockUI() {
 
   const targetRow = new Adw.ComboRow({
     title: _("Target Side"),
-    model: new Gtk.StringList({ strings: ["Left Panel", "Right Panel"] }),
+    model: new Gtk.StringList({ strings: [_("Left Panel"), _("Right Panel")] }),
   });
   settings.bind(
     "clock-move-enabled",
@@ -130,7 +132,7 @@ export function createClockUI() {
 
   const placeRow = new Adw.ComboRow({
     title: _("Placement"),
-    model: new Gtk.StringList({ strings: ["Before Anchor", "After Anchor"] }),
+    model: new Gtk.StringList({ strings: [_("Before Anchor"), _("After Anchor")] }),
   });
   settings.bind(
     "clock-move-enabled",
@@ -217,7 +219,7 @@ export function createClockUI() {
 
   const modeRow = new Adw.ComboRow({
     title: _("Format Mode"),
-    model: new Gtk.StringList({ strings: ["System Default", "Custom Format"] }),
+    model: new Gtk.StringList({ strings: [_("System Default"), _("Custom Format")] }),
   });
   modeRow.set_selected(settings.get_enum("clock-format-mode"));
   modeRow.connect("notify::selected", () =>
@@ -302,15 +304,9 @@ export function createClockUI() {
     formatEntryRow.visible = isCustom;
     presetRow.visible = isCustom;
   };
-  const formatModeSignal = settings.connect("changed::clock-format-mode", updateVis);
+  // Shared settings outlive the page; the page teardown disconnects this.
+  scope.connect(settings, "changed::clock-format-mode", updateVis);
   updateVis();
-
-  // A page is destroyed when you navigate away, but AppConfig.getSettings()
-  // is a long-lived singleton that outlives it. An undisconnected handler then
-  // fires against destroyed widgets — reachable via Dashboard -> Reset, which
-  // resets every key at once and emits 'changed::' for all of them, including
-  // keys belonging to pages that are no longer on screen.
-  page.connect("destroy", () => settings.disconnect(formatModeSignal));
 
   // --- GROUP 3: FORMATTING GUIDE ---
   const formattingGuideGroup = new Adw.PreferencesGroup({
@@ -333,7 +329,7 @@ export function createClockUI() {
 
   // Guide: Examples Section
   formattingGuideList.append(
-    createExpandableSection("Examples", [
+    createExpandableSection(_("Examples"), [
       createGuideEntry("%H:%M — 24-hour time → 14:30"),
       createGuideEntry("%I:%M %p — 12-hour time with AM/PM → 02:30 PM"),
       createGuideEntry("%A — Full weekday name → Saturday"),
@@ -347,7 +343,7 @@ export function createClockUI() {
 
   // Guide: Additional Codes Section
   formattingGuideList.append(
-    createExpandableSection("Additional useful codes", [
+    createExpandableSection(_("Additional useful codes"), [
       createGuideEntry("%H:%M:%S — 24-hour time with seconds → 14:30:45"),
       createGuideEntry("%I:%M:%S %p — 12-hour time with seconds → 02:30:45 PM"),
       createGuideEntry("%Y — Full year → 2025"),
@@ -360,7 +356,7 @@ export function createClockUI() {
 
   // Guide: Common Combinations Section
   formattingGuideList.append(
-    createExpandableSection("Common combinations", [
+    createExpandableSection(_("Common combinations"), [
       createGuideEntry("%A, %B %d, %Y — Full date → Saturday, December 13, 2025"),
       createGuideEntry("%a %b %d — Compact date → Sat Dec 13"),
       createGuideEntry("%Y-%m-%d — ISO date → 2025-12-13"),

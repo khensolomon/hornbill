@@ -65,7 +65,8 @@ const REVEAL_MAX_TRIES = 6;       // ~96ms cap before revealing regardless
 // split and nothing finer. Every other folder window is just "a Files window".
 const LOC_TRASH = '::trash';
 const LOC_DRIVE = '::drive';
-const LOC_SETTLE_MS = 120;        // Grace for a file manager to announce its location (must beat 'first-frame')
+const LOC_SETTLE_MS = 120;
+const MONITOR_SETTLE_MS = 2000;   // Ignore window moves this long after a monitor layout change        // Grace for a file manager to announce its location (must beat 'first-frame')
 
 export class GeometryManager extends ExtensionComponent {
 
@@ -78,6 +79,22 @@ export class GeometryManager extends ExtensionComponent {
         log("[Geometry] enabling manager");
 
         this._lastWrittenJson = null;
+
+        // Actors whose opacity is currently being eased by this component
+        // (reveal or fade-move). _untrackWindow() resets opacity only for
+        // these, so it never wipes EffectsManager's unfocused transparency.
+        this._fadingActors = new WeakSet();
+
+        // Mutter relocates windows itself when a monitor is removed. Those
+        // moves are not user intent and must not overwrite the saved
+        // per-monitor slot, so saving pauses briefly after a layout change.
+        this._monitorsChangedAt = 0;
+        this._signals.push({
+            obj: Main.layoutManager,
+            id: Main.layoutManager.connect('monitors-changed', () => {
+                this._monitorsChangedAt = GLib.get_monotonic_time();
+            }),
+        });
 
         // Location names for the file-manager split. Kept here rather than
         // reached for through AppsManager: the two components stay
@@ -292,10 +309,14 @@ export class GeometryManager extends ExtensionComponent {
                 if (actor) {
                     const ffId = actor.connect('first-frame', () => {
                         actor.disconnect(ffId);
+                        data.firstFrame = null;
                         if (!this._isAlive(win)) return;
                         this._tryResolveRestore(win, data);
                         this._authoritativeApply(win, data, 'first-frame');
                     });
+                    // Tracked so _untrackWindow() can disconnect it when the
+                    // window is untracked (or disable() runs) before it fires.
+                    data.firstFrame = { actor, id: ffId };
                 }
             } catch (e) { log('_trackWindow: get_compositor_private() failed', e); }
 
@@ -309,11 +330,15 @@ export class GeometryManager extends ExtensionComponent {
             // whole sequence invisible.
             try {
                 const shownId = win.connect('shown', () => {
+                    // Drop from data.signals first, so _untrackWindow() does
+                    // not disconnect it a second time.
+                    data.signals = data.signals.filter(sid => sid !== shownId);
                     win.disconnect(shownId);
                     if (!this._isAlive(win)) return;
                     data.shownSeen = true;
                     this._authoritativeApply(win, data, 'shown');
                 });
+                data.signals.push(shownId);
             } catch (e) { log('_trackWindow: connect() failed', e); }
 
             const resolved = this._tryResolveRestore(win, data);
@@ -348,12 +373,23 @@ export class GeometryManager extends ExtensionComponent {
             const actor = win.get_compositor_private();
             if (actor) {
                 // A disable mid-fade/mid-cloak must not leave the window
-                // translucent or off-screen
-                actor.remove_transition('opacity');
-                if (actor.opacity < 255) actor.opacity = 255;
+                // translucent or off-screen. Opacity is reset only when this
+                // component changed it: untracking also happens when
+                // geometry is switched off or a window turns out to be a
+                // dialog, and EffectsManager may own the opacity then.
+                if (data.cloaked || this._fadingActors.has(actor)) {
+                    actor.remove_transition('opacity');
+                    if (actor.opacity < 255) actor.opacity = 255;
+                    this._fadingActors.delete(actor);
+                }
                 if (actor.translation_x !== 0) actor.translation_x = 0;
             }
         } catch (e) { log('_untrackWindow: get_compositor_private() failed', e); }
+
+        if (data.firstFrame) {
+            try { data.firstFrame.actor.disconnect(data.firstFrame.id); } catch (e) { /* actor gone */ }
+            data.firstFrame = null;
+        }
 
         for (const slot of ['timerId', 'verifyTimerId', 'settleTimerId', 'x11TimerId', 'locTimerId', 'revealTimerId']) {
             if (data[slot]) {
@@ -1082,10 +1118,12 @@ export class GeometryManager extends ExtensionComponent {
             // threshold to straddle.
             if (!actor.get_transition('opacity')) {
                 actor.opacity = 0;
+                this._fadingActors.add(actor);
                 actor.ease({
                     opacity: 255,
                     duration: REVEAL_FADE_MS,
                     mode: Clutter.AnimationMode.EASE_OUT_QUAD,
+                    onStopped: () => this._fadingActors?.delete(actor),
                 });
             }
         } catch (e) { log('_reveal failed', e); }
@@ -1126,6 +1164,7 @@ export class GeometryManager extends ExtensionComponent {
             }
 
             const prev = actor.opacity;
+            this._fadingActors.add(actor);
             actor.ease({
                 opacity: 0,
                 duration: FADE_OUT_MS,
@@ -1136,6 +1175,7 @@ export class GeometryManager extends ExtensionComponent {
                         opacity: prev,
                         duration: FADE_IN_MS,
                         mode: Clutter.AnimationMode.EASE_OUT_QUAD,
+                        onStopped: () => this._fadingActors?.delete(actor),
                     });
                 },
             });
@@ -1275,6 +1315,10 @@ export class GeometryManager extends ExtensionComponent {
 
         if (win.is_fullscreen()) return;
 
+        if (this._monitorsChangedAt &&
+            GLib.get_monotonic_time() - this._monitorsChangedAt < MONITOR_SETTLE_MS * 1000)
+            return;
+
         if (!this._isAlive(win)) return;
         const appId = this._identityFor(win);
         if (!appId || appId.startsWith('__') || this._isSyntheticId(appId)) return;
@@ -1294,6 +1338,20 @@ export class GeometryManager extends ExtensionComponent {
             const entry = this._geometryCache[appId] || {};
             entry.max = true;
             entry.last_seen = Date.now();
+            // Record which monitor and workspace it is maximized on. Only
+            // the monitor identity is updated (mi/mr); rx/ry stay relative
+            // to the floating rect, so unmaximizing after a restore lands
+            // at the remembered offset on the monitor it was maximized on.
+            try {
+                const idx = win.get_monitor();
+                const m = Main.layoutManager.monitors[idx];
+                if (m) {
+                    entry.mi = idx;
+                    entry.mr = [m.x, m.y, m.width, m.height];
+                }
+                entry.ws = win.is_on_all_workspaces()
+                    ? null : (win.get_workspace()?.index() ?? null);
+            } catch (e) { log('_onWindowChanged: maximized monitor lookup failed', e); }
             this._geometryCache[appId] = entry;
             this._queueSave();
             return;

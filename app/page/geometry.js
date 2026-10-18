@@ -4,12 +4,14 @@ import Gio from 'gi://Gio';
 import Gdk from 'gi://Gdk';
 import GLib from 'gi://GLib';
 import { AppConfig } from '../config.js';
+import { pageScope } from '../util/teardown.js';
 import { logError } from '../util/logger.js';
-import { gettext as _ } from '../util/gettext.js';
+import { gettext as _, format } from '../util/gettext.js';
 
 export function createGeometryUI() {
     const page = new Adw.PreferencesPage();
     const settings = AppConfig.getSettings();
+    const scope = pageScope();
 
     // Internal tracker for active widgets
     // Map<WindowID, Adw.ActionRow>
@@ -107,7 +109,7 @@ export function createGeometryUI() {
             if (!info) return '';
             if (info.max) return _('Maximized');
             if (info.w === undefined || info.x === undefined) return _('No geometry recorded');
-            return `Size: ${info.w}\u00d7${info.h} \u2022 Pos: ${info.x},${info.y}`;
+            return format(_('Size: %s \u2022 Pos: %s'), `${info.w}\u00d7${info.h}`, `${info.x},${info.y}`);
         };
 
         // One row per stored entry. The file manager's Trash and Drive
@@ -213,7 +215,7 @@ export function createGeometryUI() {
 
     // --- LIVE UPDATES ---
     let updateTimeoutId = 0;
-    const changeSignalId = settings.connect('changed::geometry-data', () => {
+    scope.connect(settings, 'changed::geometry-data', () => {
         if (updateTimeoutId) return;
         updateTimeoutId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 100, () => {
             updateTimeoutId = 0;
@@ -222,12 +224,11 @@ export function createGeometryUI() {
         });
     });
 
-    page.connect('destroy', () => {
+    scope.add(() => {
         if (updateTimeoutId) {
             GLib.source_remove(updateTimeoutId);
             updateTimeoutId = 0;
         }
-        if (changeSignalId) settings.disconnect(changeSignalId);
         activeRows.clear();
     });
 

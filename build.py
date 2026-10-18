@@ -9,12 +9,13 @@ it to a target directory.
 
 USAGE EXAMPLES:
 -----------------------
-1. Standard Build (Recommended)
-   Includes 'build.py' in the zip to ensure the tool remains available in backups.
+1. Standard Build
+   Packages the tree minus everything in .gitignore/.extensionignore.
    $ python3 build.py
 
-2. Production Build (Clean)
-   Excludes 'build.py' from the final zip file.
+2. --no-self
+   Kept for compatibility. build.py is listed in .extensionignore, so it is
+   never packaged either way.
    $ python3 build.py --no-self
 
 3. EGO Submission Build
@@ -39,8 +40,10 @@ import subprocess
 import sys
 
 # --- CONFIGURATION ---
-# Output directory relative to the current working directory
-TARGET_DIR = os.path.abspath("tmp")
+# The repository root is this script's directory, whatever the caller's cwd:
+# packaging the cwd made `python3 path/to/build.py` zip the wrong tree.
+ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
+TARGET_DIR = os.path.join(ROOT_DIR, "tmp")
 
 # Keys extensions.gnome.org recognizes in metadata.json
 EGO_METADATA_KEYS = [
@@ -250,6 +253,7 @@ def should_exclude(filename, patterns):
 
 def main():
     args = parse_arguments()
+    os.chdir(ROOT_DIR)
     ignore_patterns = load_ignore_patterns(os.getcwd())
 
     # 1. Read metadata.json
@@ -300,7 +304,7 @@ def main():
                     # --- EXCLUSION LOGIC ---
                     
                     # Prevent recursive zipping of the output directory or the zip file itself
-                    if abs_file_path.startswith(TARGET_DIR):
+                    if abs_file_path.startswith(os.path.join(TARGET_DIR, "")):
                         continue
                     if file == zip_filename:
                         continue
@@ -352,7 +356,8 @@ def main():
         print("-" * 40)
 
     except Exception as e:
-        print(f"Error moving file: {e}")
+        # Fail fast: exiting 0 here let CI continue with no package in tmp/.
+        sys.exit(f"Error moving file: {e}")
 
 if __name__ == "__main__":
     main()

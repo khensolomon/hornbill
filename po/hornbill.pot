@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Hornbill\n"
 "Report-Msgid-Bugs-To: https://github.com/khensolomon/hornbill/issues\n"
-"POT-Creation-Date: 2026-08-18 13:40+0000\n"
+"POT-Creation-Date: 2026-10-18 07:15+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -17,28 +17,151 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 
-#: app/components/apps.js:1165
+#: app/components/apps.js:591 app/page/geometry.js:118 app/page/layout.js:505
+msgid "Trash"
+msgstr ""
+
+#: app/components/apps.js:1162
+msgid "Open Windows"
+msgstr ""
+
+#: app/components/apps.js:1168
+msgid "Untitled Window"
+msgstr ""
+
+#: app/components/apps.js:1178
+msgid "New Window"
+msgstr ""
+
+#: app/components/apps.js:1180 app/components/apps.js:1667
+#: app/components/apps.js:1739
+msgid "Open"
+msgstr ""
+
+#: app/components/apps.js:1188
+msgid "Pin to Favorites"
+msgstr ""
+
+#: app/components/apps.js:1188
+msgid "Unpin from Favorites"
+msgstr ""
+
+#: app/components/apps.js:1211 app/panel/indicator.js:391
+msgid "Preferences"
+msgstr ""
+
+#: app/components/apps.js:1224 app/page/about.js:84
+msgid "System"
+msgstr ""
+
+#: app/components/apps.js:1235
+msgid "Software"
+msgstr ""
+
+#: app/components/apps.js:1240
+#, javascript-format
+msgid "Unable to find %s in Software Center."
+msgstr ""
+
+#: app/components/apps.js:1245 app/components/apps.js:1293
 msgid "Properties"
 msgstr ""
 
-#: app/components/apps.js:1218 app/components/apps.js:1227
+#: app/components/apps.js:1249 app/components/apps.js:1665
+msgid "Quit"
+msgstr ""
+
+#: app/components/apps.js:1262
+msgid "Name"
+msgstr ""
+
+#: app/components/apps.js:1263
+msgid "ID"
+msgstr ""
+
+#: app/components/apps.js:1268
+msgid "Command"
+msgstr ""
+
+#: app/components/apps.js:1268 app/components/apps.js:1269
+msgid "N/A"
+msgstr ""
+
+#: app/components/apps.js:1269
+msgid "Path"
+msgstr ""
+
+#: app/components/apps.js:1274
+msgid "WM Class"
+msgstr ""
+
+#: app/components/apps.js:1346 app/components/apps.js:1360
 msgid "Copy Info"
 msgstr ""
 
-#: app/components/apps.js:1225
+#: app/components/apps.js:1358
 msgid "Copied!"
 msgstr ""
 
-#: app/components/apps.js:1383 app/panel/indicator.js:182
+#: app/components/apps.js:1523 app/page/dashboard.js:446
+#: app/page/dashboard.js:482 app/page/extensions.js:394
+#: app/page/extensions.js:413 app/panel/indicator.js:343
 msgid "Cancel"
 msgstr ""
 
-#: app/components/apps.js:1385
+#: app/components/apps.js:1525 app/components/apps.js:1682
 msgid "Empty Trash"
 msgstr ""
 
-#: app/components/apps.js:1400
+#: app/components/apps.js:1535
 msgid "Are you sure you want to delete all items in the Trash?"
+msgstr ""
+
+#: app/components/apps.js:1552
+#, javascript-format
+msgid "%s can now be unplugged."
+msgstr ""
+
+#: app/components/apps.js:1552
+msgid "Safely Removed"
+msgstr ""
+
+#: app/components/apps.js:1554
+msgid "Safely Remove Failed"
+msgstr ""
+
+#: app/components/apps.js:1737 app/panel/indicator.js:418
+msgid "Close"
+msgstr ""
+
+#: app/components/apps.js:1745
+msgid "Eject"
+msgstr ""
+
+#: app/components/apps.js:1745
+msgid "Unmount"
+msgstr ""
+
+#: app/components/apps.js:1783
+msgid "Apps"
+msgstr ""
+
+#: app/components/apps.js:1818 app/components/apps.js:1840
+msgid "Applications"
+msgstr ""
+
+#: app/components/apps.js:1830
+msgid "Toggle Grid"
+msgstr ""
+
+#: app/components/apps.js:1875 app/components/apps.js:1904
+#: app/page/layout.js:481
+msgid "Overview"
+msgstr ""
+
+#: app/components/apps.js:1890
+#, javascript-format
+msgid "Switch to Workspace %s"
 msgstr ""
 
 #: app/data/panels.js:41
@@ -97,27 +220,35 @@ msgstr ""
 msgid "Mono Minimal"
 msgstr ""
 
-#: app/page/about.js:54
-msgid "System"
+#: app/page/about.js:38
+msgid "Unknown Developer"
 msgstr ""
 
-#: app/page/about.js:59
+#: app/page/about.js:66 app/page/dashboard.js:57
+msgid "Features"
+msgstr ""
+
+#: app/page/about.js:71
+msgid "Also"
+msgstr ""
+
+#: app/page/about.js:89
 msgid "Session"
 msgstr ""
 
-#: app/page/about.js:65
+#: app/page/about.js:95
 msgid "Extension UUID"
 msgstr ""
 
-#: app/page/about.js:72
+#: app/page/about.js:102
 msgid "Copy UUID"
 msgstr ""
 
-#: app/page/about.js:86
+#: app/page/about.js:115
 msgid "Documentation"
 msgstr ""
 
-#: app/page/about.js:87
+#: app/page/about.js:116
 msgid "Resources and help"
 msgstr ""
 
@@ -147,91 +278,245 @@ msgstr ""
 msgid "Reset styling to defaults"
 msgstr ""
 
-#: app/page/appearance.js:61
-msgid "Panel Position"
-msgstr ""
-
-#: app/page/appearance.js:62
-msgid "Screen edge placement (Bottom may require restart to fully settle)"
-msgstr ""
-
-#: app/page/appearance.js:85
+#: app/page/appearance.js:56
 msgid "Panel Background"
 msgstr ""
 
-#: app/page/appearance.js:86
+#: app/page/appearance.js:57
 msgid "Control the base color, gradients, and transparency levels."
 msgstr ""
 
-#: app/page/appearance.js:92
+#: app/page/appearance.js:61 app/page/tooltips.js:92
+msgid "Background Color"
+msgstr ""
+
+#: app/page/appearance.js:63
 msgid "Enable Gradient"
 msgstr ""
 
-#: app/page/appearance.js:106
+#: app/page/appearance.js:67
+msgid "Gradient End Color"
+msgstr ""
+
+#: app/page/appearance.js:71
+msgid "Gradient Direction"
+msgstr ""
+
+#: app/page/appearance.js:71
+msgid "Horizontal"
+msgstr ""
+
+#: app/page/appearance.js:71
+msgid "Vertical"
+msgstr ""
+
+#: app/page/appearance.js:77
 msgid "Glass Effect"
 msgstr ""
 
-#: app/page/appearance.js:107
+#: app/page/appearance.js:78
 msgid "Apply backdrop blur to create a frosted glass look."
 msgstr ""
 
-#: app/page/appearance.js:111
+#: app/page/appearance.js:82
 msgid "Enable Backdrop Blur"
 msgstr ""
 
-#: app/page/appearance.js:121
+#: app/page/appearance.js:86
+msgid "Blur Radius"
+msgstr ""
+
+#: app/page/appearance.js:92
 msgid "Geometry &amp; Floating"
 msgstr ""
 
-#: app/page/appearance.js:122
+#: app/page/appearance.js:93
 msgid "Detach the panel from the screen edges."
 msgstr ""
 
-#: app/page/appearance.js:131
+#: app/page/appearance.js:97
+msgid "Outer Margin"
+msgstr ""
+
+#: app/page/appearance.js:98
+msgid "Panel Corner Radius"
+msgstr ""
+
+#: app/page/appearance.js:102
 msgid "Panel Border"
 msgstr ""
 
-#: app/page/appearance.js:132
+#: app/page/appearance.js:103
 msgid "Define the outline of the panel."
 msgstr ""
 
-#: app/page/appearance.js:143
+#: app/page/appearance.js:107
+msgid "Size"
+msgstr ""
+
+#: app/page/appearance.js:108 app/page/appearance.js:136 app/page/layout.js:234
+msgid "Color"
+msgstr ""
+
+#: app/page/appearance.js:110 app/page/tooltips.js:10
+msgid "Dashed"
+msgstr ""
+
+#: app/page/appearance.js:110 app/page/tooltips.js:10
+msgid "Dotted"
+msgstr ""
+
+#: app/page/appearance.js:110 app/page/tooltips.js:10
+msgid "Double"
+msgstr ""
+
+#: app/page/appearance.js:110 app/page/tooltips.js:10
+msgid "Groove"
+msgstr ""
+
+#: app/page/appearance.js:110 app/page/tooltips.js:10
+msgid "Inset"
+msgstr ""
+
+#: app/page/appearance.js:110 app/page/tooltips.js:10
+msgid "None"
+msgstr ""
+
+#: app/page/appearance.js:110 app/page/tooltips.js:10
+msgid "Outset"
+msgstr ""
+
+#: app/page/appearance.js:110 app/page/tooltips.js:10
+msgid "Ridge"
+msgstr ""
+
+#: app/page/appearance.js:110 app/page/tooltips.js:10
+msgid "Solid"
+msgstr ""
+
+#: app/page/appearance.js:111
+msgid "Style"
+msgstr ""
+
+#: app/page/appearance.js:114
 msgid "Content-Side Border Only"
 msgstr ""
 
-#: app/page/appearance.js:144
+#: app/page/appearance.js:115
 msgid "Applies border to the bottom (if Top Panel) or top (if Bottom Panel)"
 msgstr ""
 
-#: app/page/appearance.js:151
+#: app/page/appearance.js:122
 msgid "Panel Shadow"
 msgstr ""
 
-#: app/page/appearance.js:152
+#: app/page/appearance.js:123
 msgid "Add depth using drop shadows or inner shadow effects."
 msgstr ""
 
-#: app/page/appearance.js:156 app/page/appearance.js:214
+#: app/page/appearance.js:127 app/page/appearance.js:214
+#: app/page/tooltips.js:121
 msgid "Enable Shadow"
 msgstr ""
 
-#: app/page/appearance.js:171
+#: app/page/appearance.js:137
+msgid "Offset X"
+msgstr ""
+
+#: app/page/appearance.js:138
+msgid "Offset Y"
+msgstr ""
+
+#: app/page/appearance.js:139
+msgid "Blur"
+msgstr ""
+
+#: app/page/appearance.js:140
+msgid "Spread"
+msgstr ""
+
+#: app/page/appearance.js:142
 msgid "Inset Shadow"
 msgstr ""
 
-#: app/page/appearance.js:177
+#: app/page/appearance.js:148
 msgid "Panel Buttons"
 msgstr ""
 
-#: app/page/appearance.js:178
+#: app/page/appearance.js:149
 msgid "Fine-tune the shape and padding of panel items."
 msgstr ""
 
-#: app/page/appearance.js:187
+#: app/page/appearance.js:153
+msgid "Text &amp; Icon Color"
+msgstr ""
+
+#: app/page/appearance.js:154 app/page/appearance.js:206 app/page/effects.js:30
+#: app/page/tooltips.js:93
+msgid "Corner Radius"
+msgstr ""
+
+#: app/page/appearance.js:155
+msgid "Min Padding"
+msgstr ""
+
+#: app/page/appearance.js:156
+msgid "Natural Padding"
+msgstr ""
+
+#: app/page/appearance.js:158
 msgid "Enable Hover Effect"
 msgstr ""
 
-#: app/page/appearance.js:201
+#: app/page/appearance.js:162
+msgid "Hover Background"
+msgstr ""
+
+#: app/page/appearance.js:166
+msgid "Active Background"
+msgstr ""
+
+#: app/page/appearance.js:178 app/util/categories.js:52
+msgid "App Buttons"
+msgstr ""
+
+#: app/page/appearance.js:179
+msgid "Icon size, padding, and opacity for Hornbill’s own panel buttons."
+msgstr ""
+
+#: app/page/appearance.js:183
+msgid "Icon Size"
+msgstr ""
+
+#: app/page/appearance.js:185
+msgid "Item Padding"
+msgstr ""
+
+#: app/page/appearance.js:186
+msgid "Horizontal space inside each item, independent of panel button padding"
+msgstr ""
+
+#: app/page/appearance.js:188
+msgid "Monochrome Icons"
+msgstr ""
+
+#: app/page/appearance.js:193
+msgid "Running Opacity"
+msgstr ""
+
+#: app/page/appearance.js:194
+msgid "Opacity for running apps (0-255)"
+msgstr ""
+
+#: app/page/appearance.js:196
+msgid "Stopped Opacity"
+msgstr ""
+
+#: app/page/appearance.js:197
+msgid "Opacity for inactive favorites (0-255)"
+msgstr ""
+
+#: app/page/appearance.js:201 app/util/categories.js:64
 msgid "Popup Menus"
 msgstr ""
 
@@ -239,299 +524,549 @@ msgstr ""
 msgid "Style the dropdown menus."
 msgstr ""
 
-#: app/page/appearance.js:238 app/page/wallpaper.js:98
+#: app/page/appearance.js:209 app/page/tooltips.js:109
+msgid "Border Size"
+msgstr ""
+
+#: app/page/appearance.js:210 app/page/tooltips.js:110
+msgid "Border Color"
+msgstr ""
+
+#: app/page/appearance.js:211 app/page/tooltips.js:111
+msgid "Border Style"
+msgstr ""
+
+#: app/page/appearance.js:223 app/page/tooltips.js:130
+msgid "Shadow Color"
+msgstr ""
+
+#: app/page/appearance.js:224 app/page/tooltips.js:131
+msgid "Shadow X"
+msgstr ""
+
+#: app/page/appearance.js:225 app/page/tooltips.js:132
+msgid "Shadow Y"
+msgstr ""
+
+#: app/page/appearance.js:226 app/page/tooltips.js:133
+msgid "Shadow Blur"
+msgstr ""
+
+#: app/page/appearance.js:227 app/page/tooltips.js:134
+msgid "Shadow Spread"
+msgstr ""
+
+#: app/page/appearance.js:244 app/page/wallpaper.js:107
 msgid "Presets"
 msgstr ""
 
-#: app/page/appearance.js:239
+#: app/page/appearance.js:245
 msgid "Quickly apply a pre-defined theme."
 msgstr ""
 
-#: app/page/appearance.js:246
+#: app/page/appearance.js:252
 msgid "Dev: Export Config"
 msgstr ""
 
-#: app/page/appearance.js:247
+#: app/page/appearance.js:253
 msgid "Generate JSON configuration for new presets."
 msgstr ""
 
-#: app/page/appearance.js:253
+#: app/page/appearance.js:259
 msgid "View JSON Code"
 msgstr ""
 
-#: app/page/appearance.js:265
+#: app/page/appearance.js:271
 msgid "Copy to Clipboard"
 msgstr ""
 
-#: app/page/appearance.js:287
+#: app/page/appearance.js:293
 #, javascript-format
 msgid "Apply %s"
 msgstr ""
 
-#: app/page/appearance.js:454
+#: app/page/appearance.js:419
+msgid "New Preset Name"
+msgstr ""
+
+#: app/page/appearance.js:420
+msgid "Description..."
+msgstr ""
+
+#: app/page/appearance.js:486
 msgid "Preset Configuration"
 msgstr ""
 
-#: app/page/clock.js:101
+#: app/page/clock.js:103
 msgid "Positioning"
 msgstr ""
 
-#: app/page/clock.js:102
+#: app/page/clock.js:104
 msgid ""
 "Control where the clock appears on the panel and its position relative to "
 "other elements."
 msgstr ""
 
-#: app/page/clock.js:106
+#: app/page/clock.js:108
 msgid "Move Clock"
 msgstr ""
 
-#: app/page/clock.js:116
+#: app/page/clock.js:118
 msgid "Target Side"
 msgstr ""
 
-#: app/page/clock.js:132
+#: app/page/clock.js:119 app/page/layout.js:286
+msgid "Left Panel"
+msgstr ""
+
+#: app/page/clock.js:119 app/page/layout.js:287
+msgid "Right Panel"
+msgstr ""
+
+#: app/page/clock.js:134
 msgid "Placement"
 msgstr ""
 
-#: app/page/clock.js:149 app/page/index.js:46
+#: app/page/clock.js:135
+msgid "After Anchor"
+msgstr ""
+
+#: app/page/clock.js:135
+msgid "Before Anchor"
+msgstr ""
+
+#: app/page/clock.js:151 app/page/index.js:47
 msgid "Appearance"
 msgstr ""
 
-#: app/page/clock.js:150
+#: app/page/clock.js:152
 msgid ""
 "Adjust the visual style, format the date and time strings, or choose a "
 "preset layout."
 msgstr ""
 
-#: app/page/clock.js:155
+#: app/page/clock.js:157
 msgid "Two-Line Clock"
 msgstr ""
 
-#: app/page/clock.js:156
+#: app/page/clock.js:158
 msgid "Time top, Date bottom"
 msgstr ""
 
-#: app/page/clock.js:166
-msgid "Dim Separators"
+#: app/page/clock.js:189
+msgid "Top Line Size"
 msgstr ""
 
-#: app/page/clock.js:176
-msgid "Format Mode"
+#: app/page/clock.js:190
+msgid "Font size of the time line, percent of the panel font"
 msgstr ""
 
-#: app/page/clock.js:187
-msgid "Format String"
+#: app/page/clock.js:191
+msgid "Bottom Line Size"
 msgstr ""
 
-#: app/page/clock.js:201
-msgid "Single: Standard"
+#: app/page/clock.js:192
+msgid "Font size of the date line, percent of the panel font"
 msgstr ""
 
-#: app/page/clock.js:202
-msgid "Single: Full"
+#: app/page/clock.js:193
+msgid "Line Tightness"
 msgstr ""
 
-#: app/page/clock.js:203
-msgid "Double: Standard"
+#: app/page/clock.js:194
+msgid "Percent of each line's natural height to keep. Lower closes the gap"
 msgstr ""
 
-#: app/page/clock.js:204
-msgid "Double: Compact"
+#: app/page/clock.js:198
+msgid "Button Inset"
 msgstr ""
 
-#: app/page/clock.js:205
-msgid "Double: Big Day"
-msgstr ""
-
-#: app/page/clock.js:206
-msgid "Double: EU Compact"
-msgstr ""
-
-#: app/page/clock.js:207
-msgid "Double: EU Full"
-msgstr ""
-
-#: app/page/clock.js:210
-msgid "Single: Compact"
+#: app/page/clock.js:199
+msgid ""
+"Pull the clock's background in vertically to match the other panel buttons"
 msgstr ""
 
 #: app/page/clock.js:211
-msgid "Single: With Seconds"
-msgstr ""
-
-#: app/page/clock.js:212
-msgid "Single: With Year"
-msgstr ""
-
-#: app/page/clock.js:213
-msgid "Single: 12-Hour"
-msgstr ""
-
-#: app/page/clock.js:214
-msgid "Single: 12-Hour Full"
-msgstr ""
-
-#: app/page/clock.js:215
-msgid "Single: Date First"
-msgstr ""
-
-#: app/page/clock.js:218
-msgid "Double: With Seconds"
-msgstr ""
-
-#: app/page/clock.js:219
-msgid "Double: With Year"
-msgstr ""
-
-#: app/page/clock.js:220
-msgid "Double: Big Month"
+msgid "Dim Separators"
 msgstr ""
 
 #: app/page/clock.js:221
-msgid "Double: 12-Hour"
+msgid "Format Mode"
 msgstr ""
 
 #: app/page/clock.js:222
-msgid "Double: 12-Hour Compact"
+msgid "Custom Format"
 msgstr ""
 
-#: app/page/clock.js:223
-msgid "Double: Time Top Big"
-msgstr ""
-
-#: app/page/clock.js:226
-msgid "Triple: Time + Day + Date"
-msgstr ""
-
-#: app/page/clock.js:227
-msgid "Triple: With Seconds"
-msgstr ""
-
-#: app/page/clock.js:228
-msgid "Triple: 12-Hour Full"
-msgstr ""
-
-#: app/page/clock.js:231
-msgid "Single: Minimal"
+#: app/page/clock.js:222
+msgid "System Default"
 msgstr ""
 
 #: app/page/clock.js:232
-msgid "Double: Day Focus"
+msgid "Format String"
 msgstr ""
 
-#: app/page/clock.js:233
-msgid "Single: ISO-ish"
+#: app/page/clock.js:246
+msgid "Single: Standard"
 msgstr ""
 
-#: app/page/clock.js:237
-msgid "Select a Preset"
+#: app/page/clock.js:247
+msgid "Single: Full"
+msgstr ""
+
+#: app/page/clock.js:248
+msgid "Double: Standard"
+msgstr ""
+
+#: app/page/clock.js:249
+msgid "Double: Compact"
+msgstr ""
+
+#: app/page/clock.js:250
+msgid "Double: Big Day"
+msgstr ""
+
+#: app/page/clock.js:251
+msgid "Double: EU Compact"
+msgstr ""
+
+#: app/page/clock.js:252
+msgid "Double: EU Full"
+msgstr ""
+
+#: app/page/clock.js:255
+msgid "Single: Compact"
+msgstr ""
+
+#: app/page/clock.js:256
+msgid "Single: With Seconds"
+msgstr ""
+
+#: app/page/clock.js:257
+msgid "Single: With Year"
+msgstr ""
+
+#: app/page/clock.js:258
+msgid "Single: 12-Hour"
+msgstr ""
+
+#: app/page/clock.js:259
+msgid "Single: 12-Hour Full"
+msgstr ""
+
+#: app/page/clock.js:260
+msgid "Single: Date First"
+msgstr ""
+
+#: app/page/clock.js:263
+msgid "Double: With Seconds"
+msgstr ""
+
+#: app/page/clock.js:264
+msgid "Double: With Year"
+msgstr ""
+
+#: app/page/clock.js:265
+msgid "Double: Big Month"
+msgstr ""
+
+#: app/page/clock.js:266
+msgid "Double: 12-Hour"
 msgstr ""
 
 #: app/page/clock.js:267
-msgid "Formatting Guide"
+msgid "Double: 12-Hour Compact"
 msgstr ""
 
 #: app/page/clock.js:268
+msgid "Double: Time Top Big"
+msgstr ""
+
+#: app/page/clock.js:271
+msgid "Triple: Time + Day + Date"
+msgstr ""
+
+#: app/page/clock.js:272
+msgid "Triple: With Seconds"
+msgstr ""
+
+#: app/page/clock.js:273
+msgid "Triple: 12-Hour Full"
+msgstr ""
+
+#: app/page/clock.js:276
+msgid "Single: Minimal"
+msgstr ""
+
+#: app/page/clock.js:277
+msgid "Double: Day Focus"
+msgstr ""
+
+#: app/page/clock.js:278
+msgid "Single: ISO-ish"
+msgstr ""
+
+#: app/page/clock.js:282
+msgid "Select a Preset"
+msgstr ""
+
+#: app/page/clock.js:313
+msgid "Formatting Guide"
+msgstr ""
+
+#: app/page/clock.js:314
 msgid ""
 "Reference for standard 'strftime' codes used to build custom date and time "
 "formats."
 msgstr ""
 
-#: app/page/dashboard.js:36
+#: app/page/clock.js:332
+msgid "Examples"
+msgstr ""
+
+#: app/page/clock.js:346
+msgid "Additional useful codes"
+msgstr ""
+
+#: app/page/clock.js:359
+msgid "Common combinations"
+msgstr ""
+
+#: app/page/dashboard.js:39
 msgid "Panel Indicator"
 msgstr ""
 
-#: app/page/dashboard.js:37
+#: app/page/dashboard.js:40
 msgid "Control the main menu icon in the top bar"
 msgstr ""
 
-#: app/page/dashboard.js:42
+#: app/page/dashboard.js:45
 msgid "Show Indicator"
 msgstr ""
 
-#: app/page/dashboard.js:43
+#: app/page/dashboard.js:46
 msgid "Toggle visibility"
 msgstr ""
 
-#: app/page/dashboard.js:54
-msgid "Features"
-msgstr ""
-
-#: app/page/dashboard.js:55
+#: app/page/dashboard.js:58
 msgid "Quick access to core modules"
 msgstr ""
 
-#: app/page/dashboard.js:68
+#: app/page/dashboard.js:62
+msgid "Manage dual-mode backgrounds"
+msgstr ""
+
+#: app/page/dashboard.js:62
+msgid "Wallpaper Engine"
+msgstr ""
+
+#: app/page/dashboard.js:63
+msgid "Hand-edit custom CSS"
+msgstr ""
+
+#: app/page/dashboard.js:63 app/page/index.js:113
+msgid "Stylesheet"
+msgstr ""
+
+#: app/page/dashboard.js:64
+msgid "Arrange panel items and their styling"
+msgstr ""
+
+#: app/page/dashboard.js:64
+msgid "Panel Layout"
+msgstr ""
+
+#: app/page/dashboard.js:65 app/util/categories.js:58
+msgid "Panel Appearance"
+msgstr ""
+
+#: app/page/dashboard.js:65
+msgid "Panel colors, borders, and presets"
+msgstr ""
+
+#: app/page/dashboard.js:66
+msgid "Rounding, shadows, and transparency"
+msgstr ""
+
+#: app/page/dashboard.js:66 app/util/categories.js:94
+msgid "Window Effects"
+msgstr ""
+
+#: app/page/dashboard.js:67 app/page/index.js:94
+msgid "Remember and restore window size and position"
+msgstr ""
+
+#: app/page/dashboard.js:67
+msgid "Window Geometry"
+msgstr ""
+
+#: app/page/dashboard.js:71
 msgid "Data Management"
 msgstr ""
 
-#: app/page/dashboard.js:69
+#: app/page/dashboard.js:72
 msgid "Backup or restore your configuration"
 msgstr ""
 
-#: app/page/dashboard.js:75
+#: app/page/dashboard.js:78
 msgid "Export Configuration"
 msgstr ""
 
-#: app/page/dashboard.js:76
+#: app/page/dashboard.js:79
 msgid "Save settings to a JSON file"
 msgstr ""
 
-#: app/page/dashboard.js:89
+#: app/page/dashboard.js:92
 msgid "Import Configuration"
 msgstr ""
 
-#: app/page/dashboard.js:90
+#: app/page/dashboard.js:93
 msgid "Restore settings from a JSON file"
 msgstr ""
 
-#: app/page/dashboard.js:104 app/page/dashboard.js:110
-msgid "Reset All Settings"
+#: app/page/dashboard.js:107 app/page/dashboard.js:113
+msgid "Reset Settings"
 msgstr ""
 
-#: app/page/dashboard.js:105
-msgid "Restore every Hornbill setting to its default value"
+#: app/page/dashboard.js:108
+msgid "Restore the selected groups to their default values"
 msgstr ""
 
-#: app/page/dashboard.js:138
+#: app/page/dashboard.js:134
+msgid "Included Data"
+msgstr ""
+
+#: app/page/dashboard.js:135
+msgid "Applies to Export, Import and Reset"
+msgstr ""
+
+#: app/page/dashboard.js:146
+#, javascript-format
+msgid "%s settings"
+msgstr ""
+
+#: app/page/dashboard.js:179
+#, javascript-format
+msgid "%s/%s settings in %s/%s groups"
+msgstr ""
+
+#: app/page/dashboard.js:189
+msgid "nothing"
+msgstr ""
+
+#: app/page/dashboard.js:212
 msgid "Custom Icon"
 msgstr ""
 
-#: app/page/dashboard.js:139
+#: app/page/dashboard.js:213 app/page/dashboard.js:236
 msgid "Default"
 msgstr ""
 
-#: app/page/dashboard.js:182
+#: app/page/dashboard.js:232
+msgid "Invalid Path"
+msgstr ""
+
+#: app/page/dashboard.js:256
 msgid "Reset to Default"
 msgstr ""
 
-#: app/page/dashboard.js:193
+#: app/page/dashboard.js:267
 msgid "Select File"
 msgstr ""
 
-#: app/page/dashboard.js:209
+#: app/page/dashboard.js:283
 msgid "Select Panel Icon"
 msgstr ""
 
-#: app/page/dashboard.js:250
+#: app/page/dashboard.js:290 app/page/layout.js:425 app/page/wallpaper.js:469
+msgid "Images"
+msgstr ""
+
+#: app/page/dashboard.js:324
 msgid "Export Settings"
 msgstr ""
 
-#: app/page/dashboard.js:285
+#: app/page/dashboard.js:334 app/page/dashboard.js:378
+msgid "JSON Config"
+msgstr ""
+
+#: app/page/dashboard.js:350
+msgid "Export Complete"
+msgstr ""
+
+#: app/page/dashboard.js:354
 msgid "Export Failed"
 msgstr ""
 
-#: app/page/dashboard.js:307
+#: app/page/dashboard.js:371
 msgid "Import Settings"
 msgstr ""
 
-#: app/page/dashboard.js:342
+#: app/page/dashboard.js:410 app/page/dashboard.js:457
 msgid "Import Failed"
 msgstr ""
 
-#: app/page/dashboard.js:359
-msgid "Reset All Settings?"
+#: app/page/dashboard.js:414 app/page/dashboard.js:468
+msgid "OK"
+msgstr ""
+
+#: app/page/dashboard.js:436
+msgid "These groups will be overwritten with the values in the file:"
+msgstr ""
+
+#: app/page/dashboard.js:437
+msgid ""
+"Nothing in this file falls inside the current scope, so nothing would change."
+msgstr ""
+
+#: app/page/dashboard.js:440
+msgid "Present in the file but excluded by your scope:"
+msgstr ""
+
+#: app/page/dashboard.js:443
+msgid "Import Configuration?"
+msgstr ""
+
+#: app/page/dashboard.js:448
+msgid "Import"
+msgstr ""
+
+#: app/page/dashboard.js:457
+msgid "Import Complete"
+msgstr ""
+
+#: app/page/dashboard.js:477
+msgid "Reset Settings?"
+msgstr ""
+
+#: app/page/dashboard.js:479
+msgid ""
+"Every Hornbill setting will return to its default value. Exported backups "
+"are not affected."
+msgstr ""
+
+#: app/page/dashboard.js:480
+msgid "Everything else is left untouched."
+msgstr ""
+
+#: app/page/dashboard.js:480
+msgid "These groups will return to their default values:"
+msgstr ""
+
+#: app/page/dashboard.js:483
+msgid "Reset Everything"
+msgstr ""
+
+#: app/page/dashboard.js:483
+msgid "Reset Selected"
+msgstr ""
+
+#: app/page/dashboard.js:492
+msgid "Reset Failed"
+msgstr ""
+
+#: app/page/dashboard.js:492
+msgid "Settings could not be reset. Details are in the system log."
 msgstr ""
 
 #: app/page/effects.js:17
@@ -553,10 +1088,6 @@ msgstr ""
 msgid "Apply the same rounding to every window corner"
 msgstr ""
 
-#: app/page/effects.js:30
-msgid "Corner Radius"
-msgstr ""
-
 #: app/page/effects.js:31
 msgid "Pixels (matching GNOME’s own decoration is around 12)"
 msgstr ""
@@ -571,7 +1102,7 @@ msgid ""
 "facing the desktop stay rounded"
 msgstr ""
 
-#: app/page/effects.js:52 app/page/geometry.js:40
+#: app/page/effects.js:52 app/page/geometry.js:42
 msgid "Manage X11 Windows"
 msgstr ""
 
@@ -581,7 +1112,7 @@ msgid ""
 "destabilize the session"
 msgstr ""
 
-#: app/page/effects.js:60
+#: app/page/effects.js:60 app/util/categories.js:88
 msgid "Window Transparency"
 msgstr ""
 
@@ -630,380 +1161,481 @@ msgid ""
 "match."
 msgstr ""
 
-#: app/page/extensions.js:114
+#: app/page/extensions.js:116
 msgid "Some changes finish after reloading"
 msgstr ""
 
-#: app/page/extensions.js:115
+#: app/page/extensions.js:117
 msgid "Log out and back in to complete pending changes."
 msgstr ""
 
-#: app/page/extensions.js:125
+#: app/page/extensions.js:127
 msgid "Loading extensions…"
 msgstr ""
 
-#: app/page/extensions.js:136
+#: app/page/extensions.js:140
 msgid "User Extensions"
 msgstr ""
 
-#: app/page/extensions.js:137
+#: app/page/extensions.js:141
 msgid ""
 "Installed for your account. These can be enabled, disabled, and removed."
 msgstr ""
 
-#: app/page/extensions.js:140
+#: app/page/extensions.js:144
 msgid "System Extensions"
 msgstr ""
 
-#: app/page/extensions.js:141
+#: app/page/extensions.js:145
 msgid ""
 "Installed system-wide. These can be enabled or disabled, but not removed "
 "from here."
 msgstr ""
 
-#: app/page/extensions.js:197
+#: app/page/extensions.js:215
 msgid "Open extension homepage"
 msgstr ""
 
+#: app/page/extensions.js:232
+msgid "Cannot remove the extension you are configuring"
+msgstr ""
+
+#: app/page/extensions.js:234
+msgid "Remove this extension"
+msgstr ""
+
+#: app/page/extensions.js:235
+msgid "System extensions cannot be removed here"
+msgstr ""
+
+#: app/page/extensions.js:254
+msgid "Turning this off disables the extension you are configuring"
+msgstr ""
+
+#: app/page/extensions.js:313
+msgid "No extensions found"
+msgstr ""
+
+#: app/page/extensions.js:328
+msgid "Could not load extensions"
+msgstr ""
+
 #: app/page/extensions.js:343
+msgid "Extensions service unavailable"
+msgstr ""
+
+#: app/page/extensions.js:344
+msgid "Could not reach GNOME Shell."
+msgstr ""
+
+#: app/page/extensions.js:391 app/panel/indicator.js:333
+msgid "Disable Hornbill?"
+msgstr ""
+
+#: app/page/extensions.js:392
+msgid ""
+"The panel customisations and window features provided by this extension will "
+"stop. You can re-enable it from this list."
+msgstr ""
+
+#: app/page/extensions.js:395 app/panel/indicator.js:349
+msgid "Disable"
+msgstr ""
+
+#: app/page/extensions.js:410
 msgid "Remove extension?"
 msgstr ""
 
-#: app/page/geometry.js:21
+#: app/page/extensions.js:411
+#, javascript-format
+msgid ""
+"“%s” will be uninstalled from your account. This cannot be undone from here."
+msgstr ""
+
+#: app/page/extensions.js:414 app/page/stylesheet.js:318
+msgid "Remove"
+msgstr ""
+
+#: app/page/geometry.js:23
 msgid "Settings"
 msgstr ""
 
-#: app/page/geometry.js:26
+#: app/page/geometry.js:28
 msgid "Enable Geometry Saving"
 msgstr ""
 
-#: app/page/geometry.js:27
+#: app/page/geometry.js:29
 msgid "Remember window size and position"
 msgstr ""
 
-#: app/page/geometry.js:33
+#: app/page/geometry.js:35
 msgid "Restore Workspace"
 msgstr ""
 
-#: app/page/geometry.js:34
+#: app/page/geometry.js:36
 msgid ""
 "Reopen windows on the workspace they were closed on (recreated if needed)"
 msgstr ""
 
-#: app/page/geometry.js:41
+#: app/page/geometry.js:43
 msgid ""
 "Applies to apps running through Xwayland. Disable if X11 apps destabilize "
 "the session"
 msgstr ""
 
-#: app/page/geometry.js:50
+#: app/page/geometry.js:52 app/util/categories.js:30
 msgid "Saved Applications"
 msgstr ""
 
-#: app/page/geometry.js:51
+#: app/page/geometry.js:53
 msgid "Manage currently stored window positions"
 msgstr ""
 
-#: app/page/geometry.js:115
+#: app/page/geometry.js:110
+msgid "Maximized"
+msgstr ""
+
+#: app/page/geometry.js:111
+msgid "No geometry recorded"
+msgstr ""
+
+#: app/page/geometry.js:112
+#, javascript-format
+msgid "Size: %s • Pos: %s"
+msgstr ""
+
+#: app/page/geometry.js:118
+msgid "Drive"
+msgstr ""
+
+#: app/page/geometry.js:147
 msgid "No Saved Windows"
 msgstr ""
 
-#: app/page/geometry.js:116
+#: app/page/geometry.js:148
 msgid "Move windows around to populate this list"
 msgstr ""
 
-#: app/page/geometry.js:160
+#: app/page/geometry.js:190
 msgid "Forget this window"
 msgstr ""
 
-#: app/page/geometry.js:222
+#: app/page/geometry.js:240
 msgid "Clear Saved Geometry"
 msgstr ""
 
-#: app/page/geometry.js:223
+#: app/page/geometry.js:241
 msgid ""
 "Remove all remembered window positions and sizes. Entries rebuild as you "
 "move windows"
 msgstr ""
 
-#: app/page/geometry.js:229
+#: app/page/geometry.js:247
 msgid "Clear all saved window geometry"
 msgstr ""
 
-#: app/page/index.js:16 app/window.js:152
+#: app/page/index.js:17 app/window.js:220
 msgid "General"
 msgstr ""
 
-#: app/page/index.js:20
+#: app/page/index.js:21
 msgid "Dashboard"
 msgstr ""
 
-#: app/page/index.js:22
+#: app/page/index.js:23
 msgid "View system information and basic OS details"
 msgstr ""
 
-#: app/page/index.js:29
+#: app/page/index.js:30
 msgid "Desktop"
 msgstr ""
 
-#: app/page/index.js:33
+#: app/page/index.js:34 app/util/categories.js:76
 msgid "Wallpaper"
 msgstr ""
 
-#: app/page/index.js:35
+#: app/page/index.js:36
 msgid "Customize background images and colors"
 msgstr ""
 
-#: app/page/index.js:42
+#: app/page/index.js:43
 msgid "Panel"
 msgstr ""
 
-#: app/page/index.js:48
+#: app/page/index.js:49
 msgid "Panel colors, gradient, borders, shadow, and presets"
 msgstr ""
 
-#: app/page/index.js:54
+#: app/page/index.js:55
 msgid "Layout"
 msgstr ""
 
-#: app/page/index.js:56
+#: app/page/index.js:57
 msgid "Arrange panel items and adjust their size, spacing, and colors"
 msgstr ""
 
-#: app/page/index.js:62
+#: app/page/index.js:63
+msgid "Tooltips"
+msgstr ""
+
+#: app/page/index.js:65
+msgid "Style the hover labels on Hornbill's panel buttons"
+msgstr ""
+
+#: app/page/index.js:71 app/util/categories.js:70
 msgid "Clock"
 msgstr ""
 
-#: app/page/index.js:64
+#: app/page/index.js:73
 msgid "Customize the panel clock"
 msgstr ""
 
-#: app/page/index.js:71
+#: app/page/index.js:80
 msgid "Window"
 msgstr ""
 
-#: app/page/index.js:75 app/page/wallpaper.js:246
+#: app/page/index.js:84 app/page/wallpaper.js:257
 msgid "Effects"
 msgstr ""
 
-#: app/page/index.js:77
+#: app/page/index.js:86
 msgid "Window corner rounding, shadows, and transparency"
 msgstr ""
 
-#: app/page/index.js:83
+#: app/page/index.js:92
 msgid "Geometry"
 msgstr ""
 
-#: app/page/index.js:85
-msgid "Remember and restore window size and position"
-msgstr ""
-
-#: app/page/index.js:92
+#: app/page/index.js:101
 msgid "Advanced"
 msgstr ""
 
-#: app/page/index.js:96
+#: app/page/index.js:105 app/panel/indicator.js:399
 msgid "Extensions"
 msgstr ""
 
-#: app/page/index.js:98
+#: app/page/index.js:107
 msgid "Manage installed GNOME Shell extensions"
 msgstr ""
 
-#: app/page/index.js:104
-msgid "Stylesheet"
-msgstr ""
-
-#: app/page/index.js:106
+#: app/page/index.js:115
 msgid "Hand-edit custom CSS applied to the shell"
 msgstr ""
 
-#: app/page/index.js:117
+#: app/page/index.js:126 app/panel/indicator.js:413
 msgid "About"
 msgstr ""
 
-#: app/page/index.js:119
+#: app/page/index.js:128
 msgid "Learn more about this application"
 msgstr ""
 
-#: app/page/layout.js:43
-msgid "Global Appearance"
-msgstr ""
-
-#: app/page/layout.js:44
-msgid "Configure the look and feel of your panel buttons."
-msgstr ""
-
-#: app/page/layout.js:51
-msgid "Icon Size"
-msgstr ""
-
-#: app/page/layout.js:61
-msgid "Item Padding"
-msgstr ""
-
-#: app/page/layout.js:62
-msgid "Horizontal space inside each item, independent of panel button padding"
-msgstr ""
-
-#: app/page/layout.js:71
-msgid "Monochrome Icons"
-msgstr ""
-
-#: app/page/layout.js:78
-msgid "Running Opacity"
-msgstr ""
-
-#: app/page/layout.js:79
-msgid "Opacity for running apps (0-255)"
-msgstr ""
-
-#: app/page/layout.js:88
-msgid "Stopped Opacity"
-msgstr ""
-
-#: app/page/layout.js:89
-msgid "Opacity for inactive favorites (0-255)"
-msgstr ""
-
-#: app/page/layout.js:102
+#: app/page/layout.js:49
 msgid "Running Indicator"
 msgstr ""
 
-#: app/page/layout.js:103
+#: app/page/layout.js:50
 msgid "Customize the visual indicator for running applications."
 msgstr ""
 
-#: app/page/layout.js:113
+#: app/page/layout.js:60
 msgid "Custom"
 msgstr ""
 
-#: app/page/layout.js:114
+#: app/page/layout.js:61
 msgid "Dot Below"
 msgstr ""
 
-#: app/page/layout.js:115
+#: app/page/layout.js:62
 msgid "Dot Above"
 msgstr ""
 
-#: app/page/layout.js:116
+#: app/page/layout.js:63
 msgid "Line Below"
 msgstr ""
 
-#: app/page/layout.js:117
+#: app/page/layout.js:64
 msgid "Line Above"
 msgstr ""
 
-#: app/page/layout.js:118
+#: app/page/layout.js:65
 msgid "Bar Left"
 msgstr ""
 
-#: app/page/layout.js:119
+#: app/page/layout.js:66
 msgid "Bar Right"
 msgstr ""
 
-#: app/page/layout.js:126
+#: app/page/layout.js:73
 msgid "Style Preset"
 msgstr ""
 
-#: app/page/layout.js:127
+#: app/page/layout.js:74
 msgid "Quickly apply common indicator styles"
 msgstr ""
 
-#: app/page/layout.js:223 app/page/layout.js:338
+#: app/page/layout.js:168
+msgid "Top"
+msgstr ""
+
+#: app/page/layout.js:169
+msgid "Right"
+msgstr ""
+
+#: app/page/layout.js:170
+msgid "Bottom"
+msgstr ""
+
+#: app/page/layout.js:171
+msgid "Left"
+msgstr ""
+
+#: app/page/layout.js:174 app/page/layout.js:289
 msgid "Position"
 msgstr ""
 
-#: app/page/layout.js:250
+#: app/page/layout.js:201 app/page/tooltips.js:69
 msgid "Offset"
 msgstr ""
 
-#: app/page/layout.js:251
+#: app/page/layout.js:202
 msgid "Distance from edge"
 msgstr ""
 
-#: app/page/layout.js:259
+#: app/page/layout.js:210
 msgid "Width"
 msgstr ""
 
-#: app/page/layout.js:267
+#: app/page/layout.js:218
 msgid "Height"
 msgstr ""
 
-#: app/page/layout.js:275
+#: app/page/layout.js:226
 msgid "Radius"
 msgstr ""
 
-#: app/page/layout.js:276
+#: app/page/layout.js:227
 msgid "Corner rounding (0=Square, 99=Round)"
 msgstr ""
 
-#: app/page/layout.js:283
-msgid "Color"
-msgstr ""
-
-#: app/page/layout.js:330
+#: app/page/layout.js:281
 msgid "Show in Panel"
 msgstr ""
 
-#: app/page/layout.js:355
+#: app/page/layout.js:306
 msgid "Sort Order"
 msgstr ""
 
-#: app/page/layout.js:384
-msgid "Display Mode"
+#: app/page/layout.js:323
+msgid "Show Applications"
 msgstr ""
 
-#: app/page/layout.js:385
-msgid "Choose how the button appears in the panel."
+#: app/page/layout.js:325
+msgid "Settings for the application grid toggle button."
 msgstr ""
 
-#: app/page/layout.js:406
+#: app/page/layout.js:330 app/page/layout.js:356
 msgid "Icon Name"
 msgstr ""
 
-#: app/page/layout.js:442
+#: app/page/layout.js:331
+msgid "File Path"
+msgstr ""
+
+#: app/page/layout.js:332
+msgid "Text Label"
+msgstr ""
+
+#: app/page/layout.js:335
+msgid "Display Mode"
+msgstr ""
+
+#: app/page/layout.js:336
+msgid "Choose how the button appears in the panel."
+msgstr ""
+
+#: app/page/layout.js:394
+msgid "Suggestions"
+msgstr ""
+
+#: app/page/layout.js:405
 msgid "Icon File"
 msgstr ""
 
-#: app/page/layout.js:455
+#: app/page/layout.js:406
+msgid "No file selected"
+msgstr ""
+
+#: app/page/layout.js:418
 msgid "Select Icon"
 msgstr ""
 
-#: app/page/layout.js:490
+#: app/page/layout.js:453
 msgid "Label Text"
 msgstr ""
 
-#: app/page/layout.js:498
+#: app/page/layout.js:461
 msgid "Note"
 msgstr ""
 
-#: app/page/layout.js:499
+#: app/page/layout.js:462
 msgid ""
 "Enter a themed icon name (e.g., start-here-symbolic) or a full file path."
 msgstr ""
 
-#: app/page/layout.js:524
+#: app/page/layout.js:483
+msgid "Settings for the activities overview button."
+msgstr ""
+
+#: app/page/layout.js:487
 msgid "Hide \"Activities\" Button"
 msgstr ""
 
-#: app/page/layout.js:525
+#: app/page/layout.js:488
 msgid "Hide the default GNOME Shell Activities button"
 msgstr ""
 
-#: app/page/layout.js:548
+#: app/page/layout.js:496
+msgid "Favorites"
+msgstr ""
+
+#: app/page/layout.js:496
+msgid "Manage the pinned favorites launcher."
+msgstr ""
+
+#: app/page/layout.js:499
+msgid "Manage the taskbar for running applications."
+msgstr ""
+
+#: app/page/layout.js:499
+msgid "Running Apps"
+msgstr ""
+
+#: app/page/layout.js:502
+msgid "Disks"
+msgstr ""
+
+#: app/page/layout.js:502
+msgid "Manage mounted drives and volumes."
+msgstr ""
+
+#: app/page/layout.js:505
+msgid "Manage the trash bin button."
+msgstr ""
+
+#: app/page/layout.js:511
 msgid "Manage Favorites"
 msgstr ""
 
-#: app/page/layout.js:549
+#: app/page/layout.js:512
 msgid "Drag and drop items to reorder."
 msgstr ""
 
-#: app/page/stylesheet.js:20
+#: app/page/stylesheet.js:21 app/page/wallpaper.js:450
 msgid "Error"
 msgstr ""
 
-#: app/page/stylesheet.js:20
+#: app/page/stylesheet.js:21
 msgid "Schema ID not found in configuration."
 msgstr ""
 
@@ -1011,171 +1643,425 @@ msgstr ""
 msgid "Copy CSS"
 msgstr ""
 
-#: app/page/stylesheet.js:133
+#: app/page/stylesheet.js:134
 msgid "Bundled Styles"
 msgstr ""
 
-#: app/page/stylesheet.js:134
+#: app/page/stylesheet.js:135
 msgid ""
 "Demo styles shipped with the extension — view their CSS as a cheat sheet for "
 "writing your own."
 msgstr ""
 
-#: app/page/stylesheet.js:144
+#: app/page/stylesheet.js:145
 msgid "No Styles Found"
 msgstr ""
 
-#: app/page/stylesheet.js:145
+#: app/page/stylesheet.js:146
 msgid "No .css files were found in style/bundled"
 msgstr ""
 
-#: app/page/stylesheet.js:169
+#: app/page/stylesheet.js:171
 msgid "View CSS"
 msgstr ""
 
-#: app/page/stylesheet.js:199
+#: app/page/stylesheet.js:201
 msgid "Custom Styles"
 msgstr ""
 
-#: app/page/stylesheet.js:200
+#: app/page/stylesheet.js:202
 msgid ""
 "Add your own CSS files from anywhere on your computer. Files reload "
 "automatically when edited."
 msgstr ""
 
-#: app/page/stylesheet.js:210
+#: app/page/stylesheet.js:212
 msgid "Enable or disable all custom styles"
 msgstr ""
 
-#: app/page/stylesheet.js:218
+#: app/page/stylesheet.js:220
 msgid "Add Style File"
 msgstr ""
 
-#: app/page/stylesheet.js:233
+#: app/page/stylesheet.js:235
 msgid "Add Style File…"
 msgstr ""
 
-#: app/page/stylesheet.js:285
+#: app/page/stylesheet.js:284
+msgid "Invalid File"
+msgstr ""
+
+#: app/page/stylesheet.js:295
 msgid "Open File"
 msgstr ""
 
-#: app/page/stylesheet.js:308
-msgid "Remove"
-msgstr ""
-
-#: app/page/stylesheet.js:343
+#: app/page/stylesheet.js:352
 msgid "Select CSS File"
 msgstr ""
 
-#: app/page/wallpaper.js:90
-msgid "Enable Wallpaper Management"
+#: app/page/stylesheet.js:359
+msgid "CSS Files"
 msgstr ""
 
-#: app/page/wallpaper.js:91
-msgid "Master switch for all wallpaper features"
+#: app/page/tooltips.js:11
+msgid "Bold"
+msgstr ""
+
+#: app/page/tooltips.js:11
+msgid "Light"
+msgstr ""
+
+#: app/page/tooltips.js:11
+msgid "Medium"
+msgstr ""
+
+#: app/page/tooltips.js:11
+msgid "Normal"
+msgstr ""
+
+#: app/page/tooltips.js:35
+msgid "Behaviour"
+msgstr ""
+
+#: app/page/tooltips.js:36
+msgid "Hover labels naming each button Hornbill adds to the panel."
+msgstr ""
+
+#: app/page/tooltips.js:41
+msgid "Enable Tooltips"
+msgstr ""
+
+#: app/page/tooltips.js:42
+msgid "Name each button on hover"
+msgstr ""
+
+#: app/page/tooltips.js:50
+msgid "Reset Tooltip Style"
+msgstr ""
+
+#: app/page/tooltips.js:51
+msgid "Restore appearance to defaults. Enable and delay are untouched"
+msgstr ""
+
+#: app/page/tooltips.js:56
+msgid "Reset tooltip styling to defaults"
+msgstr ""
+
+#: app/page/tooltips.js:66
+msgid "Delay"
+msgstr ""
+
+#: app/page/tooltips.js:67
+msgid "Milliseconds of hover before the tooltip appears"
+msgstr ""
+
+#: app/page/tooltips.js:70
+msgid "Gap between the button edge and the tooltip"
+msgstr ""
+
+#: app/page/tooltips.js:74
+msgid "Text"
+msgstr ""
+
+#: app/page/tooltips.js:75
+msgid "Colour and typeface of the label."
+msgstr ""
+
+#: app/page/tooltips.js:80
+msgid "Text Color"
+msgstr ""
+
+#: app/page/tooltips.js:81
+msgid "Font Size"
+msgstr ""
+
+#: app/page/tooltips.js:82
+msgid "Font Weight"
+msgstr ""
+
+#: app/page/tooltips.js:86
+msgid "Background"
+msgstr ""
+
+#: app/page/tooltips.js:87
+msgid "Fill colour, corner rounding, and internal spacing."
+msgstr ""
+
+#: app/page/tooltips.js:95
+msgid "Horizontal Padding"
+msgstr ""
+
+#: app/page/tooltips.js:96
+msgid "Space between the text and the left and right edges"
+msgstr ""
+
+#: app/page/tooltips.js:98
+msgid "Vertical Padding"
+msgstr ""
+
+#: app/page/tooltips.js:99
+msgid "Space between the text and the top and bottom edges"
+msgstr ""
+
+#: app/page/tooltips.js:103
+msgid "Border"
+msgstr ""
+
+#: app/page/tooltips.js:104
+msgid "Set the size above zero to draw a border."
+msgstr ""
+
+#: app/page/tooltips.js:115
+msgid "Shadow"
+msgstr ""
+
+#: app/page/tooltips.js:116
+msgid "Drop shadow cast by the tooltip."
+msgstr ""
+
+#: app/page/wallpaper.js:27
+msgid "Error: org.gnome.desktop.background schema missing"
+msgstr ""
+
+#: app/page/wallpaper.js:34
+msgid "Extension Schema Error"
 msgstr ""
 
 #: app/page/wallpaper.js:99
+msgid "Enable Wallpaper Management"
+msgstr ""
+
+#: app/page/wallpaper.js:100
+msgid "Master switch for all wallpaper features"
+msgstr ""
+
+#: app/page/wallpaper.js:108
 msgid ""
 "Instantly apply a pre-configured theme with matching colors and effects."
 msgstr ""
 
-#: app/page/wallpaper.js:212
+#: app/page/wallpaper.js:223
 msgid "Background Image"
 msgstr ""
 
-#: app/page/wallpaper.js:213
+#: app/page/wallpaper.js:224
 msgid "Choose specific images for Light and Dark system themes."
 msgstr ""
 
-#: app/page/wallpaper.js:218
+#: app/page/wallpaper.js:229
 msgid "Show Image"
 msgstr ""
 
-#: app/page/wallpaper.js:219
+#: app/page/wallpaper.js:230
 msgid "Toggle the desktop background wallpaper"
 msgstr ""
 
-#: app/page/wallpaper.js:234
+#: app/page/wallpaper.js:235
+msgid "Light Mode Image"
+msgstr ""
+
+#: app/page/wallpaper.js:239
+msgid "Dark Mode Image"
+msgstr ""
+
+#: app/page/wallpaper.js:245
 msgid "Scaling Options"
 msgstr ""
 
-#: app/page/wallpaper.js:235
+#: app/page/wallpaper.js:246
 msgid "Control how the wallpaper image fits your screen."
 msgstr ""
 
-#: app/page/wallpaper.js:247
+#: app/page/wallpaper.js:258
 msgid "Apply visual filters like blur or desaturation to the background."
 msgstr ""
 
-#: app/page/wallpaper.js:252
+#: app/page/wallpaper.js:263
 msgid "Monochrome"
 msgstr ""
 
-#: app/page/wallpaper.js:253
+#: app/page/wallpaper.js:264
 msgid "Desaturate the background"
 msgstr ""
 
-#: app/page/wallpaper.js:258
+#: app/page/wallpaper.js:269
 msgid "Blur Amount"
 msgstr ""
 
-#: app/page/wallpaper.js:268
+#: app/page/wallpaper.js:279
 msgid "Brightness"
 msgstr ""
 
-#: app/page/wallpaper.js:281
+#: app/page/wallpaper.js:292
 msgid "Colors"
 msgstr ""
 
-#: app/page/wallpaper.js:282
+#: app/page/wallpaper.js:293
 msgid ""
 "Define solid colors or gradients. These appear when no image is set or "
 "behind transparent wallpapers."
 msgstr ""
 
-#: app/page/wallpaper.js:423
+#: app/page/wallpaper.js:298
+msgid "Light Secondary"
+msgstr ""
+
+#: app/page/wallpaper.js:299
+msgid "Dark Secondary"
+msgstr ""
+
+#: app/page/wallpaper.js:304
+msgid "Light Primary"
+msgstr ""
+
+#: app/page/wallpaper.js:307
+msgid "Dark Primary"
+msgstr ""
+
+#: app/page/wallpaper.js:311
+msgid "Critical UI Error"
+msgstr ""
+
+#: app/page/wallpaper.js:448
+msgid "No image set"
+msgstr ""
+
+#: app/page/wallpaper.js:461
 #, javascript-format
 msgid "Select %s"
 msgstr ""
 
-#: app/page/wallpaper.js:496
+#: app/page/wallpaper.js:478
+msgid "All Files"
+msgstr ""
+
+#: app/page/wallpaper.js:535
 msgid "Picture Style"
 msgstr ""
 
-#: app/page/wallpaper.js:537
+#: app/page/wallpaper.js:575
 msgid "Color Mode"
 msgstr ""
 
-#: app/panel/indicator.js:173
-msgid "Disable Hornbill?"
+#: app/panel/indicator.js:82
+msgid "Hornbill Extension"
 msgstr ""
 
-#: app/panel/indicator.js:188
-msgid "Disable"
+#: app/panel/indicator.js:335
+msgid ""
+"The panel customisations and window features provided by this extension will "
+"stop. You can re-enable it from the Extensions app."
 msgstr ""
 
-#: app/window.js:35
+#: app/panel/indicator.js:405
+msgid "Disable Extension"
+msgstr ""
+
+#: app/util/categories.js:31
+msgid "Remembered window positions and sizes"
+msgstr ""
+
+#: app/util/categories.js:40
+msgid "Geometry Settings"
+msgstr ""
+
+#: app/util/categories.js:41
+msgid "Whether positions are remembered, workspace and X11 options"
+msgstr ""
+
+#: app/util/categories.js:46
+msgid "Panel Tooltips"
+msgstr ""
+
+#: app/util/categories.js:47
+msgid "Hover label styling, delay and offset"
+msgstr ""
+
+#: app/util/categories.js:53
+msgid "Favourites, running apps, drives, trash and the running dot"
+msgstr ""
+
+#: app/util/categories.js:59
+msgid "Panel colours, borders, layout and button styling"
+msgstr ""
+
+#: app/util/categories.js:65
+msgid "Menu colours, borders and shadows"
+msgstr ""
+
+#: app/util/categories.js:71
+msgid "Position, format and two-line layout"
+msgstr ""
+
+#: app/util/categories.js:77
+msgid "Images, colours and background effects"
+msgstr ""
+
+#: app/util/categories.js:82
+msgid "Screen Corners"
+msgstr ""
+
+#: app/util/categories.js:83
+msgid "Rounded corner radius and edge behaviour"
+msgstr ""
+
+#: app/util/categories.js:89
+msgid "Focused and unfocused window opacity"
+msgstr ""
+
+#: app/util/categories.js:95
+msgid "Effect handling options"
+msgstr ""
+
+#: app/util/categories.js:100
+msgid "Extension Indicator"
+msgstr ""
+
+#: app/util/categories.js:101
+msgid "The Hornbill panel button and its icon"
+msgstr ""
+
+#: app/util/categories.js:106
+msgid "Custom Stylesheet"
+msgstr ""
+
+#: app/util/categories.js:107
+msgid "Hand-written CSS and which bundled styles are on"
+msgstr ""
+
+#: app/util/categories.js:125
+msgid "Other"
+msgstr ""
+
+#: app/util/categories.js:126
+msgid "Settings not covered by the groups above"
+msgstr ""
+
+#: app/window.js:50
 msgid "Menu"
 msgstr ""
 
-#: app/window.js:40
+#: app/window.js:55
 msgid "Search"
 msgstr ""
 
-#: app/window.js:44
+#: app/window.js:59
 msgid "Search settings..."
 msgstr ""
 
-#: app/window.js:152
+#: app/window.js:220
 #, javascript-format
 msgid "Options for %s"
 msgstr ""
 
-#: app/window.js:282
+#: app/window.js:249
+msgid "Under Construction"
+msgstr ""
+
+#: app/window.js:367
 msgid "No Results Found"
 msgstr ""
 
-#: prefs.js:105
+#: prefs.js:89
 msgid "Preferences Error"
 msgstr ""

@@ -2,7 +2,7 @@
 EXT ?= hornbill@lethil.me
 
 # Mark targets as PHONY so Make doesn't look for files with these names
-.PHONY: check uninstall disable enable refresh reload logs
+.PHONY: check prefs reset uninstall disable enable refresh reload logs
 
 check:
 	@./check.sh
@@ -36,14 +36,16 @@ refresh:
 	gnome-extensions enable $(EXT)
 	@echo "Done."
 
+# org.gnome.Shell.Eval is disabled outside unsafe mode since GNOME 41, and
+# dbus-send exits 0 even when Eval refuses, so the old target reported a
+# restart that never happened. Restarting cannot be scripted; say how instead.
 reload:
-	@echo "Attempting to restart GNOME Shell via D-Bus..."
-	@if dbus-send --session --type=method_call --dest=org.gnome.Shell /org/gnome/Shell org.gnome.Shell.Eval string:'true' >/dev/null 2>&1; then \
-		dbus-send --session --type=method_call --dest=org.gnome.Shell /org/gnome/Shell org.gnome.Shell.Eval string:'global.reexec_self();'; \
-		echo "GNOME Shell restarted."; \
-	else \
-		echo "GNOME Shell not available on D-Bus (Are you on Wayland?)."; \
-	fi
+	@echo "GNOME Shell cannot be restarted from a script."
+	@echo "  X11:     Alt+F2, type r, Enter."
+	@echo "  Wayland: log out and back in, or test in a nested session"
+	@echo "           (dbus-run-session gnome-shell --devkit on GNOME 49+,"
+	@echo "            dbus-run-session gnome-shell --nested --wayland on 46-48)."
+	@exit 1
 
 logs:
 	@echo "-- Watching logs for gnome-shell:"

@@ -50,6 +50,10 @@ export class Indicator {
   }
 
   disable() {
+    if (this._confirmDialog) {
+      this._confirmDialog.destroy();
+      this._confirmDialog = null;
+    }
     this._destroyButton();
 
     if (this._settings) {
@@ -75,7 +79,7 @@ export class Indicator {
   }
 
   _createButton() {
-    const nameId = AppConfig.name || "Hornbill Extension";
+    const nameId = AppConfig.name || _("Hornbill Extension");
 
     this.button = new PanelMenu.Button(0.5, nameId, false);
     this.button.clear_actions();
@@ -309,9 +313,16 @@ export class Indicator {
    * Confirmation before disabling. Runs inside gnome-shell, so uses ModalDialog.
    */
   _confirmDisable() {
+    if (this._confirmDialog) return;
     let dialog;
     try {
       dialog = new ModalDialog.ModalDialog({ destroyOnClose: true });
+      // Tracked so disable() can close it; otherwise it would survive the
+      // extension with its modal grab and callbacks into a torn-down indicator.
+      this._confirmDialog = dialog;
+      dialog.connect("destroy", () => {
+        if (this._confirmDialog === dialog) this._confirmDialog = null;
+      });
     } catch (e) {
       logError("Could not create confirmation dialog", e);
       this._doDisable();
@@ -320,9 +331,10 @@ export class Indicator {
 
     const content = new Dialog.MessageDialogContent({
       title: _("Disable Hornbill?"),
-      description:
+      description: _(
         "The panel customisations and window features provided by this " +
-        "extension will stop. You can re-enable it from the Extensions app.",
+          "extension will stop. You can re-enable it from the Extensions app.",
+      ),
     });
     dialog.contentLayout.add_child(content);
 

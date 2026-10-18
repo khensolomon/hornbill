@@ -20,13 +20,18 @@ export class PanelsManager extends ExtensionComponent {
         this._refreshTimeoutId = 0;
         this._settingsSignals = [];
         this._clockCssFile = null;
-
-        // Shared settings object resolved from the extension's own schema dir.
-        // Backend and prefs now use the same source, so they can't diverge.
-        this._settings = AppConfig.getSettings();
+        this._clockCss = null;
+        // Style classes added to stock menu actors, so disable can take them
+        // back off. Map<actor, Set<className>>.
+        this._addedMenuClasses = new Map();
     }
 
     onEnable() {
+        // Shared settings object resolved from the extension's own schema dir.
+        // Backend and prefs use the same source, so they cannot diverge.
+        // Resolved here rather than in the constructor: nothing is created
+        // before enable().
+        this._settings = AppConfig.getSettings();
         this._savedPanelStyle = Main.panel.get_style();
         
         const keys = [
@@ -74,10 +79,6 @@ export class PanelsManager extends ExtensionComponent {
             });
         });
 
-        // DEBUG LOG: Verify what the extension actually sees on startup
-        const startColor = this._settings.get_string('panel-bg-color');
-        log(`[Panels] Enabled. Schema: ${AppConfig.schemaId}. Loaded BG Color: ${startColor}`);
-
         this._queueRefresh();
     }
 
@@ -123,6 +124,7 @@ export class PanelsManager extends ExtensionComponent {
         }
 
         this._iterateMenus((menu) => this._resetMenuStyle(menu));
+        this._removeAddedMenuClasses();
         this._iterateButtons((btn) => {
             if (this._isValid(btn)) {
                 btn.set_style(null);
@@ -181,6 +183,7 @@ export class PanelsManager extends ExtensionComponent {
             // Enable Panel Styling off left every menu with its configured
             // radius, border and shadow still applied.
             this._iterateMenus((menu) => this._resetMenuStyle(menu));
+            this._removeAddedMenuClasses();
             return;
         }
 
@@ -258,9 +261,12 @@ export class PanelsManager extends ExtensionComponent {
                 x_expand: true,
                 y_expand: true,
             });
+            // SIZE only. The actor is a child of Main.panel, so its origin is
+            // already the panel's origin; binding ALL would add the panel's
+            // own offset (non-zero whenever panel-margin is set) a second time.
             this._blurActor.add_constraint(new Clutter.BindConstraint({
                 source: Main.panel,
-                coordinate: Clutter.BindCoordinate.ALL,
+                coordinate: Clutter.BindCoordinate.SIZE,
             }));
 
             this._blurEffect = new Shell.BlurEffect({
@@ -461,6 +467,11 @@ export class PanelsManager extends ExtensionComponent {
 }
 `;
 
+        // Refreshes run on every settings change and every panel child-added
+        // (each app launch). Writing the file and reloading a stylesheet
+        // restyles the whole stage, so skip both when nothing changed.
+        if (this._clockCssFile && css === this._clockCss) return;
+
         try {
             const dir = GLib.build_filenamev([GLib.get_user_cache_dir(), 'hornbill']);
             GLib.mkdir_with_parents(dir, 0o755);
@@ -473,6 +484,7 @@ export class PanelsManager extends ExtensionComponent {
             }
             this._clockCssFile = Gio.File.new_for_path(path);
             theme.load_stylesheet(this._clockCssFile);
+            this._clockCss = css;
         } catch (e) {
             logError('Failed to apply clock stylesheet', e);
         }
@@ -485,6 +497,7 @@ export class PanelsManager extends ExtensionComponent {
             theme.unload_stylesheet(this._clockCssFile);
         } catch (e) { log('_unloadClockCss: get_for_stage() failed', e); }
         this._clockCssFile = null;
+        this._clockCss = null;
     }
 
     /**
@@ -518,9 +531,14 @@ export class PanelsManager extends ExtensionComponent {
     _cleanupButtonSignals() {
         // Entries are {obj, id} pairs: signals may live on the button itself
         // or on its menu object.
+        // No _isValid() gate: a PopupMenu is a plain JS object without
+        // get_parent(), so the gate rejected every menu entry and their
+        // open-state-changed handlers were never disconnected (they kept
+        // restyling buttons after disable). A destroyed actor makes
+        // disconnect() throw, which is caught and is harmless.
         for (const [, sigs] of this._buttonSignals) {
             sigs.forEach(sig => {
-                if (this._isValid(sig.obj)) sig.obj.disconnect(sig.id);
+                try { sig.obj.disconnect(sig.id); } catch (e) { /* already destroyed */ }
             });
         }
         this._buttonSignals.clear();
@@ -627,6 +645,30 @@ export class PanelsManager extends ExtensionComponent {
         } catch (e) { log('_resetMenuStyle: _getBoxPointer() failed', e); }
     }
 
+    /**
+     * Add a style class to a stock menu actor, recording it only when it was
+     * absent, so _removeAddedMenuClasses() reverts exactly what was changed.
+     */
+    _addMenuClass(actor, className) {
+        if (actor.has_style_class_name(className)) return;
+        actor.add_style_class_name(className);
+        let set = this._addedMenuClasses.get(actor);
+        if (!set) {
+            set = new Set();
+            this._addedMenuClasses.set(actor, set);
+        }
+        set.add(className);
+    }
+
+    _removeAddedMenuClasses() {
+        for (const [actor, classes] of this._addedMenuClasses) {
+            for (const className of classes) {
+                try { actor.remove_style_class_name(className); } catch (e) { /* actor destroyed */ }
+            }
+        }
+        this._addedMenuClasses.clear();
+    }
+
     _styleSingleMenu(menu) {
         try {
             const bubble = this._getBoxPointer(menu);
@@ -658,16 +700,12 @@ export class PanelsManager extends ExtensionComponent {
                 bubbleCss += `border: ${bSize}px ${styles[bStyle]} ${bColor}; `;
             }
 
-            if (!bubble.has_style_class_name('popup-menu-boxpointer')) {
-                bubble.add_style_class_name('popup-menu-boxpointer');
-            }
+            this._addMenuClass(bubble, 'popup-menu-boxpointer');
             bubble.set_style(bubbleCss);
 
             if (this._isValid(content)) {
                 let contentCss = `border-radius: ${radius}px; `;
-                if (!content.has_style_class_name('popup-menu')) {
-                    content.add_style_class_name('popup-menu');
-                }
+                this._addMenuClass(content, 'popup-menu');
                 content.set_style(contentCss);
             }
         } catch (e) { log('_styleSingleMenu failed', e); }

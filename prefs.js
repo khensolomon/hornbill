@@ -5,12 +5,11 @@ import Gdk from "gi://Gdk";
 import GLib from "gi://GLib";
 import { ExtensionPreferences } from "resource:///org/gnome/Shell/Extensions/js/extensions/prefs.js";
 
-import { createUI, installLayout } from "./app/window.js";
+import { createUI, installLayout, destroyUI } from "./app/window.js";
 import { AppConfig } from "./app/config.js";
-import { log } from "./app/util/logger.js";
 import { gettext as _ } from './app/util/gettext.js';
 
-export default class GnomeSplitViewPrefs extends ExtensionPreferences {
+export default class HornbillPreferences extends ExtensionPreferences {
   _settings = null;
   _settingsSignal = null;
 
@@ -26,14 +25,12 @@ export default class GnomeSplitViewPrefs extends ExtensionPreferences {
     }
 
     try {
-      // FIX: Robustly load fresh metadata from disk using Gio
+      // metadata.json is re-read from disk and merged over the shell's copy:
+      // the shell caches metadata from load time, so after an in-place
+      // update its copy can lack keys such as 'links'.
       const freshMetadata = this._loadLocalMetadata(this.path);
-
-      // Merge: Shell metadata (base) + Disk metadata (overrides)
-      // This ensures 'links' appear even if Shell cached an old version
       const finalMetadata = { ...this.metadata, ...freshMetadata };
 
-      // 1. Init Config
       AppConfig.init(finalMetadata, this.path, true);
 
       // Attach placeholder content IMMEDIATELY so the window always has
@@ -43,15 +40,6 @@ export default class GnomeSplitViewPrefs extends ExtensionPreferences {
       const bootstrap = new Adw.Bin();
       window.set_content(bootstrap);
 
-      // Debug: Check if links are actually loaded
-      const linkCount = finalMetadata.links
-        ? Object.keys(finalMetadata.links).length
-        : 0;
-      log(
-        `Preferences initializing... Loaded ${linkCount} links from metadata.`,
-      );
-
-      // 2. Set Size Defaults
       window.set_default_size(
         AppConfig.defaults.window.width,
         AppConfig.defaults.window.height,
@@ -68,10 +56,8 @@ export default class GnomeSplitViewPrefs extends ExtensionPreferences {
       window?.set_title?.(finalMetadata.name);
       window?.add_css_class?.("hornbill-prefs-window");
 
-      // 3. Load CSS
       this._loadCustomStyles();
 
-      // 4. Create UI
       const splitView = createUI();
       window.set_content(splitView);
 
@@ -79,19 +65,22 @@ export default class GnomeSplitViewPrefs extends ExtensionPreferences {
       // Adw.PreferencesPage was added to the window; a pure set_content()
       // UI adds none, so it logs "Extension did not provide any UI" on
       // every open (confirmed harmless — the split view above still
-      // shows). Add one empty page to satisfy that check. Guarded so a
-      // failure here can never block the real UI that is already set.
+      // shows). Add one empty page to satisfy that check.
       window.add(new Adw.PreferencesPage());
 
       installLayout(window, splitView);
       this._setupDeepLinking(splitView);
 
-      // 5. Cleanup
+      // The preferences process can outlive this window, so everything
+      // connected to shared objects is released here: the deep-link handler
+      // and every page still on the navigation stack.
       window.connect("close-request", () => {
         if (this._settings && this._settingsSignal) {
           this._settings.disconnect(this._settingsSignal);
         }
+        this._settingsSignal = null;
         this._settings = null;
+        destroyUI(splitView);
       });
     } catch (e) {
       console.error(`PREFS ERROR: ${e.message}`);
@@ -106,7 +95,7 @@ export default class GnomeSplitViewPrefs extends ExtensionPreferences {
   }
 
   /**
-   * Helper: Reads metadata.json using Gio.File (Robust)
+   * Reads metadata.json from the extension directory.
    */
   _loadLocalMetadata(extensionPath) {
     const jsonPath = GLib.build_filenamev([extensionPath, "metadata.json"]);
