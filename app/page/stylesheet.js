@@ -24,7 +24,6 @@ export function createStylesheetUI(navigator) {
     }
 
     const settings = AppConfig.getSettings();
-    const scope = pageScope();
 
     // 1. Custom Styles (the user's own work comes first)
     _addCustomStylesGroup(page, settings);
@@ -246,7 +245,7 @@ function _addCustomStylesGroup(page, settings) {
     refresh();
 
     // Shared settings outlive the page; the page teardown disconnects this.
-    scope.connect(settings, 'changed::custom-styles', refresh);
+    pageScope().connect(settings, 'changed::custom-styles', refresh);
 
     const onAdd = (btn) => _onAddClicked(btn.get_root(), settings);
     headerAdd.connect('clicked', () => onAdd(headerAdd));
