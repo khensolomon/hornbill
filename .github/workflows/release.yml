@@ -1,8 +1,23 @@
 name: Release
 
-# Triggered by the commit message, not by a tag:
+# Triggered by the commit message, not by a tag. The SUBJECT line of the last
+# commit in a push must start with:
 #
-#     Release: extension; short summary of why
+#     release: extension<separator><optional summary>
+#
+# Case-insensitive, with optional spaces around the colon. The separator is
+# ';', ':', '-', an en or em dash, or plain whitespace, so all of these work:
+#
+#     Release: extension;
+#     release:extension; fix torn-off tab geometry
+#     release: extension - fix torn-off tab geometry
+#     release:extension fix torn-off tab geometry
+#
+# Text after the separator becomes the summary line of the release notes.
+# Deliberately NOT matched: 'release: extensions', 'prerelease: extension',
+# 'chore: release extension', and the word anywhere but the start of the
+# subject. A merge commit ('Merge pull request ...') never matches, so merging
+# a pull request does not release by accident.
 #
 # 'extension' is the target, leaving room for other targets later without a
 # second workflow. head_commit is the LAST commit of a push, so the release
@@ -31,10 +46,52 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  # Expressions have no regex, so the trigger is parsed in a step. Every push
+  # to master runs this job for a few seconds; the release job below only
+  # runs when it says so.
+  trigger:
+    runs-on: ubuntu-latest
+    outputs:
+      release: ${{ steps.parse.outputs.release }}
+      summary: ${{ steps.parse.outputs.summary }}
+    steps:
+      - name: Parse the release trigger
+        id: parse
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          # Passed through the environment, never interpolated into the
+          # script: a commit message is untrusted text.
+          COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
+          DISPATCH_SUMMARY: ${{ inputs.summary }}
+        run: |
+          python3 - <<'PY'
+          import os, re, secrets
+
+          # Keep in sync with the comment at the top of this file.
+          PATTERN = re.compile(
+              r'^\s*release\s*:\s*extension(?:\s*[;:\u2013\u2014-]\s*|\s+|$)(?P<summary>.*)$',
+              re.IGNORECASE)
+
+          if os.environ['EVENT_NAME'] == 'workflow_dispatch':
+              release, summary = True, os.environ.get('DISPATCH_SUMMARY', '').strip()
+          else:
+              msg = os.environ.get('COMMIT_MESSAGE', '')
+              subject = msg.splitlines()[0] if msg else ''
+              m = PATTERN.match(subject)
+              release = bool(m)
+              summary = m.group('summary').strip() if m else ''
+              print(f"Subject: {subject!r}")
+
+          print(f"Release: {release}" + (f", summary: {summary!r}" if summary else ""))
+          delim = 'EOF_' + secrets.token_hex(8)
+          with open(os.environ['GITHUB_OUTPUT'], 'a', encoding='utf-8') as fh:
+              fh.write(f"release={'true' if release else 'false'}\n")
+              fh.write(f"summary<<{delim}\n{summary}\n{delim}\n")
+          PY
+
   release:
-    if: >-
-      github.event_name == 'workflow_dispatch' ||
-      startsWith(github.event.head_commit.message, 'Release: extension;')
+    needs: trigger
+    if: needs.trigger.outputs.release == 'true'
     runs-on: ubuntu-latest
 
     steps:
@@ -99,12 +156,7 @@ jobs:
           nxt = re.compile(r'^##\s', re.MULTILINE).search(text, start)
           body = text[start:nxt.start() if nxt else len(text)].strip()
 
-          summary = os.environ.get('DISPATCH_SUMMARY', '').strip()
-          if not summary:
-              msg = os.environ.get('COMMIT_MESSAGE', '')
-              # Only the subject line, and only past the first ';'
-              subject = msg.splitlines()[0] if msg else ''
-              summary = subject.split(';', 1)[1].strip() if ';' in subject else ''
+          summary = os.environ.get('RELEASE_SUMMARY', '').strip()
           out = (f"{summary}\n\n---\n\n{body}" if summary else body)
 
           # OUTSIDE the repo: build.py packages the working tree, so a notes
@@ -115,11 +167,9 @@ jobs:
           print(f"Release notes: {len(out)} chars from the {vn} section")
           PY
         env:
-          # Actions expressions have no slice(), so the raw message is passed
-          # through and split in Python: everything after the first ';' in
-          # "Release: extension; ..." becomes the summary line.
-          COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
-          DISPATCH_SUMMARY: ${{ inputs.summary }}
+          # Parsed by the trigger job: the text after the trigger prefix, or
+          # the workflow_dispatch input.
+          RELEASE_SUMMARY: ${{ needs.trigger.outputs.summary }}
 
       - name: Verify sources
         run: |
